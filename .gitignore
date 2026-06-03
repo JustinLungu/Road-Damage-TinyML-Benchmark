@@ -1,3 +1,16 @@
+annotations*
+images*
+
+.vscode/
+*.pt
+
+
+
+
+
+############################ Pyhon.gitignore template ############################
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
