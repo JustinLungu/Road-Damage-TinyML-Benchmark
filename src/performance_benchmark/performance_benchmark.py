@@ -6,7 +6,11 @@ from typing import Any
 import torch
 
 from src.performance_benchmark.benchmark_result import BenchmarkResult
-from src.performance_benchmark.constants import BYTES_PER_MB, DEFAULT_WARMUP_RUNS
+from src.performance_benchmark.constants import (
+    BYTES_PER_MB,
+    DEFAULT_WARMUP_RUNS,
+    PROGRESS_INTERVAL_IMAGES,
+)
 from src.performance_benchmark.model_inference_adapter import ModelInferenceAdapter
 from src.performance_benchmark.system_metrics_sampler import SystemMetricsSampler
 from src.performance_benchmark.utils import (
@@ -56,12 +60,21 @@ class PerformanceBenchmark:
         sampler.start()
         try:
             with torch.inference_mode():
-                for image_path in self.image_paths:
+                for image_number, image_path in enumerate(self.image_paths, start=1):
                     synchronize_device(self.device)
                     start_time = time.perf_counter()
                     self.adapter.infer(image_path)
                     synchronize_device(self.device)
                     latencies_s.append(time.perf_counter() - start_time)
+
+                    if (
+                        image_number % PROGRESS_INTERVAL_IMAGES == 0
+                        or image_number == len(self.image_paths)
+                    ):
+                        print(
+                            f"Progress: {image_number}/{len(self.image_paths)} images",
+                            flush=True,
+                        )
         finally:
             sampler.stop()
 

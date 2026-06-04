@@ -35,6 +35,9 @@ smaller run. The same limit is applied to every selected model:
 uv run python experiments/system_performance.py --model yolov5nu --device cpu --num-images 100
 ```
 
+During inference, the benchmark prints progress every 50 completed images and
+once more when the final image is complete.
+
 Results are appended to
 `results/system_metrics/system_performance_results.csv`. Each run records FPS,
 average and p95 latency, CPU RAM, GPU RAM, GPU utilization, power, energy per
