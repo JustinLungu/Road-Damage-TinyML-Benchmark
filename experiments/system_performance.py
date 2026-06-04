@@ -7,15 +7,17 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.load_model import MODEL_LOADERS, load_model  # noqa: E402
 from src.performance_benchmark import (  # noqa: E402
+    PerformanceBenchmark,
     append_result_csv,
     list_coco_images,
     resolve_device,
-    run_benchmark,
 )
 
 
 COCO_IMAGES_DIR = PROJECT_ROOT / "datasets" / "coco" / "images"
-RESULTS_CSV = PROJECT_ROOT / "results" / "system_metrics" / "system_performance_results.csv"
+RESULTS_CSV = (
+    PROJECT_ROOT / "results" / "system_metrics" / "system_performance_results.csv"
+)
 
 
 def main() -> None:
@@ -47,7 +49,8 @@ def main() -> None:
     model = load_model(args.model)
 
     print(f"Benchmarking {len(image_paths)} images on {device}...")
-    result = run_benchmark(args.model, model, image_paths, device)
+    benchmark = PerformanceBenchmark(args.model, model, image_paths, device)
+    result = benchmark.run()
     append_result_csv(result, RESULTS_CSV)
 
     print(f"Results appended to: {RESULTS_CSV}")
