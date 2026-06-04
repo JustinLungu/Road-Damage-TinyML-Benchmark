@@ -32,8 +32,9 @@ results are written to `results/system_metrics/system_performance_results.csv`.
 
 ## Pipeline
 
-1. The experiment runner reads the selected model name, device, and optional
-   image limit from the command line.
+1. The experiment runner reads the selected model names, device, and optional
+   image limit from the command line. If multiple models are selected, it starts
+   a fresh Python process for each model.
 2. `src/load_model.py` loads the requested pretrained model, and the COCO
    validation image paths are collected.
 3. `ModelInferenceAdapter` prepares the correct preprocessing and inference call

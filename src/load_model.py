@@ -123,6 +123,56 @@ MODEL_LOADERS: dict[str, Callable[[], Any]] = {
 }
 
 
+MODEL_CHECKPOINT_PATHS: dict[str, Path] = {
+    "yolov5nu": CNN_DIR / "yolov5nu.pt",
+    "yolov8n": CNN_DIR / "yolov8n.pt",
+    "mobilenet_v3_small": CNN_DIR
+    / "hub"
+    / "checkpoints"
+    / "mobilenet_v3_small-047dcff4.pth",
+    "mobilenet_v3_large": CNN_DIR
+    / "hub"
+    / "checkpoints"
+    / "mobilenet_v3_large-5c1a4163.pth",
+}
+
+MODEL_CACHE_DIRS: dict[str, Path] = {
+    "mobilevit_xxs": VIT_DIR / "mobilevit_xxs",
+    "mobilevit_xs": VIT_DIR / "mobilevit_xs",
+    "mobilevit_s": VIT_DIR / "mobilevit_s",
+    "efficientformer_l1": VIT_DIR / "efficientformer_l1",
+    "efficientformer_l3": VIT_DIR / "efficientformer_l3",
+    "efficientformer_l7": VIT_DIR / "efficientformer_l7",
+    "smolvlm_256m": VLM_DIR / "smolvlm_256m",
+    "smolvlm_500m": VLM_DIR / "smolvlm_500m",
+    "smolvlm_2b": VLM_DIR / "smolvlm_2b",
+}
+
+CHECKPOINT_PATTERNS = ("*.pt", "*.pth", "*.bin", "*.safetensors")
+
+
+def get_downloaded_model_names() -> list[str]:
+    return [
+        model_name for model_name in MODEL_LOADERS if is_model_downloaded(model_name)
+    ]
+
+
+def is_model_downloaded(model_name: str) -> bool:
+    checkpoint_path = MODEL_CHECKPOINT_PATHS.get(model_name)
+    if checkpoint_path is not None:
+        return checkpoint_path.is_file()
+
+    cache_dir = MODEL_CACHE_DIRS.get(model_name)
+    if cache_dir is None:
+        return False
+
+    return any(
+        ".no_exist" not in checkpoint_path.parts and checkpoint_path.is_file()
+        for pattern in CHECKPOINT_PATTERNS
+        for checkpoint_path in cache_dir.rglob(pattern)
+    )
+
+
 def load_model(model_name: str) -> Any:
     if model_name not in MODEL_LOADERS:
         raise ValueError(f"Unknown model: {model_name}")
@@ -152,7 +202,7 @@ def main() -> None:
         required=True,
         choices=list(MODEL_LOADERS.keys()) + ["all"],
     )
-    
+
     args = parser.parse_args()
 
     if args.model == "all":
