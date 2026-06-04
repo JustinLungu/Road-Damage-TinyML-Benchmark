@@ -40,6 +40,16 @@ Results are appended to
 average and p95 latency, CPU RAM, GPU RAM, GPU utilization, power, energy per
 inference, and the number of images.
 
+Use `-o` to overwrite the existing results CSV with only the rows from the
+current run:
+
+```bash
+uv run python experiments/system_performance.py \
+  --model yolov5nu yolov8n mobilenet_v3_small \
+  --device cuda:0 \
+  -o
+```
+
 When multiple models are selected, each model runs in a fresh Python process so
 memory left behind by an earlier model does not affect later RAM measurements.
 

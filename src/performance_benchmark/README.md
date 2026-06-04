@@ -32,9 +32,9 @@ results are written to `results/system_metrics/system_performance_results.csv`.
 
 ## Pipeline
 
-1. The experiment runner reads the selected model names, device, and optional
-   image limit from the command line. If multiple models are selected, it starts
-   a fresh Python process for each model.
+1. The experiment runner reads the selected model names, device, optional image
+   limit, and optional results overwrite flag from the command line. If multiple
+   models are selected, it starts a fresh Python process for each model.
 2. `src/load_model.py` loads the requested pretrained model, and the COCO
    validation image paths are collected.
 3. `ModelInferenceAdapter` prepares the correct preprocessing and inference call
@@ -54,4 +54,5 @@ results are written to `results/system_metrics/system_performance_results.csv`.
    average utilization, average power, and energy per inference.
 8. The experiment runner appends one result row to
    `results/system_metrics/system_performance_results.csv`. Hardware metrics
-   that are not available are left blank.
+   that are not available are left blank. With `-o`, the existing CSV is
+   removed once before rows from the current run are written.

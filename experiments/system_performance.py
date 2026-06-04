@@ -50,10 +50,19 @@ def main() -> None:
         default=None,
         help="Number of COCO validation images to use. Defaults to all images.",
     )
+    parser.add_argument(
+        "-o",
+        "--overwrite",
+        action="store_true",
+        help="Overwrite the results CSV before writing rows for this run.",
+    )
     args = parser.parse_args()
 
     model_names = resolve_model_names(args.model, parser)
     device = resolve_device(args.device)
+
+    if args.overwrite:
+        RESULTS_CSV.unlink(missing_ok=True)
 
     if len(model_names) > 1:
         run_model_processes(model_names, args.device, args.num_images)
