@@ -274,6 +274,7 @@ coverage and test reports before running `pysonar`:
 mkdir -p reports
 
 uv run pytest \
+  -p pytest_cov \
   --cov=src \
   --cov=experiments \
   --cov-report=xml:coverage.xml \
@@ -284,3 +285,16 @@ uv run pysonar
 
 The generated `coverage.xml`, `reports/`, and `.sonar/` scanner output are local
 artifacts and should not be committed.
+
+If pytest tries to load unrelated system plugins, such as ROS pytest plugins,
+run the coverage command with plugin autoload disabled while explicitly loading
+`pytest-cov`:
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 uv run pytest \
+  -p pytest_cov \
+  --cov=src \
+  --cov=experiments \
+  --cov-report=xml:coverage.xml \
+  --junitxml=reports/pytest.xml
+```
