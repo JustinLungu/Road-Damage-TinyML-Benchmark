@@ -65,3 +65,19 @@ CPU RAM is the benchmark process RSS. GPU RAM is PyTorch CUDA allocated memory.
 On Jetson, GPU utilization and input-rail system power are read from
 `tegrastats`. On other NVIDIA systems, GPU utilization and GPU board power are
 read through NVML. Any unavailable hardware metric is left blank in the CSV.
+
+## System performance plots
+
+Create one bar plot per metric from the system performance CSV:
+
+```bash
+uv run python experiments/plot_system_performance.py
+```
+
+By default, the script reads
+`results/system_metrics/system_performance_results.csv` and saves PNG plots in
+two folders next to that CSV:
+
+- `results/system_metrics/with_vlms/` contains plots for all models.
+- `results/system_metrics/without_vlms/` contains plots after filtering out VLM
+  model rows such as SmolVLM.
