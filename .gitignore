@@ -7,6 +7,8 @@ images*
 !models/README.md
 models*
 
+# SonarQube scanner cache/output
+.sonar/
 
 
 ############################ Pyhon.gitignore template ############################
@@ -219,6 +221,7 @@ tempCodeRunnerFile.py
 
 # Ruff stuff:
 .ruff_cache/
+
 
 # PyPI configuration file
 .pypirc
