@@ -1,18 +1,20 @@
 import argparse
 import re
+import sys
 from collections import Counter
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
+REPO_ROOT_FOR_IMPORTS = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT_FOR_IMPORTS))
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_CSV = (
-    PROJECT_ROOT / "results" / "system_metrics" / "system_performance_results.csv"
+from experiments.performance.constants import (  # noqa: E402
+    DEFAULT_CSV,
+    WITH_VLMS_DIR,
+    WITHOUT_VLMS_DIR,
 )
-WITH_VLMS_DIR = "with_vlms"
-WITHOUT_VLMS_DIR = "without_vlms"
 
 
 def main() -> None:

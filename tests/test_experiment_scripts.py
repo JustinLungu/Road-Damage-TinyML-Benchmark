@@ -6,8 +6,8 @@ import pandas as pd
 import pytest
 import torch
 
-import experiments.plot_system_performance as plot_system_performance
-import experiments.system_performance as system_performance
+import experiments.performance.plot_system_performance as plot_system_performance
+import experiments.performance.system_performance as system_performance
 from src.performance_benchmark.benchmark_result import BenchmarkResult
 
 

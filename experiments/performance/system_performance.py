@@ -5,9 +5,13 @@ from pathlib import Path
 
 import torch
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+REPO_ROOT_FOR_IMPORTS = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT_FOR_IMPORTS))
 
+from src.constants import (  # noqa: E402
+    COCO_IMAGES_DIR,
+)
+from experiments.performance.constants import ALL_LOADED, RESULTS_CSV  # noqa: E402
 from src.load_model import (  # noqa: E402
     MODEL_LOADERS,
     get_downloaded_model_names,
@@ -19,13 +23,6 @@ from src.performance_benchmark import (  # noqa: E402
     list_coco_images,
     resolve_device,
 )
-
-
-COCO_IMAGES_DIR = PROJECT_ROOT / "datasets" / "coco" / "images"
-RESULTS_CSV = (
-    PROJECT_ROOT / "results" / "system_metrics" / "system_performance_results.csv"
-)
-ALL_LOADED = "all-loaded"
 
 
 def main() -> None:

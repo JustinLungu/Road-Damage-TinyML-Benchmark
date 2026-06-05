@@ -21,14 +21,16 @@ accuracy.
 - `benchmark_result.py` defines the result fields written to the CSV file.
 - `metric_samples.py` stores the raw system metric samples collected during a
   benchmark.
-- `constants.py` contains model groups, prompts, sampling defaults, and parser
-  patterns.
+- `constants.py` contains benchmark-specific model groups, prompts, sampling
+  defaults, and parser patterns. Shared repo paths and model IDs live in
+  `src/constants.py`.
 - `utils.py` contains shared helpers for devices, COCO image paths, image
   loading, statistics, and CSV writing.
 - `__init__.py` exposes the package's public imports.
 
-The experiment entry point is `experiments/system_performance.py`, and its
-results are written to `results/system_metrics/system_performance_results.csv`.
+The experiment entry point is
+`experiments/performance/system_performance.py`, and its results are written to
+`results/system_metrics/system_performance_results.csv`.
 
 ## Pipeline
 

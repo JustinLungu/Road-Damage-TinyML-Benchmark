@@ -1,17 +1,22 @@
 import argparse
 import os
-from pathlib import Path
 from typing import Any, Callable
 
+from src.constants import (
+    CHECKPOINT_PATTERNS,
+    CNN_DIR,
+    EFFICIENTFORMER_MODEL_IDS,
+    MOBILEVIT_MODEL_IDS,
+    MODEL_CACHE_DIRS,
+    MODEL_CHECKPOINT_PATHS,
+    MODEL_STORAGE_DIRS,
+    SMOLVLM_MODEL_IDS,
+    VIT_DIR,
+    VLM_DIR,
+    YOLO_MODEL_CHECKPOINTS,
+)
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-MODELS_DIR = PROJECT_ROOT / "models"
-
-CNN_DIR = MODELS_DIR / "cnn"
-VIT_DIR = MODELS_DIR / "vit"
-VLM_DIR = MODELS_DIR / "vlm"
-
-for directory in (CNN_DIR, VIT_DIR, VLM_DIR):
+for directory in MODEL_STORAGE_DIRS:
     directory.mkdir(parents=True, exist_ok=True)
 
 
@@ -27,9 +32,7 @@ def load_mobilenet_v3_small() -> Any:
 
     from torchvision.models import MobileNet_V3_Small_Weights, mobilenet_v3_small
 
-    return mobilenet_v3_small(
-        weights=MobileNet_V3_Small_Weights.DEFAULT
-    ).eval()
+    return mobilenet_v3_small(weights=MobileNet_V3_Small_Weights.DEFAULT).eval()
 
 
 def load_mobilenet_v3_large() -> Any:
@@ -37,9 +40,7 @@ def load_mobilenet_v3_large() -> Any:
 
     from torchvision.models import MobileNet_V3_Large_Weights, mobilenet_v3_large
 
-    return mobilenet_v3_large(
-        weights=MobileNet_V3_Large_Weights.DEFAULT
-    ).eval()
+    return mobilenet_v3_large(weights=MobileNet_V3_Large_Weights.DEFAULT).eval()
 
 
 def load_mobilevit(model_id: str, local_name: str) -> Any:
@@ -72,83 +73,46 @@ def load_smolvlm(model_id: str, local_name: str) -> Any:
     ).eval()
 
 
+def make_ultralytics_loader(checkpoint_name: str) -> Callable[[], Any]:
+    return lambda: load_ultralytics_model(checkpoint_name)
+
+
+def make_mobilevit_loader(model_name: str, model_id: str) -> Callable[[], Any]:
+    return lambda: load_mobilevit(model_id, model_name)
+
+
+def make_efficientformer_loader(model_name: str, model_id: str) -> Callable[[], Any]:
+    return lambda: load_efficientformer(model_id, model_name)
+
+
+def make_smolvlm_loader(model_name: str, model_id: str) -> Callable[[], Any]:
+    return lambda: load_smolvlm(model_id, model_name)
+
+
 MODEL_LOADERS: dict[str, Callable[[], Any]] = {
     # CNN / object detection
-    "yolov5nu": lambda: load_ultralytics_model("yolov5nu.pt"),
-    "yolov8n": lambda: load_ultralytics_model("yolov8n.pt"),
-
+    **{
+        model_name: make_ultralytics_loader(checkpoint_name)
+        for model_name, checkpoint_name in YOLO_MODEL_CHECKPOINTS.items()
+    },
     # CNN / image classification
     "mobilenet_v3_small": load_mobilenet_v3_small,
     "mobilenet_v3_large": load_mobilenet_v3_large,
-
     # Lightweight vision transformers
-    "mobilevit_xxs": lambda: load_mobilevit(
-        "apple/mobilevit-xx-small",
-        "mobilevit_xxs",
-    ),
-    "mobilevit_xs": lambda: load_mobilevit(
-        "apple/mobilevit-x-small",
-        "mobilevit_xs",
-    ),
-    "mobilevit_s": lambda: load_mobilevit(
-        "apple/mobilevit-small",
-        "mobilevit_s",
-    ),
-    "efficientformer_l1": lambda: load_efficientformer(
-        "efficientformer_l1.snap_dist_in1k",
-        "efficientformer_l1",
-    ),
-    "efficientformer_l3": lambda: load_efficientformer(
-        "efficientformer_l3.snap_dist_in1k",
-        "efficientformer_l3",
-    ),
-    "efficientformer_l7": lambda: load_efficientformer(
-        "efficientformer_l7.snap_dist_in1k",
-        "efficientformer_l7",
-    ),
-
+    **{
+        model_name: make_mobilevit_loader(model_name, model_id)
+        for model_name, model_id in MOBILEVIT_MODEL_IDS.items()
+    },
+    **{
+        model_name: make_efficientformer_loader(model_name, model_id)
+        for model_name, model_id in EFFICIENTFORMER_MODEL_IDS.items()
+    },
     # Tiny VLMs
-    "smolvlm_256m": lambda: load_smolvlm(
-        "HuggingFaceTB/SmolVLM-256M-Instruct",
-        "smolvlm_256m",
-    ),
-    "smolvlm_500m": lambda: load_smolvlm(
-        "HuggingFaceTB/SmolVLM-500M-Instruct",
-        "smolvlm_500m",
-    ),
-    "smolvlm_2b": lambda: load_smolvlm(
-        "HuggingFaceTB/SmolVLM-Instruct",
-        "smolvlm_2b",
-    ),
+    **{
+        model_name: make_smolvlm_loader(model_name, model_id)
+        for model_name, model_id in SMOLVLM_MODEL_IDS.items()
+    },
 }
-
-
-MODEL_CHECKPOINT_PATHS: dict[str, Path] = {
-    "yolov5nu": CNN_DIR / "yolov5nu.pt",
-    "yolov8n": CNN_DIR / "yolov8n.pt",
-    "mobilenet_v3_small": CNN_DIR
-    / "hub"
-    / "checkpoints"
-    / "mobilenet_v3_small-047dcff4.pth",
-    "mobilenet_v3_large": CNN_DIR
-    / "hub"
-    / "checkpoints"
-    / "mobilenet_v3_large-5c1a4163.pth",
-}
-
-MODEL_CACHE_DIRS: dict[str, Path] = {
-    "mobilevit_xxs": VIT_DIR / "mobilevit_xxs",
-    "mobilevit_xs": VIT_DIR / "mobilevit_xs",
-    "mobilevit_s": VIT_DIR / "mobilevit_s",
-    "efficientformer_l1": VIT_DIR / "efficientformer_l1",
-    "efficientformer_l3": VIT_DIR / "efficientformer_l3",
-    "efficientformer_l7": VIT_DIR / "efficientformer_l7",
-    "smolvlm_256m": VLM_DIR / "smolvlm_256m",
-    "smolvlm_500m": VLM_DIR / "smolvlm_500m",
-    "smolvlm_2b": VLM_DIR / "smolvlm_2b",
-}
-
-CHECKPOINT_PATTERNS = ("*.pt", "*.pth", "*.bin", "*.safetensors")
 
 
 def get_downloaded_model_names() -> list[str]:

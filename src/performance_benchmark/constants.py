@@ -1,5 +1,12 @@
 import re
 
+from src.constants import (
+    EFFICIENTFORMER_MODEL_IDS,
+    MOBILEVIT_MODEL_IDS,
+    SMOLVLM_MODEL_IDS,
+    YOLO_MODEL_CHECKPOINTS,
+)
+
 
 SMOLVLM_PROMPT = "Describe the image briefly."
 
@@ -17,20 +24,8 @@ TEGRASTATS_POWER_PATTERN = re.compile(
     r"\b(?:POM_5V_IN|VDD_IN)\s+(\d+)(?:mW)?(?:/\d+(?:mW)?)?"
 )
 
-YOLO_MODELS = {"yolov5nu", "yolov8n"}
+YOLO_MODELS = set(YOLO_MODEL_CHECKPOINTS)
 MOBILENET_MODELS = {"mobilenet_v3_small", "mobilenet_v3_large"}
-MOBILEVIT_MODELS = {
-    "mobilevit_xxs": "apple/mobilevit-xx-small",
-    "mobilevit_xs": "apple/mobilevit-x-small",
-    "mobilevit_s": "apple/mobilevit-small",
-}
-EFFICIENTFORMER_MODELS = {
-    "efficientformer_l1",
-    "efficientformer_l3",
-    "efficientformer_l7",
-}
-SMOLVLM_MODELS = {
-    "smolvlm_256m": "HuggingFaceTB/SmolVLM-256M-Instruct",
-    "smolvlm_500m": "HuggingFaceTB/SmolVLM-500M-Instruct",
-    "smolvlm_2b": "HuggingFaceTB/SmolVLM-Instruct",
-}
+MOBILEVIT_MODELS = dict(MOBILEVIT_MODEL_IDS)
+EFFICIENTFORMER_MODELS = set(EFFICIENTFORMER_MODEL_IDS)
+SMOLVLM_MODELS = dict(SMOLVLM_MODEL_IDS)

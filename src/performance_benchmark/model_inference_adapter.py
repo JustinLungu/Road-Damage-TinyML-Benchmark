@@ -3,7 +3,7 @@ from typing import Any, Callable
 
 import torch
 
-from src.load_model import VIT_DIR, VLM_DIR
+from src.constants import VIT_DIR, VLM_DIR
 from src.performance_benchmark.constants import (
     EFFICIENTFORMER_MODELS,
     MOBILEVIT_MODELS,
