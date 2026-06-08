@@ -7,6 +7,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 
+# Allow this script to be run directly from the repo root with `uv run python ...`.
 REPO_ROOT_FOR_IMPORTS = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT_FOR_IMPORTS))
 
@@ -46,6 +47,7 @@ def create_metric_plots(csv_path: Path) -> list[Path]:
 
     output_root = csv_path.parent
     model_names = results["model_name"].astype(str)
+    # Keep one plot set with every model and one set excluding VLM rows.
     non_vlm_results = results[~model_names.map(is_vlm_model)].copy()
 
     plot_groups = [
@@ -53,6 +55,7 @@ def create_metric_plots(csv_path: Path) -> list[Path]:
         (WITHOUT_VLMS_DIR, non_vlm_results),
     ]
 
+    # Every numeric CSV column except model_name gets its own bar plot.
     metric_columns = [column for column in results.columns if column != "model_name"]
     created_plots = []
 
@@ -83,6 +86,7 @@ def create_metric_plots_for_group(
     created_plots = []
 
     for metric_column in metric_columns:
+        # Blank hardware fields become NaN and are skipped for that metric.
         metric_values = pd.to_numeric(results[metric_column], errors="coerce")
         plot_data = pd.DataFrame(
             {
@@ -116,6 +120,7 @@ def make_plot_labels(model_names: list[str]) -> list[str]:
         if total_counts[model_name] == 1:
             labels.append(model_name)
         else:
+            # Repeated model rows are separate benchmark runs, so keep both visible.
             labels.append(f"{model_name} #{seen_counts[model_name]}")
 
     return labels
@@ -123,6 +128,7 @@ def make_plot_labels(model_names: list[str]) -> list[str]:
 
 def plot_metric(plot_data: pd.DataFrame, metric_column: str, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    # Wider figures keep model labels readable when many models are plotted.
     figure_width = max(8, len(plot_data) * 0.8)
     figure, axis = plt.subplots(figsize=(figure_width, 5))
 

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import torch
 
+# Allow this script to be run directly from the repo root with `uv run python ...`.
 REPO_ROOT_FOR_IMPORTS = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT_FOR_IMPORTS))
 
@@ -59,9 +60,11 @@ def main() -> None:
     device = resolve_device(args.device)
 
     if args.overwrite:
+        # Remove the old CSV once before this run starts writing new rows.
         RESULTS_CSV.unlink(missing_ok=True)
 
     if len(model_names) > 1:
+        # Each model gets a fresh process so previous model memory is released.
         run_model_processes(model_names, args.device, args.num_images)
         return
 
@@ -78,11 +81,13 @@ def resolve_model_names(
         if len(selected_models) != 1:
             parser.error(f"{ALL_LOADED} cannot be combined with explicit model names.")
 
+        # This only selects checkpoints found under models/, not global caches.
         downloaded_models = get_downloaded_model_names()
         if not downloaded_models:
             parser.error("No downloaded model checkpoints were found under models/.")
         return downloaded_models
 
+    # Drop duplicates while preserving the order given by the user.
     return list(dict.fromkeys(selected_models))
 
 
@@ -95,6 +100,9 @@ def run_model_processes(
     failed_models = []
 
     for model_name in model_names:
+        # Re-run this script once per model, but with a single --model argument.
+        # A fresh process gives cleaner RAM/GPU measurements because model state
+        # and PyTorch/CUDA caches from previous models are released by the OS.
         command = [
             sys.executable,
             str(Path(__file__).resolve()),
@@ -106,6 +114,7 @@ def run_model_processes(
         if num_images is not None:
             command.extend(["--num-images", str(num_images)])
 
+        # check=False lets us continue and report all failed models together.
         completed_process = subprocess.run(command, check=False)
         if completed_process.returncode != 0:
             failed_models.append(model_name)
@@ -123,6 +132,7 @@ def run_model_benchmark(
     model = load_model(model_name)
 
     print(f"Benchmarking {len(image_paths)} images on {device}...")
+    # PerformanceBenchmark returns one row worth of system metrics.
     benchmark = PerformanceBenchmark(model_name, model, image_paths, device)
     result = benchmark.run()
     append_result_csv(result, RESULTS_CSV)
