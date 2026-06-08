@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 @dataclass
 class BenchmarkResult:
+    # Final output format
     model_name: str
     fps: float
     avg_latency_ms: float

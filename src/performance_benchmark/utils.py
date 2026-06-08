@@ -43,6 +43,7 @@ def list_coco_images(images_dir: Path, num_images: int | None = None) -> list[Pa
 
 def append_result_csv(result: BenchmarkResult, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    # Append rows across runs, but create the header for a new/empty file.
     write_header = not output_path.exists() or output_path.stat().st_size == 0
 
     with output_path.open("a", newline="", encoding="utf-8") as output_file:
@@ -65,6 +66,7 @@ def move_inputs_to_device(inputs: Any, device: torch.device) -> dict[str, Any]:
 
 
 def synchronize_device(device: torch.device) -> None:
+    # CUDA work is asynchronous; synchronize before reading timing boundaries.
     if device.type == "cuda":
         torch.cuda.synchronize(device)
 

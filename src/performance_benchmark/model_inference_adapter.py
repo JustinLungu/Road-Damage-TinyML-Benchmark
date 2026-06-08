@@ -19,6 +19,8 @@ InferenceFunction = Callable[[Path], None]
 
 
 class ModelInferenceAdapter:
+    """Normalize different model APIs behind one image-path inference call."""
+
     def __init__(self, model_name: str, model: Any, device: torch.device) -> None:
         self.model_name = model_name
         self.model = model
@@ -32,6 +34,7 @@ class ModelInferenceAdapter:
         self.inference_function(image_path)
 
     def _prepare_inference(self) -> InferenceFunction:
+        # Each model family needs different preprocessing and call signatures.
         if self.model_name in YOLO_MODELS:
             return self._infer_yolo
         if self.model_name in MOBILENET_MODELS:
@@ -48,6 +51,7 @@ class ModelInferenceAdapter:
         )
 
     def _infer_yolo(self, image_path: Path) -> None:
+        # Ultralytics handles image loading and preprocessing from the file path.
         self.model.predict(
             source=str(image_path), device=str(self.device), verbose=False
         )
@@ -104,6 +108,7 @@ class ModelInferenceAdapter:
                 ],
             }
         ]
+        # The benchmark measures one forward pass with a fixed prompt, no decoding.
         self.prompt = self.processor.apply_chat_template(
             messages,
             add_generation_prompt=True,
@@ -115,6 +120,7 @@ class ModelInferenceAdapter:
         if self.transform is None:
             raise RuntimeError("Image transform has not been initialized.")
 
+        # Torchvision and timm models consume a batched image tensor.
         image = load_rgb_image(image_path)
         input_tensor = self.transform(image).unsqueeze(0).to(self.device)
         self.model(input_tensor)
@@ -123,6 +129,7 @@ class ModelInferenceAdapter:
         if self.processor is None:
             raise RuntimeError("Image processor has not been initialized.")
 
+        # Hugging Face processors return dict-like tensors accepted by the model.
         image = load_rgb_image(image_path)
         inputs = self.processor(images=image, return_tensors="pt")
         self.model(**move_inputs_to_device(inputs, self.device))

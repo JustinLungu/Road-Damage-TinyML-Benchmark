@@ -21,6 +21,8 @@ from src.performance_benchmark.utils import (
 
 
 class PerformanceBenchmark:
+    """Run one timed system-performance benchmark for one loaded model."""
+
     def __init__(
         self,
         model_name: str,
@@ -39,9 +41,11 @@ class PerformanceBenchmark:
         self.adapter = ModelInferenceAdapter(model_name, model, device)
 
     def run(self) -> BenchmarkResult:
+        # Warmup is excluded so one-time backend setup does not dominate results.
         self._run_warmup()
 
         if self.device.type == "cuda":
+            # Peak GPU memory should describe measured inference, not warmup.
             torch.cuda.reset_peak_memory_stats(self.device)
 
         sampler = SystemMetricsSampler(self.device)
@@ -49,24 +53,33 @@ class PerformanceBenchmark:
         return self._build_result(latencies_s, sampler)
 
     def _run_warmup(self) -> None:
+        # Uses torch.inference_mode() so PyTorch does not track gradients during inference.
         with torch.inference_mode():
             for _ in range(self.warmup_runs):
                 self.adapter.infer(self.image_paths[0])
                 synchronize_device(self.device)
 
     def _measure_latencies(self, sampler: SystemMetricsSampler) -> list[float]:
+        # Store one elapsed time per image, in seconds.
         latencies_s: list[float] = []
 
+        # Start RAM/GPU/power sampling before the first measured inference.
         sampler.start()
         try:
+            # Disables autograd bookkeeping, which is unnecessary for inference.
             with torch.inference_mode():
                 for image_number, image_path in enumerate(self.image_paths, start=1):
+                    # Finish any previous CUDA work before starting this image timer.
                     synchronize_device(self.device)
+                    # perf_counter is a high-resolution wall-clock timer.
                     start_time = time.perf_counter()
+                    # This includes image loading, preprocessing, and model forward.
                     self.adapter.infer(image_path)
+                    # Wait for GPU inference to finish before stopping the timer.
                     synchronize_device(self.device)
                     latencies_s.append(time.perf_counter() - start_time)
 
+                    # Print occasional progress without spamming one line per image.
                     if (
                         image_number % PROGRESS_INTERVAL_IMAGES == 0
                         or image_number == len(self.image_paths)
@@ -76,6 +89,7 @@ class PerformanceBenchmark:
                             flush=True,
                         )
         finally:
+            # Always stop the sampler, even if model inference raises an error.
             sampler.stop()
 
         return latencies_s
@@ -90,6 +104,7 @@ class PerformanceBenchmark:
         avg_power_w = average_or_none(sampler.samples.power_w)
 
         if self.device.type == "cuda":
+            # PyTorch reports peak allocated tensor memory for this process.
             peak_gpu_ram_mb = (
                 torch.cuda.max_memory_allocated(self.device) / BYTES_PER_MB
             )

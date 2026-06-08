@@ -11,6 +11,8 @@ from src.performance_benchmark.constants import (
 
 
 class TegrastatsMonitor:
+    """Read Jetson utilization and input power from a tegrastats process."""
+
     def __init__(self, interval_ms: int) -> None:
         self.interval_ms = interval_ms
         self.process: subprocess.Popen[str] | None = None
@@ -44,6 +46,7 @@ class TegrastatsMonitor:
             power_match = TEGRASTATS_POWER_PATTERN.search(line)
 
             with self.lock:
+                # Store the latest parsed values; sampler reads them periodically.
                 if gpu_match:
                     self.gpu_utilization = float(gpu_match.group(1))
                 if power_match:
