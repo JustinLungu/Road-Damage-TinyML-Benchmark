@@ -16,11 +16,13 @@ from src.constants import (
     YOLO_MODEL_CHECKPOINTS,
 )
 
+# Guarantees that the folders exist before downloading or loading anything
 for directory in MODEL_STORAGE_DIRS:
     directory.mkdir(parents=True, exist_ok=True)
 
 
 def load_ultralytics_model(checkpoint_name: str) -> Any:
+    # Heavy ML libraries are imported lazily so simple CLI/help/test paths stay fast.
     from ultralytics import YOLO
 
     checkpoint_path = CNN_DIR / checkpoint_name
@@ -28,6 +30,7 @@ def load_ultralytics_model(checkpoint_name: str) -> Any:
 
 
 def load_mobilenet_v3_small() -> Any:
+    # Torchvision reads TORCH_HOME when deciding where pretrained weights live.
     os.environ["TORCH_HOME"] = str(CNN_DIR)
 
     from torchvision.models import MobileNet_V3_Small_Weights, mobilenet_v3_small
@@ -36,6 +39,7 @@ def load_mobilenet_v3_small() -> Any:
 
 
 def load_mobilenet_v3_large() -> Any:
+    # Torchvision reads TORCH_HOME when deciding where pretrained weights live.
     os.environ["TORCH_HOME"] = str(CNN_DIR)
 
     from torchvision.models import MobileNet_V3_Large_Weights, mobilenet_v3_large
@@ -55,6 +59,7 @@ def load_mobilevit(model_id: str, local_name: str) -> Any:
 def load_efficientformer(model_name: str, local_name: str) -> Any:
     import timm
 
+    # timm may use Hugging Face caches internally for pretrained weights.
     os.environ["HF_HOME"] = str(VIT_DIR / local_name)
     os.environ["TIMM_HOME"] = str(VIT_DIR / local_name)
 
@@ -131,12 +136,14 @@ def is_model_downloaded(model_name: str) -> bool:
         return False
 
     return any(
+        # Hugging Face can create .no_exist cache markers for failed lookups.
         ".no_exist" not in checkpoint_path.parts and checkpoint_path.is_file()
         for pattern in CHECKPOINT_PATTERNS
         for checkpoint_path in cache_dir.rglob(pattern)
     )
 
 
+# It checks that the name is valid, then calls the correct loader.
 def load_model(model_name: str) -> Any:
     if model_name not in MODEL_LOADERS:
         raise ValueError(f"Unknown model: {model_name}")
@@ -151,9 +158,10 @@ def load_all_models() -> dict[str, Any]:
         try:
             print(f"\nLoading {model_name}...")
             loaded_models[model_name] = loader()
-            print(f"✓ Loaded {model_name}")
+            print(f"[OK] Loaded {model_name}")
         except Exception as exc:
-            print(f"✗ Failed to load {model_name}")
+            # If one fails, it does not crash the full script.
+            print(f"[FAILED] Failed to load {model_name}")
             print(f"  Error: {exc}")
 
     return loaded_models
@@ -176,7 +184,7 @@ def main() -> None:
         print("=" * 40)
 
         for model_name in models:
-            print(f"✓ {model_name}")
+            print(f"[OK] {model_name}")
 
         print(f"\nLoaded {len(models)} models successfully.")
 
