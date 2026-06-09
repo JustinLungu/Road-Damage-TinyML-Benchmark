@@ -23,7 +23,8 @@ from src.performance_benchmark.utils import resolve_device  # noqa: E402
 # Demo Config
 #############
 
-MODEL_NAME = "yolov5nu"
+SUPPORTED_MODEL_NAMES = ("yolov5nu", "yolov8n")
+MODEL_NAMES = ["yolov5nu", "yolov8n"]
 
 # Manual-image mode: used when USE_RANDOM_IMAGE is False.
 IMAGE_PATH = REPO_ROOT / "datasets" / "coco" / "images" / "000000047585.jpg"
@@ -35,17 +36,17 @@ RANDOM_IMAGE_DIR = REPO_ROOT / "datasets" / "coco" / "images"
 # Set to an integer for reproducible random image selection.
 RANDOM_SEED: int | None = None
 
-DEVICE_NAME = "cpu"       # or "cuda:0" if CUDA is available
+DEVICE_NAME = "cpu"  # or "cuda:0" if CUDA is available
 # Ultralytics resizes/letterboxes the source image to this inference size.
 # Output boxes are still mapped back to the original image pixel coordinates.
 # 320 faster & less memory, 640 more accurate, 1280 slower & more memory.
-# Must be multiple of 32 due to YOLOv5 architecture.
+# Must be a multiple of 32 for these YOLO detectors.
 IMAGE_SIZE = 640
 CONFIDENCE_THRESHOLD = 0.6
 NMS_IOU_THRESHOLD = 0.7
 
 SAVE_ANNOTATED_IMAGE = True
-OUTPUT_PATH = MODEL_DOCS_DIR / "outputs" / "annotated.jpg"
+OUTPUT_DIR = MODEL_DOCS_DIR / "outputs"
 
 
 def resolve_repo_path(path: Path) -> Path:
@@ -147,16 +148,25 @@ def print_detection_table(rows: list[dict[str, Any]]) -> None:
         )
 
 
-def main() -> None:
-    image_path = select_image_path()
-    output_path = resolve_repo_path(OUTPUT_PATH)
+def validate_model_names() -> None:
+    if not MODEL_NAMES:
+        raise ValueError("MODEL_NAMES must contain at least one model name.")
 
-    if not image_path.is_file():
-        raise FileNotFoundError(f"Image does not exist: {image_path}")
+    unknown_model_names = [
+        model_name
+        for model_name in MODEL_NAMES
+        if model_name not in SUPPORTED_MODEL_NAMES
+    ]
+    if unknown_model_names:
+        raise ValueError(
+            f"MODEL_NAMES must only contain {SUPPORTED_MODEL_NAMES}, "
+            f"got {unknown_model_names}"
+        )
 
-    device = resolve_device(DEVICE_NAME)
-    print(f"Loading {MODEL_NAME} on {device}...")
-    model = load_model(MODEL_NAME)
+
+def run_model(model_name: str, image_path: Path, device: torch.device) -> None:
+    print(f"\nLoading {model_name} on {device}...")
+    model = load_model(model_name)
 
     # Ultralytics handles image loading, resizing, tensor conversion, forward
     # pass, confidence filtering, and non-maximum suppression inside predict().
@@ -171,15 +181,32 @@ def main() -> None:
         )[0]
 
     rows = detection_rows(result)
+    print(f"Model: {model_name}")
     print(f"Image: {display_path(image_path)}")
     print(f"Original shape: {result.orig_shape}")
     print(f"Detections: {len(rows)}")
     print_detection_table(rows)
 
     if SAVE_ANNOTATED_IMAGE:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_dir = resolve_repo_path(OUTPUT_DIR)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / f"{model_name}_annotated.jpg"
         result.save(filename=str(output_path))
         print(f"Annotated image: {display_path(output_path)}")
+
+
+def main() -> None:
+    validate_model_names()
+
+    image_path = select_image_path()
+    if not image_path.is_file():
+        raise FileNotFoundError(f"Image does not exist: {image_path}")
+
+    device = resolve_device(DEVICE_NAME)
+    print(f"Selected image: {display_path(image_path)}")
+
+    for model_name in MODEL_NAMES:
+        run_model(model_name, image_path, device)
 
 
 if __name__ == "__main__":
