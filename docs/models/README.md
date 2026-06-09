@@ -16,6 +16,7 @@ Each model-family README should explain:
 
 ## Image Classification
 
+- [EfficientFormer classifiers](efficientformer/README.md): timm EfficientFormer L1, L3, and L7 image classifiers loaded from `models/vit/`.
 - [MobileNetV3 classifiers](mobilenet/README.md): Torchvision MobileNetV3 Small and Large classifiers loaded from `models/cnn/hub/checkpoints/`.
 - [MobileViT classifiers](mobilevit/README.md): Hugging Face MobileViT XXS, XS, and Small image classifiers loaded from `models/vit/`.
 
