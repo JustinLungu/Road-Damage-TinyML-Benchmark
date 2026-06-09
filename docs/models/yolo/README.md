@@ -9,6 +9,8 @@ This folder documents the Ultralytics YOLO object detectors used in the reposito
 
 Both are COCO-pretrained object detectors with 80 classes. In this project they are used as fast object-detection baselines for inference demos and system-performance benchmarks.
 
+For definitions of terms such as anchor-free, C3, C2f, SPPF, neck, stride, and FLOPs, see [definitions.md](definitions.md).
+
 The repo registry names are defined in `src/constants.py`:
 
 ```python
@@ -43,19 +45,77 @@ Sources:
 
 ## Internal Flow
 
-At inference time, both models follow the same high-level path:
+At inference time, both models follow the same broad path:
 
-1. The Ultralytics predictor loads the image path, resizes/letterboxes it to the requested inference size, converts it to a tensor, normalizes it, and batches it.
-2. The backbone applies Conv-BatchNorm-SiLU layers and model-specific blocks:
-   - `yolov5nu`: C3/CSP bottleneck blocks;
-   - `yolov8n`: C2f blocks.
-3. SPPF near the deepest feature map increases receptive field cheaply by pooling at multiple effective scales.
-4. The neck upsamples and concatenates features in a feature-pyramid style path, so high-level semantic features and higher-resolution spatial features meet.
-5. The detection head predicts boxes and class scores at three scales:
-   - stride 8 for smaller objects;
-   - stride 16 for medium objects;
-   - stride 32 for larger objects.
-6. Ultralytics postprocesses raw predictions with confidence filtering and non-maximum suppression, then returns a `Results` object.
+```text
+image file
+  -> Ultralytics preprocessing
+  -> backbone
+  -> SPPF
+  -> neck
+  -> detection head
+  -> postprocessing
+  -> Results object
+```
+
+### 1. Preprocessing
+
+The demo and benchmark pass an image path to Ultralytics:
+
+```python
+model.predict(source=str(image_path), imgsz=IMAGE_SIZE, ...)
+```
+
+Ultralytics then loads the image, resizes and letterboxes it to the requested inference size, converts it to a tensor, normalizes pixel values, and adds a batch dimension. Letterboxing means the image is resized without changing its aspect ratio, then padded where needed.
+
+This is why `IMAGE_SIZE = 640` does not mean the original image must be 640x640. It means the model receives a 640-sized inference tensor. After prediction, boxes are mapped back to the original image pixel coordinates.
+
+### 2. Backbone
+
+The backbone is the feature extractor. It turns raw pixels into feature maps.
+
+Early layers keep more spatial detail and learn simple patterns such as edges, textures, and corners. Deeper layers have lower spatial resolution but stronger semantic information, such as object parts and whole-object cues.
+
+Both models use Conv-BatchNorm-SiLU layers, then model-specific efficient blocks:
+
+- `yolov5nu`: C3/CSP bottleneck blocks;
+- `yolov8n`: C2f blocks.
+
+These blocks exist to extract useful visual features without making the model too large or slow.
+
+### 3. SPPF
+
+SPPF sits near the deepest part of the network. It pools features so the model can use a wider context without a large compute cost.
+
+This helps with objects where context matters. For example, a small visible part may be easier to interpret when the model also sees surrounding structure.
+
+### 4. Neck
+
+The neck mixes feature maps from different depths.
+
+Deep feature maps know more about what is in the image, but they are spatially coarse. Earlier feature maps preserve better location detail, but they are less semantically rich. The neck upsamples deeper features and concatenates them with higher-resolution features so the detector can use both.
+
+This is one reason YOLO can detect objects at different sizes in one forward pass.
+
+### 5. Detection Head
+
+The detection head receives three feature-map scales and predicts boxes/classes from each:
+
+- stride 8: more spatial detail, useful for smaller objects;
+- stride 16: middle scale;
+- stride 32: more context, useful for larger objects.
+
+Both local checkpoints use an anchor-free, objectness-free split head. In practical terms, the model predicts box localization and class scores directly, without older YOLO anchor templates or a separate objectness score.
+
+### 6. Postprocessing
+
+The raw head output still contains many candidate boxes. Ultralytics filters candidates by confidence, applies non-maximum suppression to remove duplicate overlapping boxes, rescales boxes to the original image size, and returns a `Results` object.
+
+For object detection, the part we usually inspect is:
+
+```python
+result.boxes
+```
 
 The important practical consequence is that this repo does not manually prepare image tensors for YOLO. The adapter passes a file path to Ultralytics and lets the library handle preprocessing and postprocessing.
 
