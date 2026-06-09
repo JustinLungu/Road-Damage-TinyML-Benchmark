@@ -17,3 +17,7 @@ Each model-family README should explain:
 ## Image Classification
 
 - [MobileNetV3 classifiers](mobilenet/README.md): Torchvision MobileNetV3 Small and Large classifiers loaded from `models/cnn/hub/checkpoints/`.
+
+## Vision-Language
+
+- [SmolVLM models](smolvlm/README.md): Hugging Face SmolVLM instruct models loaded from `models/vlm/` for image-plus-text prompting.
