@@ -105,7 +105,7 @@ def test_system_performance_runner_flow(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(
         system_performance,
         "get_downloaded_model_names",
-        lambda: ["yolov5nu", "mobilenet_v3_small"],
+        lambda: ["yolov5nu", "smolvlm_2b", "mobilenet_v3_small"],
     )
     assert system_performance.resolve_model_names(
         [system_performance.ALL_LOADED],
@@ -117,7 +117,11 @@ def test_system_performance_runner_flow(monkeypatch, tmp_path) -> None:
             [system_performance.ALL_LOADED, "yolov5nu"],
             parser,
         )
-    monkeypatch.setattr(system_performance, "get_downloaded_model_names", lambda: [])
+    monkeypatch.setattr(
+        system_performance,
+        "get_downloaded_model_names",
+        lambda: ["smolvlm_2b"],
+    )
     with pytest.raises(SystemExit):
         system_performance.resolve_model_names([system_performance.ALL_LOADED], parser)
 

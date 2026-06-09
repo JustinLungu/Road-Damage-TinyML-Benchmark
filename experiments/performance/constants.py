@@ -10,6 +10,9 @@ from src.constants import SYSTEM_PERFORMANCE_RESULTS_CSV
 # Special --model value that expands to every checkpoint already present locally.
 ALL_LOADED = "all-loaded"
 
+# Supported explicitly, but skipped by all-loaded because it can exceed local GPU RAM.
+ALL_LOADED_EXCLUDED_MODELS = {"smolvlm_2b"}
+
 
 ###############
 # Result Paths

@@ -7,6 +7,12 @@ import torch
 from PIL import Image
 
 import src.load_model as load_model_module
+from src.constants import (
+    EFFICIENTFORMER_MODEL_IDS,
+    MOBILEVIT_MODEL_IDS,
+    SMOLVLM_MODEL_IDS,
+    YOLO_MODEL_CHECKPOINTS,
+)
 from src.performance_benchmark.model_inference_adapter import ModelInferenceAdapter
 
 
@@ -90,6 +96,24 @@ def install_fake_model_modules(monkeypatch) -> None:
 
 def make_image(path: Path) -> None:
     Image.new("RGB", (2, 2), color="white").save(path)
+
+
+def test_all_registered_models_route_through_load_model(monkeypatch) -> None:
+    install_fake_model_modules(monkeypatch)
+
+    expected_model_names = (
+        set(YOLO_MODEL_CHECKPOINTS)
+        | {"mobilenet_v3_small", "mobilenet_v3_large"}
+        | set(MOBILEVIT_MODEL_IDS)
+        | set(EFFICIENTFORMER_MODEL_IDS)
+        | set(SMOLVLM_MODEL_IDS)
+    )
+
+    assert set(load_model_module.MODEL_LOADERS) == expected_model_names
+
+    for model_name in sorted(expected_model_names):
+        model = load_model_module.load_model(model_name)
+        assert isinstance(model, FakeModel)
 
 
 def test_model_registry_cache_detection_and_cli(monkeypatch, tmp_path, capsys) -> None:
