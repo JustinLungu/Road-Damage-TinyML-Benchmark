@@ -13,3 +13,7 @@ Each model-family README should explain:
 ## Object Detection
 
 - [YOLO detectors](yolo/README.md): Ultralytics YOLOv5nu and YOLOv8n object detectors loaded from `models/cnn/`.
+
+## Image Classification
+
+- [MobileNetV3 classifiers](mobilenet/README.md): Torchvision MobileNetV3 Small and Large classifiers loaded from `models/cnn/hub/checkpoints/`.
