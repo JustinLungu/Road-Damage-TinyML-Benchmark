@@ -29,7 +29,9 @@ uv run python experiments/performance/system_performance.py --model all-loaded -
 
 The `all-loaded` option checks for model weight files under `models/`. It does
 not select empty cache directories or checkpoints that only exist in a global
-library cache.
+library cache. It also skips models listed in `ALL_LOADED_EXCLUDED_MODELS`,
+currently `smolvlm_2b`, because that checkpoint can exceed common local GPU
+memory. You can still benchmark it explicitly with `--model smolvlm_2b`.
 
 The benchmark uses all validation images by default. Use `--num-images` for a
 smaller run. The same limit is applied to every selected model:

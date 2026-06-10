@@ -30,6 +30,9 @@ Run every checkpoint already downloaded under `models/`:
 uv run python experiments/performance/system_performance.py --model all-loaded --device cuda:0
 ```
 
+`all-loaded` skips models that are known to be too large for common local GPU
+runs, currently `smolvlm_2b`. Explicit model selection still works.
+
 Use `--num-images` for a smaller test run and `-o` to overwrite the existing
 CSV before writing the new results:
 

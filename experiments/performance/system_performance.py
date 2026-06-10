@@ -12,7 +12,11 @@ sys.path.insert(0, str(REPO_ROOT_FOR_IMPORTS))
 from src.constants import (  # noqa: E402
     COCO_IMAGES_DIR,
 )
-from experiments.performance.constants import ALL_LOADED, RESULTS_CSV  # noqa: E402
+from experiments.performance.constants import (  # noqa: E402
+    ALL_LOADED,
+    ALL_LOADED_EXCLUDED_MODELS,
+    RESULTS_CSV,
+)
 from src.load_model import (  # noqa: E402
     MODEL_LOADERS,
     get_downloaded_model_names,
@@ -82,7 +86,11 @@ def resolve_model_names(
             parser.error(f"{ALL_LOADED} cannot be combined with explicit model names.")
 
         # This only selects checkpoints found under models/, not global caches.
-        downloaded_models = get_downloaded_model_names()
+        downloaded_models = [
+            model_name
+            for model_name in get_downloaded_model_names()
+            if model_name not in ALL_LOADED_EXCLUDED_MODELS
+        ]
         if not downloaded_models:
             parser.error("No downloaded model checkpoints were found under models/.")
         return downloaded_models

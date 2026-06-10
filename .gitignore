@@ -6,6 +6,10 @@ images*
 
 !models/README.md
 models*
+!docs/models/
+!docs/models/**
+docs/models/outputs/
+docs/models/*/outputs/
 
 # SonarQube scanner cache/output
 .sonar/
