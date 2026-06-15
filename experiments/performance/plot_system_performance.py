@@ -12,9 +12,9 @@ REPO_ROOT_FOR_IMPORTS = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT_FOR_IMPORTS))
 
 from experiments.performance.constants import (  # noqa: E402
+    ALL_MODELS_DIR,
     DEFAULT_CSV,
-    WITH_VLMS_DIR,
-    WITHOUT_VLMS_DIR,
+    TASK_MODEL_GROUPS,
 )
 
 
@@ -47,26 +47,39 @@ def create_metric_plots(csv_path: Path) -> list[Path]:
 
     output_root = csv_path.parent
     model_names = results["model_name"].astype(str)
-    # Keep one plot set with every model and one set excluding VLM rows.
-    non_vlm_results = results[~model_names.map(is_vlm_model)].copy()
-
     plot_groups = [
-        (WITH_VLMS_DIR, results),
-        (WITHOUT_VLMS_DIR, non_vlm_results),
+        (
+            group_name,
+            results[model_names.isin(group_model_names)].copy(),
+        )
+        for group_name, group_model_names in TASK_MODEL_GROUPS
     ]
+    plot_groups.append((ALL_MODELS_DIR, results))
 
     # Every numeric CSV column except model_name gets its own bar plot.
     metric_columns = [column for column in results.columns if column != "model_name"]
     created_plots = []
 
     for group_name, group_results in plot_groups:
+        output_dir = output_root / group_name
+        remove_stale_plots(output_dir)
         created_plots.extend(
             create_metric_plots_for_group(
                 results=group_results,
                 metric_columns=metric_columns,
-                output_dir=output_root / group_name,
+                output_dir=output_dir,
                 group_name=group_name,
             )
+        )
+
+    known_model_names = set().union(
+        *(group_model_names for _, group_model_names in TASK_MODEL_GROUPS)
+    )
+    unknown_model_names = sorted(set(model_names) - known_model_names)
+    if unknown_model_names:
+        print(
+            "Models included only in all_models because they have no task group: "
+            f"{', '.join(unknown_model_names)}"
         )
 
     return created_plots
@@ -106,8 +119,12 @@ def create_metric_plots_for_group(
     return created_plots
 
 
-def is_vlm_model(model_name: str) -> bool:
-    return "vlm" in model_name.lower()
+def remove_stale_plots(output_dir: Path) -> None:
+    if not output_dir.is_dir():
+        return
+
+    for plot_path in output_dir.glob("*_bar.png"):
+        plot_path.unlink()
 
 
 def make_plot_labels(model_names: list[str]) -> list[str]:

@@ -79,15 +79,23 @@ uv run python experiments/performance/plot_system_performance.py
 
 By default, the script reads
 `results/system_metrics/system_performance_results.csv` and saves PNG plots in
-two folders next to that CSV:
+four folders next to that CSV:
 
-- `results/system_metrics/with_vlms/` contains plots for all models.
-- `results/system_metrics/without_vlms/` contains plots after filtering out VLM
-  model rows such as SmolVLM.
+- `results/system_metrics/image_classification/` compares MobileNet, MobileViT,
+  EfficientFormer, EfficientNet, ResNet, and Inception classifiers.
+- `results/system_metrics/object_detection/` compares YOLO object detectors.
+- `results/system_metrics/semantic_interpretation/` compares SmolVLM models
+  using the fixed semantic-description prompt.
+- `results/system_metrics/all_models/` contains every CSV row for an overall
+  system-cost comparison across tasks.
+
+Each folder contains one bar plot per numeric CSV metric. When the script is
+rerun, stale `*_bar.png` files in these four folders are removed before the new
+plots are written.
 
 ## Files
 
 - `system_performance.py` runs the benchmark and writes the CSV row.
 - `plot_system_performance.py` reads the CSV and creates comparison plots.
 - `constants.py` contains experiment-local constants such as the `all-loaded`
-  CLI token and plot output folder names.
+  CLI token, plot output folder names, and task-specific model groups.

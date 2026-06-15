@@ -52,4 +52,8 @@ plots with:
 uv run python experiments/performance/plot_system_performance.py
 ```
 
+Plots are separated into `image_classification/`, `object_detection/`,
+`semantic_interpretation/`, and `all_models/` under
+`results/system_metrics/`.
+
 See `performance/README.md` for the full benchmark details.

@@ -32,10 +32,15 @@ def test_plot_system_performance_creates_grouped_plots(monkeypatch, tmp_path, ca
     csv_path = tmp_path / "system_performance_results.csv"
     pd.DataFrame(
         {
-            "model_name": ["yolov5nu", "smolvlm_256m", "yolov5nu"],
-            "fps": [100.0, 2.0, 110.0],
-            "avg_power_w": [20.0, 50.0, 19.0],
-            "not_numeric": ["a", "b", "c"],
+            "model_name": [
+                "yolov5nu",
+                "smolvlm_256m",
+                "mobilenet_v2",
+                "yolov5nu",
+            ],
+            "fps": [100.0, 2.0, 80.0, 110.0],
+            "avg_power_w": [20.0, 50.0, 15.0, 19.0],
+            "not_numeric": ["a", "b", "c", "d"],
         }
     ).to_csv(csv_path, index=False)
     plotted = []
@@ -56,15 +61,22 @@ def test_plot_system_performance_creates_grouped_plots(monkeypatch, tmp_path, ca
     plot_system_performance.main()
     created_lines = capsys.readouterr().out.splitlines()
 
-    assert "Created 4 plots:" in created_lines
-    assert plotted[0][0]["model_name"].tolist() == [
+    assert "Created 8 plots:" in created_lines
+    assert plotted[0][0]["model_name"].tolist() == ["mobilenet_v2"]
+    assert plotted[2][0]["model_name"].tolist() == ["yolov5nu #1", "yolov5nu #2"]
+    assert plotted[4][0]["model_name"].tolist() == ["smolvlm_256m"]
+    assert plotted[6][0]["model_name"].tolist() == [
         "yolov5nu #1",
         "smolvlm_256m",
+        "mobilenet_v2",
         "yolov5nu #2",
     ]
-    assert plotted[2][0]["model_name"].tolist() == ["yolov5nu #1", "yolov5nu #2"]
-    assert plot_system_performance.is_vlm_model("SmolVLM_256M") is True
-    assert plot_system_performance.is_vlm_model("yolov5nu") is False
+    assert {plot[2].parent.name for plot in plotted} == {
+        "image_classification",
+        "object_detection",
+        "semantic_interpretation",
+        "all_models",
+    }
     assert plot_system_performance.format_metric_name("avg_latency_ms") == (
         "Avg Latency Ms"
     )
@@ -90,9 +102,15 @@ def test_plot_system_performance_creates_grouped_plots(monkeypatch, tmp_path, ca
         results=pd.DataFrame(columns=["model_name", "fps"]),
         metric_columns=["fps"],
         output_dir=tmp_path,
-        group_name="without_vlms",
+        group_name="semantic_interpretation",
     )
     assert empty_group == []
+
+    stale_plot = tmp_path / "stale" / "old_bar.png"
+    stale_plot.parent.mkdir()
+    stale_plot.write_text("old", encoding="utf-8")
+    plot_system_performance.remove_stale_plots(stale_plot.parent)
+    assert stale_plot.exists() is False
 
 
 def test_system_performance_runner_flow(monkeypatch, tmp_path) -> None:

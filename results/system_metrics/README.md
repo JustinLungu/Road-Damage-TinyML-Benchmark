@@ -7,12 +7,21 @@ visualize one metric at a time so models can be compared quickly.
 ## Files
 
 - `system_performance_results.csv` stores one benchmark row per model run.
-- `with_vlms/` contains plots for every row in the CSV, including VLM models.
-- `without_vlms/` contains the same plots after filtering out VLM rows.
+- `image_classification/` contains plots for MobileNet, MobileViT,
+  EfficientFormer, EfficientNet, ResNet, and Inception models.
+- `object_detection/` contains plots for YOLO object detectors.
+- `semantic_interpretation/` contains plots for SmolVLM models.
+- `all_models/` contains plots for every row in the CSV.
 
-The VLM rows are useful for comparing system cost, but they are not doing the
-same task as YOLO, CNN, or ViT models. SmolVLM uses a fixed prompt forward pass:
-`Describe the image briefly.`
+The task-specific folders compare models doing the same kind of work.
+`all_models/` is useful for comparing overall system cost, but its models do
+not produce equivalent outputs. SmolVLM uses a fixed prompt forward pass:
+`Describe the image briefly.`, classifiers return ImageNet logits, and YOLO
+returns object detections.
+
+The plot script derives these groups from the model registries in
+`src/constants.py`. A future model that has not been assigned to a task group
+is included only in `all_models/` and reported in the script output.
 
 ## How to Read the Plots
 
