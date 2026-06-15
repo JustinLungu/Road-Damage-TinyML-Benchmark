@@ -10,6 +10,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATASETS_DIR = PROJECT_ROOT / "datasets"
 COCO_DIR = DATASETS_DIR / "coco"
 COCO_IMAGES_DIR = COCO_DIR / "images"
+COCO_INSTANCES_VAL_ANNOTATIONS = COCO_DIR / "annotations" / "instances_val2017.json"
+IMAGENETTE_DIR = DATASETS_DIR / "imagenette"
+IMAGENETTE_VALIDATION_LABELS = IMAGENETTE_DIR / "validation_labels.csv"
 
 MODELS_DIR = PROJECT_ROOT / "models"
 CNN_DIR = MODELS_DIR / "cnn"
@@ -21,6 +24,10 @@ RESULTS_DIR = PROJECT_ROOT / "results"
 SYSTEM_METRICS_RESULTS_DIR = RESULTS_DIR / "system_metrics"
 SYSTEM_PERFORMANCE_RESULTS_CSV = (
     SYSTEM_METRICS_RESULTS_DIR / "system_performance_results.csv"
+)
+DETECTION_METRICS_RESULTS_DIR = RESULTS_DIR / "detection_metrics"
+DETECTION_BENCHMARK_RESULTS_CSV = (
+    DETECTION_METRICS_RESULTS_DIR / "detection_benchmark_results.csv"
 )
 
 

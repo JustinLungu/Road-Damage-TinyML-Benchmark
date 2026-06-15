@@ -7,6 +7,8 @@ experiment-specific documentation.
 
 - `performance/` contains the system performance benchmark and plotting scripts
   for comparing loaded models on COCO validation images.
+- `detection/` contains prediction-quality benchmarks for COCO object detection
+  and manifest-labeled image classification.
 
 ## Quick Start
 
@@ -57,3 +59,5 @@ Plots are separated into `image_classification/`, `object_detection/`,
 `results/system_metrics/`.
 
 See `performance/README.md` for the full benchmark details.
+
+See `detection/README.md` for detection and classification metric definitions.

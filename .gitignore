@@ -18,6 +18,8 @@ docs/models/*/outputs/
 # Results
 !results/system_metrics/README.md
 results/system_metrics/*
+results/detection_metrics/*
+!results/detection_metrics/README.md
 
 
 
