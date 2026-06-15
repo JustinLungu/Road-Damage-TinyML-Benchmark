@@ -7,6 +7,7 @@ from src.constants import VIT_DIR, VLM_DIR
 from src.performance_benchmark.constants import (
     EFFICIENTNET_MODELS,
     EFFICIENTFORMER_MODELS,
+    INCEPTION_MODELS,
     MOBILEVIT_MODELS,
     MOBILENET_MODELS,
     RESNET_MODELS,
@@ -45,6 +46,8 @@ class ModelInferenceAdapter:
             return self._prepare_efficientnet()
         if self.model_name in RESNET_MODELS:
             return self._prepare_resnet()
+        if self.model_name in INCEPTION_MODELS:
+            return self._prepare_inception()
         if self.model_name in MOBILEVIT_MODELS:
             return self._prepare_mobilevit()
         if self.model_name in EFFICIENTFORMER_MODELS:
@@ -91,6 +94,13 @@ class ModelInferenceAdapter:
         from torchvision.models import ResNet18_Weights
 
         self.transform = ResNet18_Weights.DEFAULT.transforms()
+        self.model.to(self.device).eval()
+        return self._infer_transformed_tensor
+
+    def _prepare_inception(self) -> InferenceFunction:
+        from torchvision.models import Inception_V3_Weights
+
+        self.transform = Inception_V3_Weights.DEFAULT.transforms()
         self.model.to(self.device).eval()
         return self._infer_transformed_tensor
 

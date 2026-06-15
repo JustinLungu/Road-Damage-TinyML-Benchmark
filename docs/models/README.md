@@ -18,6 +18,7 @@ Each model-family README should explain:
 
 - [EfficientNet-B0 classifier](efficientnet/README.md): Torchvision EfficientNet-B0 image classifier loaded from `models/cnn/hub/checkpoints/`.
 - [EfficientFormer classifiers](efficientformer/README.md): timm EfficientFormer L1, L3, and L7 image classifiers loaded from `models/vit/`.
+- [InceptionV3 classifier](inception/README.md): Torchvision InceptionV3 image classifier loaded from `models/cnn/hub/checkpoints/`.
 - [MobileNet classifiers](mobilenet/README.md): Torchvision MobileNetV2 and MobileNetV3 Small/Large classifiers loaded from `models/cnn/hub/checkpoints/`.
 - [MobileViT classifiers](mobilevit/README.md): Hugging Face MobileViT XXS, XS, and Small image classifiers loaded from `models/vit/`.
 - [ResNet18 classifier](resnet/README.md): Torchvision ResNet18 image classifier loaded from `models/cnn/hub/checkpoints/`.

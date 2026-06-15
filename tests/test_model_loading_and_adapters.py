@@ -10,6 +10,7 @@ import src.load_model as load_model_module
 from src.constants import (
     EFFICIENTNET_MODEL_CHECKPOINTS,
     EFFICIENTFORMER_MODEL_IDS,
+    INCEPTION_MODEL_CHECKPOINTS,
     MOBILENET_MODEL_CHECKPOINTS,
     MOBILEVIT_MODEL_IDS,
     RESNET_MODEL_CHECKPOINTS,
@@ -70,11 +71,13 @@ def install_fake_model_modules(monkeypatch) -> None:
     )
     torchvision_models.EfficientNet_B0_Weights = SimpleNamespace(DEFAULT=FakeWeights())
     torchvision_models.ResNet18_Weights = SimpleNamespace(DEFAULT=FakeWeights())
+    torchvision_models.Inception_V3_Weights = SimpleNamespace(DEFAULT=FakeWeights())
     torchvision_models.mobilenet_v2 = lambda weights: FakeModel("v2")
     torchvision_models.mobilenet_v3_small = lambda weights: FakeModel("small")
     torchvision_models.mobilenet_v3_large = lambda weights: FakeModel("large")
     torchvision_models.efficientnet_b0 = lambda weights: FakeModel("efficientnet_b0")
     torchvision_models.resnet18 = lambda weights: FakeModel("resnet18")
+    torchvision_models.inception_v3 = lambda weights: FakeModel("inception_v3")
     torchvision.models = torchvision_models
     monkeypatch.setitem(sys.modules, "torchvision", torchvision)
     monkeypatch.setitem(sys.modules, "torchvision.models", torchvision_models)
@@ -115,6 +118,7 @@ def test_all_registered_models_route_through_load_model(monkeypatch) -> None:
         | set(MOBILENET_MODEL_CHECKPOINTS)
         | set(EFFICIENTNET_MODEL_CHECKPOINTS)
         | set(RESNET_MODEL_CHECKPOINTS)
+        | set(INCEPTION_MODEL_CHECKPOINTS)
         | set(MOBILEVIT_MODEL_IDS)
         | set(EFFICIENTFORMER_MODEL_IDS)
         | set(SMOLVLM_MODEL_IDS)
@@ -216,6 +220,7 @@ def test_loader_functions_use_external_factories(monkeypatch) -> None:
     assert load_model_module.load_mobilenet_v3_large().eval_called is True
     assert load_model_module.load_efficientnet_b0().eval_called is True
     assert load_model_module.load_resnet18().eval_called is True
+    assert load_model_module.load_inception_v3().eval_called is True
     assert (
         load_model_module.load_mobilevit("apple/mobilevit-small", "mobilevit_s").name
         == "mobilevit"
@@ -253,6 +258,7 @@ def test_adapter_prepare_paths_run_without_real_models(monkeypatch, tmp_path) ->
         "mobilenet_v3_large",
         "efficientnet_b0",
         "resnet18",
+        "inception_v3",
         "mobilevit_xxs",
         "efficientformer_l1",
         "smolvlm_256m",

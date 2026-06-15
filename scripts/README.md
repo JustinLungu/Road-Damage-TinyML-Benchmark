@@ -48,6 +48,7 @@ You can also use the explicit flag:
 ```bash
 ./scripts/inference_demo.sh --model mobilenet
 ./scripts/inference_demo.sh --model resnet
+./scripts/inference_demo.sh --model inception
 ./scripts/inference_demo.sh -m smolvlm
 ```
 
@@ -56,6 +57,7 @@ The argument must match a directory under `docs/models/` that contains a `demo.p
 ```text
 efficientformer
 efficientnet
+inception
 mobilenet
 mobilevit
 resnet
