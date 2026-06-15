@@ -13,7 +13,8 @@ models/
 │       ├── efficientnet_b0_rwightman-7f5810bc.pth
 │       ├── mobilenet_v2-7ebf99e0.pth
 │       ├── mobilenet_v3_small-047dcff4.pth
-│       └── mobilenet_v3_large-5c1a4163.pth
+│       ├── mobilenet_v3_large-5c1a4163.pth
+│       └── resnet18-f37072fd.pth
 ├── vit/
 │   ├── mobilevit_xxs/
 │   ├── mobilevit_xs/
@@ -27,8 +28,8 @@ models/
     └── smolvlm_2b/
 ```
 
-The YOLO checkpoints are stored directly in `cnn/`. EfficientNet-B0 and
-MobileNetV2/V3 weights are stored by Torchvision under
+The YOLO checkpoints are stored directly in `cnn/`. EfficientNet-B0,
+MobileNetV2/V3, and ResNet18 weights are stored by Torchvision under
 `cnn/hub/checkpoints/`. MobileViT, EfficientFormer, and SmolVLM use
 library-managed cache folders, so their internal file layout may vary between
 library versions.

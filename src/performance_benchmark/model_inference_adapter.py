@@ -9,6 +9,7 @@ from src.performance_benchmark.constants import (
     EFFICIENTFORMER_MODELS,
     MOBILEVIT_MODELS,
     MOBILENET_MODELS,
+    RESNET_MODELS,
     SMOLVLM_MODELS,
     SMOLVLM_PROMPT,
     YOLO_MODELS,
@@ -42,6 +43,8 @@ class ModelInferenceAdapter:
             return self._prepare_mobilenet()
         if self.model_name in EFFICIENTNET_MODELS:
             return self._prepare_efficientnet()
+        if self.model_name in RESNET_MODELS:
+            return self._prepare_resnet()
         if self.model_name in MOBILEVIT_MODELS:
             return self._prepare_mobilevit()
         if self.model_name in EFFICIENTFORMER_MODELS:
@@ -81,6 +84,13 @@ class ModelInferenceAdapter:
         from torchvision.models import EfficientNet_B0_Weights
 
         self.transform = EfficientNet_B0_Weights.DEFAULT.transforms()
+        self.model.to(self.device).eval()
+        return self._infer_transformed_tensor
+
+    def _prepare_resnet(self) -> InferenceFunction:
+        from torchvision.models import ResNet18_Weights
+
+        self.transform = ResNet18_Weights.DEFAULT.transforms()
         self.model.to(self.device).eval()
         return self._infer_transformed_tensor
 

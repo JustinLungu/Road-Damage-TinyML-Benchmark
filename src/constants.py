@@ -46,6 +46,11 @@ EFFICIENTNET_MODEL_CHECKPOINTS = {
     "efficientnet_b0": "efficientnet_b0_rwightman-7f5810bc.pth",
 }
 
+# Torchvision downloads ResNet weights under models/cnn/hub/checkpoints/.
+RESNET_MODEL_CHECKPOINTS = {
+    "resnet18": "resnet18-f37072fd.pth",
+}
+
 # Hugging Face model IDs used by transformers.
 MOBILEVIT_MODEL_IDS = {
     "mobilevit_xxs": "apple/mobilevit-xx-small",
@@ -85,6 +90,10 @@ MODEL_CHECKPOINT_PATHS: dict[str, Path] = {
     **{
         model_name: CNN_DIR / "hub" / "checkpoints" / checkpoint_name
         for model_name, checkpoint_name in EFFICIENTNET_MODEL_CHECKPOINTS.items()
+    },
+    **{
+        model_name: CNN_DIR / "hub" / "checkpoints" / checkpoint_name
+        for model_name, checkpoint_name in RESNET_MODEL_CHECKPOINTS.items()
     },
 }
 
