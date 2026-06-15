@@ -10,6 +10,13 @@ Download the COCO 2017 validation images and annotations:
 ./scripts/download_coco_val.sh
 ```
 
+Download the labeled Imagenette validation split used by the classification
+accuracy benchmark:
+
+```bash
+./scripts/download_imagenette_val.sh
+```
+
 Download the annotated training split for one RDD2022 country. India is the
 default initial subset:
 

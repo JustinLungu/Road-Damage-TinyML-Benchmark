@@ -1,5 +1,6 @@
 annotations*
 images*
+datasets/imagenette/validation_labels.csv
 
 .vscode/
 *.pt
