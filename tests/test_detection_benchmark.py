@@ -1,13 +1,16 @@
 import argparse
 import csv
 import json
+import sys
 from dataclasses import asdict
 from pathlib import Path
 
+import pandas as pd
 import pytest
 import torch
 
 import experiments.detection.detection_benchmark as experiment
+import experiments.detection.plot_detection_benchmark as plot_detection
 import src.detection_benchmark.classification_benchmark as classification_module
 import src.detection_benchmark.object_detection_benchmark as detection_module
 from src.detection_benchmark.benchmark_result import DetectionBenchmarkResult
@@ -325,3 +328,110 @@ def test_detection_experiment_model_resolution_validation_and_routing(
         iou_threshold=0.5,
     )
     assert appended == [(make_result("yolov8n"), experiment.RESULTS_CSV)]
+
+
+def test_detection_plotting_creates_task_and_common_metric_plots(
+    monkeypatch,
+    tmp_path,
+    capsys,
+) -> None:
+    csv_path = tmp_path / "detection_benchmark_results.csv"
+    pd.DataFrame(
+        {
+            "model_name": [
+                "yolov8n",
+                "mobilenet_v2",
+                "mobilenet_v2",
+            ],
+            "task": [
+                "object_detection",
+                "image_classification",
+                "image_classification",
+            ],
+            "map_50_95": [0.4, None, None],
+            "map_50": [0.5, None, None],
+            "map_75": [0.3, None, None],
+            "precision": [0.7, 0.8, 0.9],
+            "recall": [0.5, 0.6, 0.7],
+            "f1_score": [0.58, 0.68, 0.78],
+            "mean_iou": [0.85, None, None],
+            "top1_accuracy": [None, 0.65, 0.7],
+            "top5_accuracy": [None, 0.9, 0.92],
+        }
+    ).to_csv(csv_path, index=False)
+
+    task_plots = []
+    common_plots = []
+    real_plot_bar_chart = plot_detection.plot_bar_chart
+
+    def fake_task_plot(plot_data, metric_column, task_name, output_path) -> None:
+        task_plots.append(
+            (plot_data.copy(), metric_column, task_name, output_path)
+        )
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text("task plot", encoding="utf-8")
+
+    def fake_common_plot(plot_data, metric_column, output_path) -> None:
+        common_plots.append((plot_data.copy(), metric_column, output_path))
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text("common plot", encoding="utf-8")
+
+    monkeypatch.setattr(plot_detection, "plot_task_metric", fake_task_plot)
+    monkeypatch.setattr(plot_detection, "plot_common_metric", fake_common_plot)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["plot_detection_benchmark.py", "--csv", str(csv_path)],
+    )
+
+    plot_detection.main()
+    output_lines = capsys.readouterr().out.splitlines()
+
+    assert "Created 15 plots:" in output_lines
+    assert len(task_plots) == 12
+    assert len(common_plots) == 3
+    assert {plot[3].parent.name for plot in task_plots} == {
+        "image_classification",
+        "object_detection",
+    }
+    assert {plot[2].parent.name for plot in common_plots} == {"common_metrics"}
+    assert task_plots[0][0]["model_name"].tolist() == [
+        "mobilenet_v2 #1",
+        "mobilenet_v2 #2",
+    ]
+    assert common_plots[0][0]["task"].tolist() == [
+        "object_detection",
+        "image_classification",
+        "image_classification",
+    ]
+    assert plot_detection.format_metric_name("map_50_95") == "mAP 50-95"
+    assert plot_detection.format_metric_name("top1_accuracy") == "Top-1 Accuracy"
+
+    real_output = tmp_path / "real" / "metric_bar.png"
+    real_plot_bar_chart(
+        plot_data=pd.DataFrame(
+            {
+                "model_name": ["model_a", "model_b"],
+                "f1_score": [0.5, 0.75],
+            }
+        ),
+        metric_column="f1_score",
+        output_path=real_output,
+        colors=["#4C78A8", "#F58518"],
+        title="F1 Score",
+    )
+    assert real_output.is_file()
+
+    with pytest.raises(FileNotFoundError, match="does not exist"):
+        plot_detection.create_detection_plots(tmp_path / "missing.csv")
+
+    invalid_csv = tmp_path / "invalid.csv"
+    pd.DataFrame({"model_name": ["model"]}).to_csv(invalid_csv, index=False)
+    with pytest.raises(ValueError, match="task"):
+        plot_detection.create_detection_plots(invalid_csv)
+
+    stale_plot = tmp_path / "stale" / "old_bar.png"
+    stale_plot.parent.mkdir()
+    stale_plot.write_text("old", encoding="utf-8")
+    plot_detection.remove_stale_plots(stale_plot.parent)
+    assert stale_plot.exists() is False

@@ -28,3 +28,21 @@ The default classification rows use Imagenette, a ten-class subset of ImageNet.
 Compare rows only when `dataset_name` and `split` match.
 
 Do not compare classification scores directly with object-detection scores.
+
+## Plot Folders
+
+Run:
+
+```bash
+uv run python experiments/detection/plot_detection_benchmark.py
+```
+
+This creates:
+
+- `object_detection/` for YOLO-only detection metrics.
+- `image_classification/` for classifier-only metrics.
+- `common_metrics/` for precision, recall, and F1 across every model.
+
+Common plots use blue for image classification and orange for object detection.
+They also include a warning that shared metric names retain task-specific
+definitions and are calculated on different datasets.

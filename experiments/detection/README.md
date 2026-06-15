@@ -72,3 +72,35 @@ Rows are appended to:
 
 Use `-o` to remove the previous CSV before the current run. Multiple selected
 models run in separate processes to release model memory between evaluations.
+
+## Plot Results
+
+Create the detection benchmark plots after the CSV has been populated:
+
+```bash
+uv run python experiments/detection/plot_detection_benchmark.py
+```
+
+The script creates three folders under `results/detection_metrics/`:
+
+- `object_detection/` contains mAP 50-95, mAP 50, mAP 75, precision, recall,
+  F1, and mean IoU plots for YOLO models.
+- `image_classification/` contains top-1 accuracy, top-5 accuracy, precision,
+  recall, and F1 plots for classifiers.
+- `common_metrics/` contains precision, recall, and F1 plots with every model.
+  Blue bars represent image classification and orange bars represent object
+  detection.
+
+The common plots compare identically named metrics, but those metrics have
+task-specific definitions and use different datasets. They provide context
+across the complete model set; they are not a single cross-task leaderboard.
+
+Use `--csv` to plot another compatible result file:
+
+```bash
+uv run python experiments/detection/plot_detection_benchmark.py \
+  --csv path/to/detection_benchmark_results.csv
+```
+
+Existing `*_bar.png` files in the three output folders are removed before new
+plots are written.
