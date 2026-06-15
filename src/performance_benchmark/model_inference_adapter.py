@@ -5,6 +5,7 @@ import torch
 
 from src.constants import VIT_DIR, VLM_DIR
 from src.performance_benchmark.constants import (
+    EFFICIENTNET_MODELS,
     EFFICIENTFORMER_MODELS,
     MOBILEVIT_MODELS,
     MOBILENET_MODELS,
@@ -39,6 +40,8 @@ class ModelInferenceAdapter:
             return self._infer_yolo
         if self.model_name in MOBILENET_MODELS:
             return self._prepare_mobilenet()
+        if self.model_name in EFFICIENTNET_MODELS:
+            return self._prepare_efficientnet()
         if self.model_name in MOBILEVIT_MODELS:
             return self._prepare_mobilevit()
         if self.model_name in EFFICIENTFORMER_MODELS:
@@ -71,6 +74,13 @@ class ModelInferenceAdapter:
             weights = MobileNet_V3_Large_Weights.DEFAULT
 
         self.transform = weights.transforms()
+        self.model.to(self.device).eval()
+        return self._infer_transformed_tensor
+
+    def _prepare_efficientnet(self) -> InferenceFunction:
+        from torchvision.models import EfficientNet_B0_Weights
+
+        self.transform = EfficientNet_B0_Weights.DEFAULT.transforms()
         self.model.to(self.device).eval()
         return self._infer_transformed_tensor
 

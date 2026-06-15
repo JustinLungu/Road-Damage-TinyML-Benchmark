@@ -41,6 +41,11 @@ MOBILENET_MODEL_CHECKPOINTS = {
     "mobilenet_v3_large": "mobilenet_v3_large-5c1a4163.pth",
 }
 
+# Torchvision downloads EfficientNet weights under models/cnn/hub/checkpoints/.
+EFFICIENTNET_MODEL_CHECKPOINTS = {
+    "efficientnet_b0": "efficientnet_b0_rwightman-7f5810bc.pth",
+}
+
 # Hugging Face model IDs used by transformers.
 MOBILEVIT_MODEL_IDS = {
     "mobilevit_xxs": "apple/mobilevit-xx-small",
@@ -76,6 +81,10 @@ MODEL_CHECKPOINT_PATHS: dict[str, Path] = {
     **{
         model_name: CNN_DIR / "hub" / "checkpoints" / checkpoint_name
         for model_name, checkpoint_name in MOBILENET_MODEL_CHECKPOINTS.items()
+    },
+    **{
+        model_name: CNN_DIR / "hub" / "checkpoints" / checkpoint_name
+        for model_name, checkpoint_name in EFFICIENTNET_MODEL_CHECKPOINTS.items()
     },
 }
 

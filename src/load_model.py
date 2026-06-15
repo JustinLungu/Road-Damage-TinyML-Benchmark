@@ -56,6 +56,15 @@ def load_mobilenet_v3_large() -> Any:
     return mobilenet_v3_large(weights=MobileNet_V3_Large_Weights.DEFAULT).eval()
 
 
+def load_efficientnet_b0() -> Any:
+    # Torchvision reads TORCH_HOME when deciding where pretrained weights live.
+    os.environ["TORCH_HOME"] = str(CNN_DIR)
+
+    from torchvision.models import EfficientNet_B0_Weights, efficientnet_b0
+
+    return efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT).eval()
+
+
 def load_mobilevit(model_id: str, local_name: str) -> Any:
     from transformers import AutoModelForImageClassification
 
@@ -113,6 +122,7 @@ MODEL_LOADERS: dict[str, Callable[[], Any]] = {
     "mobilenet_v2": load_mobilenet_v2,
     "mobilenet_v3_small": load_mobilenet_v3_small,
     "mobilenet_v3_large": load_mobilenet_v3_large,
+    "efficientnet_b0": load_efficientnet_b0,
     # Lightweight vision transformers
     **{
         model_name: make_mobilevit_loader(model_name, model_id)
