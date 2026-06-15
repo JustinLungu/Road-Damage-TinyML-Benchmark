@@ -10,6 +10,9 @@ models/
 │   ├── yolov5nu.pt
 │   ├── yolov8n.pt
 │   └── hub/checkpoints/
+│       ├── mobilenet_v2-7ebf99e0.pth
+│       ├── mobilenet_v3_small-047dcff4.pth
+│       └── mobilenet_v3_large-5c1a4163.pth
 ├── vit/
 │   ├── mobilevit_xxs/
 │   ├── mobilevit_xs/
@@ -23,7 +26,7 @@ models/
     └── smolvlm_2b/
 ```
 
-The YOLO checkpoints are stored directly in `cnn/`. MobileNetV3 weights are
+The YOLO checkpoints are stored directly in `cnn/`. MobileNetV2/V3 weights are
 stored by Torchvision under `cnn/hub/checkpoints/`. MobileViT,
 EfficientFormer, and SmolVLM use library-managed cache folders, so their
 internal file layout may vary between library versions.

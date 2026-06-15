@@ -14,7 +14,9 @@ This is different from YOLO object detection, which returns object boxes and cla
 
 ImageNet-1K is a common image-classification benchmark with 1000 object/category classes.
 
-The local MobileNetV3 checkpoints are pretrained on ImageNet-1K, so their output vector has 1000 values. Each output position corresponds to one ImageNet class.
+The local MobileNetV2 and MobileNetV3 checkpoints are pretrained on
+ImageNet-1K, so their output vector has 1000 values. Each output position
+corresponds to one ImageNet class.
 
 ## Logits
 
@@ -44,7 +46,8 @@ If `TOP_K = 5`, the demo prints the five most likely ImageNet classes. This is u
 
 Preprocessing prepares the original image for the model.
 
-Torchvision MobileNetV3 weights include the exact transforms expected by each checkpoint. Those transforms usually:
+Torchvision MobileNet weights include the exact transforms expected by each
+checkpoint. Those transforms usually:
 
 1. resize the image;
 2. crop the center region;
@@ -59,6 +62,7 @@ Resize changes the image scale. Center crop takes a fixed-size crop from the cen
 
 For the local default weights:
 
+- `mobilenet_v2`: resize to 232, center crop to 224;
 - `mobilenet_v3_small`: resize to 256, center crop to 224;
 - `mobilenet_v3_large`: resize to 232, center crop to 224.
 
@@ -104,11 +108,44 @@ An inverted residual block is a MobileNet block that expands channels, applies a
 
 The "inverted" part means the block is wide in the middle and narrow at the input/output. This is the opposite of older bottleneck blocks that are narrow in the middle.
 
+## Linear Bottleneck
+
+A linear bottleneck is the narrow projection at the end of a MobileNetV2
+inverted residual block.
+
+The block expands features, processes them with a depthwise convolution, then
+projects them back to fewer channels. MobileNetV2 does not apply another
+non-linear activation after this final projection. The intent is to avoid
+destroying useful information when the representation is compressed.
+
+## Residual Connection
+
+A residual connection adds a block's input to its output when their shapes
+match.
+
+This gives information and gradients a direct path through the network.
+MobileNetV2 inverted residual blocks use this connection when their stride is
+one and the input/output channel counts match.
+
+## ReLU6
+
+ReLU6 is an activation that clamps values to the range from zero to six:
+
+```text
+ReLU6(x) = min(max(x, 0), 6)
+```
+
+MobileNetV2 uses ReLU6 inside its stem and expanded block representations. The
+bounded activation was designed to behave predictably in lower-precision mobile
+inference.
+
 ## Squeeze-and-Excitation
 
 Squeeze-and-excitation, often shortened to SE, lets the network reweight channels based on global image context.
 
-It helps the model emphasize useful feature channels and suppress less useful ones.
+It helps the model emphasize useful feature channels and suppress less useful
+ones. The local MobileNetV3 models use SE in selected blocks; MobileNetV2 does
+not.
 
 ## h-swish
 
@@ -120,7 +157,9 @@ MobileNetV3 uses hardware-aware activation choices like h-swish to keep inferenc
 
 Parameters are learned weights in the model.
 
-More parameters can increase model capacity, but they also increase model size and memory use. MobileNetV3 Small has fewer parameters than MobileNetV3 Large.
+More parameters can increase model capacity, but they also increase model size
+and memory use. MobileNetV3 Small has the fewest parameters locally,
+MobileNetV2 is in the middle, and MobileNetV3 Large has the most.
 
 ## FLOPs
 
@@ -128,4 +167,6 @@ FLOPs means floating-point operations. It approximates how much computation a mo
 
 Lower FLOPs usually means faster and more energy-efficient inference, although actual speed also depends on hardware and implementation details.
 
-Torchvision reports MobileNetV3 Small as much cheaper than MobileNetV3 Large, which is why the small model is useful when speed and memory matter more than top accuracy.
+Torchvision reports MobileNetV3 Small as the cheapest local variant by FLOPs.
+MobileNetV2 uses more operations than both V3 variants with the selected
+pretrained weights, but it remains an important simple edge-oriented baseline.

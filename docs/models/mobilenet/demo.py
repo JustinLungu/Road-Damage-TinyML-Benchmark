@@ -16,6 +16,7 @@ MODEL_DOCS_DIR = Path(__file__).resolve().parent
 # Allow imports from src/ when this file is executed directly.
 sys.path.insert(0, str(REPO_ROOT))
 
+from src.constants import MOBILENET_MODEL_CHECKPOINTS  # noqa: E402
 from src.load_model import load_model  # noqa: E402
 from src.performance_benchmark.utils import load_rgb_image, resolve_device  # noqa: E402
 
@@ -24,8 +25,8 @@ from src.performance_benchmark.utils import load_rgb_image, resolve_device  # no
 # Demo Config
 #############
 
-SUPPORTED_MODEL_NAMES = ("mobilenet_v3_small", "mobilenet_v3_large")
-MODEL_NAMES = ["mobilenet_v3_small", "mobilenet_v3_large"]
+SUPPORTED_MODEL_NAMES = tuple(MOBILENET_MODEL_CHECKPOINTS)
+MODEL_NAMES = ["mobilenet_v2", "mobilenet_v3_small", "mobilenet_v3_large"]
 
 # Manual-image mode: used when USE_RANDOM_IMAGE is False.
 IMAGE_PATH = REPO_ROOT / "datasets" / "coco" / "images" / "000000047585.jpg"
@@ -95,10 +96,13 @@ def validate_model_names() -> None:
 def get_weights(model_name: str) -> Any:
     """Return the Torchvision weights object with transforms and labels."""
     from torchvision.models import (
+        MobileNet_V2_Weights,
         MobileNet_V3_Large_Weights,
         MobileNet_V3_Small_Weights,
     )
 
+    if model_name == "mobilenet_v2":
+        return MobileNet_V2_Weights.DEFAULT
     if model_name == "mobilenet_v3_small":
         return MobileNet_V3_Small_Weights.DEFAULT
     if model_name == "mobilenet_v3_large":
@@ -150,9 +154,7 @@ def print_classification_table(rows: list[dict[str, Any]]) -> None:
     print(divider)
     for row in formatted_rows:
         print(
-            "  ".join(
-                value.ljust(widths[column]) for column, value in enumerate(row)
-            )
+            "  ".join(value.ljust(widths[column]) for column, value in enumerate(row))
         )
 
 

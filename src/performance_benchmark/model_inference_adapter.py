@@ -58,11 +58,14 @@ class ModelInferenceAdapter:
 
     def _prepare_mobilenet(self) -> InferenceFunction:
         from torchvision.models import (
+            MobileNet_V2_Weights,
             MobileNet_V3_Large_Weights,
             MobileNet_V3_Small_Weights,
         )
 
-        if self.model_name == "mobilenet_v3_small":
+        if self.model_name == "mobilenet_v2":
+            weights = MobileNet_V2_Weights.DEFAULT
+        elif self.model_name == "mobilenet_v3_small":
             weights = MobileNet_V3_Small_Weights.DEFAULT
         else:
             weights = MobileNet_V3_Large_Weights.DEFAULT

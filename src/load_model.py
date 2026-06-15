@@ -29,6 +29,15 @@ def load_ultralytics_model(checkpoint_name: str) -> Any:
     return YOLO(str(checkpoint_path))
 
 
+def load_mobilenet_v2() -> Any:
+    # Torchvision reads TORCH_HOME when deciding where pretrained weights live.
+    os.environ["TORCH_HOME"] = str(CNN_DIR)
+
+    from torchvision.models import MobileNet_V2_Weights, mobilenet_v2
+
+    return mobilenet_v2(weights=MobileNet_V2_Weights.DEFAULT).eval()
+
+
 def load_mobilenet_v3_small() -> Any:
     # Torchvision reads TORCH_HOME when deciding where pretrained weights live.
     os.environ["TORCH_HOME"] = str(CNN_DIR)
@@ -101,6 +110,7 @@ MODEL_LOADERS: dict[str, Callable[[], Any]] = {
         for model_name, checkpoint_name in YOLO_MODEL_CHECKPOINTS.items()
     },
     # CNN / image classification
+    "mobilenet_v2": load_mobilenet_v2,
     "mobilenet_v3_small": load_mobilenet_v3_small,
     "mobilenet_v3_large": load_mobilenet_v3_large,
     # Lightweight vision transformers

@@ -10,7 +10,7 @@ accuracy.
 - `performance_benchmark.py` contains the main `PerformanceBenchmark` class
   that runs warmup passes, times inference, and creates the final result.
 - `model_inference_adapter.py` prepares a consistent inference call for each
-  supported model family: YOLO, MobileNetV3, MobileViT, EfficientFormer, and
+  supported model family: YOLO, MobileNetV2/V3, MobileViT, EfficientFormer, and
   SmolVLM.
 - `system_metrics_sampler.py` samples process RAM, CUDA memory, GPU utilization,
   and power while inference is running.

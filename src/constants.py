@@ -34,8 +34,9 @@ YOLO_MODEL_CHECKPOINTS = {
     "yolov8n": "yolov8n.pt",
 }
 
-# Torchvision downloads MobileNetV3 weights under models/cnn/hub/checkpoints/.
+# Torchvision downloads MobileNet weights under models/cnn/hub/checkpoints/.
 MOBILENET_MODEL_CHECKPOINTS = {
+    "mobilenet_v2": "mobilenet_v2-7ebf99e0.pth",
     "mobilenet_v3_small": "mobilenet_v3_small-047dcff4.pth",
     "mobilenet_v3_large": "mobilenet_v3_large-5c1a4163.pth",
 }

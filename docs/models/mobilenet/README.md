@@ -1,22 +1,30 @@
-# MobileNetV3 Classifiers
+# MobileNet Classifiers
 
-This folder documents the Torchvision MobileNetV3 classifiers used in the repository:
+This folder documents the Torchvision MobileNet classifiers used in the
+repository:
 
 | Repo name | Checkpoint location | Family | Parameters | FLOPs | ImageNet-1K acc@1 / acc@5 |
 | --- | --- | --- | --- | --- | --- |
+| `mobilenet_v2` | `models/cnn/hub/checkpoints/mobilenet_v2-7ebf99e0.pth` | MobileNetV2 | 3.50M | 0.301B | 72.154 / 90.822 |
 | `mobilenet_v3_small` | `models/cnn/hub/checkpoints/mobilenet_v3_small-047dcff4.pth` | MobileNetV3 Small | 2.54M | 0.057B | 67.668 / 87.402 |
 | `mobilenet_v3_large` | `models/cnn/hub/checkpoints/mobilenet_v3_large-5c1a4163.pth` | MobileNetV3 Large | 5.48M | 0.217B | 75.274 / 92.566 |
 
-Both are ImageNet-1K pretrained image classifiers with 1000 output classes. In this project they are useful lightweight CNN baselines for system-performance benchmarks.
+All three are ImageNet-1K pretrained image classifiers with 1000 output
+classes. In this project they are lightweight CNN baselines for inference
+demos and system-performance benchmarks.
 
-The parameters, FLOPs, and accuracy values above come from the local Torchvision weight metadata for the default pretrained weights.
+The parameters, FLOPs, accuracy values, preprocessing transforms, and class
+labels come from the Torchvision metadata attached to each default weight.
 
-For definitions of terms such as logits, softmax, top-k, depthwise separable convolution, inverted residual block, squeeze-and-excitation, and FLOPs, see [definitions.md](definitions.md).
+For definitions of terms such as logits, softmax, top-k, depthwise separable
+convolution, inverted residual block, linear bottleneck, ReLU6,
+squeeze-and-excitation, and FLOPs, see [definitions.md](definitions.md).
 
-The repo registry names are defined in `src/load_model.py` and checkpoint paths are defined in `src/constants.py`:
+The checkpoint paths are registered in `src/constants.py`:
 
 ```python
 MOBILENET_MODEL_CHECKPOINTS = {
+    "mobilenet_v2": "mobilenet_v2-7ebf99e0.pth",
     "mobilenet_v3_small": "mobilenet_v3_small-047dcff4.pth",
     "mobilenet_v3_large": "mobilenet_v3_large-5c1a4163.pth",
 }
@@ -24,26 +32,40 @@ MOBILENET_MODEL_CHECKPOINTS = {
 
 ## What Makes MobileNet Different
 
-MobileNet models are CNNs designed for efficient inference. They trade some accuracy for lower latency, lower memory use, and lower compute cost.
+MobileNet models are CNNs designed for efficient inference on mobile and edge
+hardware. They replace many expensive standard convolutions with depthwise
+separable convolutions and compact inverted residual blocks.
 
-The central idea is to replace many expensive standard convolutions with efficient blocks based on depthwise separable convolutions and inverted residuals. MobileNetV3 also uses squeeze-and-excitation and hardware-aware activation choices such as h-swish.
+The local variants make different accuracy and compute tradeoffs:
 
-The difference between the local variants is scale:
+- `mobilenet_v2` is the original inverted-residual and linear-bottleneck
+  baseline. It is especially relevant to edge deployment because its operators
+  are simple and widely supported.
+- `mobilenet_v3_small` is the cheapest local variant. It uses substantially
+  fewer FLOPs, but its ImageNet accuracy is lower.
+- `mobilenet_v3_large` is the strongest local MobileNet classifier. It uses
+  more parameters and memory than the other variants.
 
-- `mobilenet_v3_small` is smaller and cheaper. It has fewer parameters, lower FLOPs, and lower ImageNet accuracy.
-- `mobilenet_v3_large` is larger and more accurate. It costs more memory and compute, but usually gives stronger classifications.
+MobileNetV3 builds on MobileNetV2 by adding architecture choices found through
+hardware-aware search, including squeeze-and-excitation blocks and h-swish
+activations.
 
-Unlike YOLO, MobileNetV3 is not an object detector. It does not return boxes. It returns one 1000-class ImageNet score vector for the whole image. The top-k output should be read as "which ImageNet labels best describe the full image crop?", not "which objects were detected and where are they?"
+Unlike YOLO, MobileNet is not an object detector. It does not return boxes. It
+returns one 1000-class ImageNet score vector for the whole image. The top-k
+output should be read as "which ImageNet labels best describe the full image
+crop?", not "which objects were detected and where are they?"
 
 ## Internal Flow
 
-At inference time, both models follow this broad path:
+At inference time, all local MobileNet models follow this broad path:
 
 ```text
 image file
   -> Torchvision preprocessing
-  -> MobileNetV3 feature extractor
-  -> global pooling
+  -> convolutional stem
+  -> inverted residual feature blocks
+  -> final convolution
+  -> global average pooling
   -> classifier head
   -> logits
   -> softmax probabilities
@@ -52,45 +74,64 @@ image file
 
 ### 1. Preprocessing
 
-The demo loads the image as RGB and applies the exact transform bundled with the selected Torchvision weights:
+The demo loads the image as RGB and applies the exact transform bundled with
+the selected Torchvision weight:
 
 ```python
 transform = weights.transforms()
 input_tensor = transform(image).unsqueeze(0)
 ```
 
-The transforms resize, center crop, convert to tensor, and normalize with ImageNet statistics. The local default weights use a 224x224 crop:
+The transforms resize, center crop, convert to tensor, and normalize with
+ImageNet statistics. The local default weights use a 224x224 crop:
 
+- `mobilenet_v2`: resize to 232, center crop to 224;
 - `mobilenet_v3_small`: resize to 256, center crop to 224;
 - `mobilenet_v3_large`: resize to 232, center crop to 224.
 
-This means the original COCO image can have any size. The model still receives a normalized 224x224 tensor.
+The source COCO image can have any size. The model receives a normalized
+batched tensor shaped `1 x 3 x 224 x 224`.
 
-### 2. Feature Extractor
+### 2. MobileNetV2 Feature Extractor
 
-The MobileNetV3 feature extractor is a stack of efficient convolutional blocks.
+MobileNetV2 begins with a standard convolution, then uses inverted residual
+blocks.
 
-Instead of using only standard convolutions, MobileNetV3 relies heavily on inverted residual blocks and depthwise separable convolutions. These reduce computation by separating spatial filtering from channel mixing.
+A typical block:
 
-The network gradually reduces spatial resolution while increasing feature depth. Early layers detect simple patterns like edges and textures. Later layers represent higher-level object and scene cues.
+1. expands the channel width with a 1x1 convolution;
+2. applies an efficient depthwise spatial convolution;
+3. projects the channels back down with a linear 1x1 convolution;
+4. adds a residual connection when the input/output shape allows it.
 
-### 3. Squeeze-and-Excitation and Activations
+The narrow projection is called a linear bottleneck because it does not apply
+another non-linearity after compressing the features. MobileNetV2 mainly uses
+ReLU6 inside the expanded part of each block.
 
-Some MobileNetV3 blocks use squeeze-and-excitation. This lets the model emphasize or suppress feature channels based on global context.
+### 3. MobileNetV3 Feature Extractor
 
-MobileNetV3 also uses hardware-aware nonlinearities such as h-swish. These choices are part of why MobileNetV3 is efficient on edge devices.
+MobileNetV3 keeps the inverted-residual structure but changes the block
+configuration for better hardware-aware efficiency.
+
+Some blocks use squeeze-and-excitation to reweight feature channels from global
+context. The network also mixes ReLU and h-swish activations. Small and Large
+use different channel widths and block layouts to target different resource
+budgets.
 
 ### 4. Global Pooling
 
-After the convolutional feature extractor, the model uses global pooling to collapse spatial dimensions. Instead of keeping a grid of features, it summarizes the image into one feature vector.
+After the feature extractor, global average pooling collapses the spatial
+dimensions into one feature vector.
 
-This is one reason classification loses object location information. After global pooling, the model is focused on "what is in the image", not "where each object is".
+This removes explicit object-location information. The model answers what best
+describes the whole crop rather than where an object appears.
 
 ### 5. Classifier Head
 
-The classifier head maps the pooled feature vector to 1000 logits, one for each ImageNet-1K class.
+The classifier head maps the pooled feature vector to 1000 logits, one for each
+ImageNet-1K class.
 
-The demo applies softmax to convert logits into probabilities, then prints the top-k classes:
+The demo applies softmax and selects the top-k classes:
 
 ```python
 probabilities = logits.softmax(dim=1)[0]
@@ -99,16 +140,17 @@ scores, class_ids = probabilities.topk(TOP_K)
 
 ## How This Repo Loads Them
 
-`src/load_model.py` returns Torchvision MobileNetV3 modules:
+`src/load_model.py` returns Torchvision MobileNet modules:
 
 ```python
 from src.load_model import load_model
 
-model = load_model("mobilenet_v3_large")
+model = load_model("mobilenet_v2")
 print(type(model))
 ```
 
-The repo sets `TORCH_HOME` to `models/cnn` before loading. Torchvision then reads or writes weights under:
+Before loading, the repo sets `TORCH_HOME` to `models/cnn`. Torchvision then
+reads or downloads the weights under:
 
 ```text
 models/cnn/hub/checkpoints/
@@ -121,24 +163,24 @@ experiments/performance/system_performance.py
   -> src.load_model.load_model(model_name)
   -> src.performance_benchmark.PerformanceBenchmark
   -> src.performance_benchmark.model_inference_adapter.ModelInferenceAdapter
-  -> weights.transforms()
+  -> matching Torchvision weight transforms
   -> model(input_tensor)
 ```
 
-## Inference Example
+## MobileNetV2 Inference Example
 
 ```python
 from pathlib import Path
 
 import torch
-from torchvision.models import MobileNet_V3_Large_Weights
+from torchvision.models import MobileNet_V2_Weights
 
 from src.load_model import load_model
 from src.performance_benchmark.utils import load_rgb_image
 
-model_name = "mobilenet_v3_large"
+model_name = "mobilenet_v2"
 image_path = Path("datasets/coco/images/000000047585.jpg")
-weights = MobileNet_V3_Large_Weights.DEFAULT
+weights = MobileNet_V2_Weights.DEFAULT
 model = load_model(model_name).eval()
 transform = weights.transforms()
 categories = weights.meta["categories"]
@@ -152,33 +194,38 @@ with torch.inference_mode():
     scores, class_ids = probabilities.topk(5)
 
 for score, class_id in zip(scores, class_ids):
-    print(categories[int(class_id)], float(score))
+    class_id_int = int(class_id)
+    print(categories[class_id_int], float(score))
 ```
 
 ## Reading The Output
 
-MobileNetV3 returns logits shaped:
+Each MobileNet returns logits shaped:
 
 ```text
 batch_size, 1000
 ```
 
-For a single image, the shape is usually:
+For one image, the shape is:
 
 ```text
 1, 1000
 ```
 
-Each of the 1000 values corresponds to one ImageNet class. The largest value is the model's preferred class before softmax. After softmax, the largest probability is the model's most likely class.
+Each value corresponds to one ImageNet class. The largest value is the model's
+preferred class before softmax. After softmax, the largest probability is the
+model's most likely class.
 
-The demo prints rows with:
+The demo prints:
 
 - rank;
 - label;
 - probability;
-- ImageNet class id.
+- ImageNet class ID.
 
-For COCO images with multiple objects, the top label may describe the dominant object, person, clothing, scene, or a related ImageNet category. It should not be interpreted like a detector output.
+For COCO images with multiple objects, the top label may describe the dominant
+object, person, scene, or a related ImageNet category. It should not be
+interpreted like detector output.
 
 ## Quick Demo
 
@@ -188,10 +235,10 @@ Run the local demo from the repository root:
 uv run python docs/models/mobilenet/demo.py
 ```
 
-The demo is intentionally configured by constants at the top of `demo.py`, so edit these values before running:
+The demo is configured through constants at the top of `demo.py`:
 
 ```python
-MODEL_NAMES = ["mobilenet_v3_small", "mobilenet_v3_large"]
+MODEL_NAMES = ["mobilenet_v2", "mobilenet_v3_small", "mobilenet_v3_large"]
 IMAGE_PATH = REPO_ROOT / "datasets" / "coco" / "images" / "000000047585.jpg"
 USE_RANDOM_IMAGE = True
 RANDOM_IMAGE_DIR = REPO_ROOT / "datasets" / "coco" / "images"
@@ -203,9 +250,12 @@ SAVE_INPUT_IMAGE = True
 OUTPUT_DIR = MODEL_DOCS_DIR / "outputs"
 ```
 
-Set `MODEL_NAMES` to one or both supported names. For example, `["mobilenet_v3_small"]` runs only the small model, while `["mobilenet_v3_small", "mobilenet_v3_large"]` runs both models on the same selected image.
+Set `MODEL_NAMES = ["mobilenet_v2"]` to run only MobileNetV2. Multiple variants
+reuse the same selected image so their top-k predictions can be compared.
 
-Set `USE_RANDOM_IMAGE = False` to use `IMAGE_PATH`. Set `USE_RANDOM_IMAGE = True` to ignore `IMAGE_PATH` and sample a random `.jpg` from `RANDOM_IMAGE_DIR`. Set `RANDOM_SEED` to an integer if you want the same random image across runs.
+Set `USE_RANDOM_IMAGE = False` to use `IMAGE_PATH`. Set it to `True` to sample a
+random `.jpg` from `RANDOM_IMAGE_DIR`. Set `RANDOM_SEED` to an integer for
+repeatable image selection.
 
 When `SAVE_RESULTS_JSON = True`, each model writes a top-k JSON file under:
 
@@ -213,19 +263,30 @@ When `SAVE_RESULTS_JSON = True`, each model writes a top-k JSON file under:
 docs/models/mobilenet/outputs/
 ```
 
-When `SAVE_INPUT_IMAGE = True`, the selected source image is also copied to:
+When `SAVE_INPUT_IMAGE = True`, the selected source image is copied to:
 
 ```text
 docs/models/mobilenet/outputs/selected_image.jpg
 ```
 
-This image is the visual reference for the top-k whole-image classifications. It is not annotated with boxes because MobileNetV3 does not predict object locations.
+The input image is not annotated with boxes because MobileNet does not predict
+object locations.
 
-With `USE_RANDOM_IMAGE = False`, the default image produced `groom` as the top prediction for both local checkpoints.
+With `USE_RANDOM_IMAGE = False`, MobileNetV2 classified the configured example
+image most strongly as `groom`. Exact probabilities can shift slightly across
+Torchvision and PyTorch versions.
 
 ## Benchmark Commands
 
-The system-performance benchmark measures latency, FPS, RAM, GPU metrics, power, and energy per inference. It does not report classification accuracy.
+The system-performance benchmark measures latency, FPS, RAM, GPU metrics,
+power, and energy per inference. It does not report classification accuracy.
+
+```bash
+uv run python experiments/performance/system_performance.py \
+  --model mobilenet_v2 \
+  --device cuda:0 \
+  --num-images 100
+```
 
 ```bash
 uv run python experiments/performance/system_performance.py \
@@ -240,3 +301,10 @@ uv run python experiments/performance/system_performance.py \
   --device cuda:0 \
   --num-images 100
 ```
+
+## Sources
+
+- Torchvision MobileNetV2 model:
+  <https://docs.pytorch.org/vision/stable/models/mobilenetv2.html>
+- MobileNetV2 paper:
+  <https://arxiv.org/abs/1801.04381>
