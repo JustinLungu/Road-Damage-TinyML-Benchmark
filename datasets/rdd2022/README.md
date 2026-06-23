@@ -66,7 +66,15 @@ Download another annotated training subset:
 ./scripts/download_rdd2022_subset.sh united-states
 ```
 
-Norway is available but its official archive is approximately 9.9 GB.
+Download every available country-specific annotated training subset:
+
+```bash
+./scripts/download_rdd2022_subset.sh all
+```
+
+The `all` command skips country folders that already contain a `train/`
+directory. Norway is available but its official archive is approximately
+9.9 GB, so the full download is large.
 
 ## Resulting Layout
 

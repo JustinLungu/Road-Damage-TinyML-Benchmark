@@ -31,6 +31,12 @@ List or select the other official country-specific archives:
 ./scripts/download_rdd2022_subset.sh china-motorbike
 ```
 
+Download every available country-specific annotated training split:
+
+```bash
+./scripts/download_rdd2022_subset.sh all
+```
+
 See `datasets/rdd2022/README.md` for the dataset layout, classes, and source
 information.
 
