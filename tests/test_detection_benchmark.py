@@ -1,9 +1,11 @@
 import argparse
 import csv
 import json
+import subprocess
 import sys
 from dataclasses import asdict
 from pathlib import Path
+from types import ModuleType, SimpleNamespace
 
 import pandas as pd
 import pytest
@@ -12,7 +14,9 @@ import torch
 import experiments.detection.detection_benchmark as experiment
 import experiments.detection.plot_detection_benchmark as plot_detection
 import src.detection_benchmark.classification_benchmark as classification_module
+import src.detection_benchmark.classification_inference_adapter as classification_adapter_module
 import src.detection_benchmark.object_detection_benchmark as detection_module
+import src.detection_benchmark.object_detection_inference_adapter as detection_adapter_module
 from src.detection_benchmark.benchmark_result import DetectionBenchmarkResult
 from src.detection_benchmark.classification_benchmark import (
     ClassificationBenchmark,
@@ -22,12 +26,18 @@ from src.detection_benchmark.classification_dataset import (
     ClassificationSample,
     load_classification_manifest,
 )
+from src.detection_benchmark.classification_inference_adapter import (
+    ClassificationInferenceAdapter,
+)
 from src.detection_benchmark.object_detection_benchmark import (
     GroundTruthBox,
     box_iou,
     build_category_mapping,
     calculate_coco_map,
     match_detections,
+)
+from src.detection_benchmark.object_detection_inference_adapter import (
+    ObjectDetectionInferenceAdapter,
 )
 from src.detection_benchmark.object_detection_inference_adapter import PredictedBox
 from src.detection_benchmark.utils import append_result_csv
@@ -95,6 +105,75 @@ def write_tiny_coco_dataset(tmp_path: Path) -> tuple[Path, Path]:
         encoding="utf-8",
     )
     return images_dir, annotation_path
+
+
+class FakeClassificationModel:
+    def __init__(self, logits: torch.Tensor | None = None) -> None:
+        self.logits = logits if logits is not None else torch.tensor([[1.0, 2.0]])
+        self.device = None
+        self.eval_called = False
+        self.calls = []
+        self.config = SimpleNamespace(id2label={0: "zero", 1: "one"})
+
+    def to(self, device: torch.device):
+        self.device = device
+        return self
+
+    def eval(self):
+        self.eval_called = True
+        return self
+
+    def __call__(self, *args, **kwargs):
+        self.calls.append((args, kwargs))
+        return self.logits
+
+
+class FakeMobileVitModel(FakeClassificationModel):
+    def __call__(self, *args, **kwargs):
+        self.calls.append((args, kwargs))
+        return SimpleNamespace(logits=torch.tensor([[3.0, 4.0]]))
+
+
+class FakeWeights:
+    def transforms(self):
+        return lambda image: torch.ones(3, 2, 2)
+
+
+class FakeProcessor:
+    def __call__(self, **kwargs):
+        assert kwargs["return_tensors"] == "pt"
+        return {"pixel_values": torch.ones(1, 3, 2, 2)}
+
+
+def install_fake_classifier_modules(monkeypatch) -> None:
+    torchvision = ModuleType("torchvision")
+    torchvision_models = ModuleType("torchvision.models")
+    torchvision_models.MobileNet_V2_Weights = SimpleNamespace(DEFAULT=FakeWeights())
+    torchvision_models.MobileNet_V3_Small_Weights = SimpleNamespace(
+        DEFAULT=FakeWeights()
+    )
+    torchvision_models.MobileNet_V3_Large_Weights = SimpleNamespace(
+        DEFAULT=FakeWeights()
+    )
+    torchvision_models.EfficientNet_B0_Weights = SimpleNamespace(DEFAULT=FakeWeights())
+    torchvision_models.ResNet18_Weights = SimpleNamespace(DEFAULT=FakeWeights())
+    torchvision_models.Inception_V3_Weights = SimpleNamespace(DEFAULT=FakeWeights())
+    torchvision.models = torchvision_models
+    monkeypatch.setitem(sys.modules, "torchvision", torchvision)
+    monkeypatch.setitem(sys.modules, "torchvision.models", torchvision_models)
+
+    transformers = ModuleType("transformers")
+    transformers.AutoImageProcessor = SimpleNamespace(
+        from_pretrained=lambda *args, **kwargs: FakeProcessor()
+    )
+    monkeypatch.setitem(sys.modules, "transformers", transformers)
+
+    timm = ModuleType("timm")
+    timm.data = SimpleNamespace(
+        resolve_model_data_config=lambda model: {"input_size": (3, 224, 224)},
+        create_transform=lambda **kwargs: lambda image: torch.ones(3, 2, 2),
+    )
+    monkeypatch.setitem(sys.modules, "timm", timm)
 
 
 def test_classification_manifest_metrics_benchmark_and_csv(
@@ -180,6 +259,86 @@ def test_classification_manifest_rejects_invalid_input(tmp_path) -> None:
     empty_manifest.write_text("image_path,class_id\n", encoding="utf-8")
     with pytest.raises(ValueError, match="empty"):
         load_classification_manifest(empty_manifest)
+
+
+def test_classification_inference_adapter_routes_all_supported_families(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    install_fake_classifier_modules(monkeypatch)
+    monkeypatch.setattr(
+        classification_adapter_module,
+        "load_rgb_image",
+        lambda image_path: object(),
+    )
+    image_path = tmp_path / "image.jpg"
+    image_path.write_bytes(b"image")
+
+    for model_name in (
+        "mobilenet_v2",
+        "mobilenet_v3_small",
+        "mobilenet_v3_large",
+        "efficientnet_b0",
+        "resnet18",
+        "inception_v3",
+        "efficientformer_l1",
+    ):
+        model = FakeClassificationModel()
+        adapter = ClassificationInferenceAdapter(
+            model_name,
+            model,
+            torch.device("cpu"),
+        )
+        logits = adapter.predict(image_path)
+
+        assert logits.tolist() == [1.0, 2.0]
+        assert model.device == torch.device("cpu")
+        assert model.eval_called is True
+        assert model.calls
+
+    mobilevit_model = FakeMobileVitModel()
+    adapter = ClassificationInferenceAdapter(
+        "mobilevit_xxs",
+        mobilevit_model,
+        torch.device("cpu"),
+    )
+    assert adapter.predict(image_path).tolist() == [3.0, 4.0]
+    assert mobilevit_model.calls
+
+
+def test_classification_inference_adapter_validation_and_shape_errors(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    install_fake_classifier_modules(monkeypatch)
+    image_path = tmp_path / "image.jpg"
+    image_path.write_bytes(b"image")
+
+    with pytest.raises(ValueError, match="not an image classifier"):
+        ClassificationInferenceAdapter("yolov8n", object(), torch.device("cpu"))
+
+    model = FakeClassificationModel(torch.ones(1, 2, 3))
+    adapter = ClassificationInferenceAdapter(
+        "mobilenet_v2",
+        model,
+        torch.device("cpu"),
+    )
+    monkeypatch.setattr(
+        classification_adapter_module,
+        "load_rgb_image",
+        lambda image_path: object(),
+    )
+    with pytest.raises(ValueError, match="Expected one logits vector"):
+        adapter.predict(image_path)
+
+    adapter = ClassificationInferenceAdapter.__new__(ClassificationInferenceAdapter)
+    adapter.transform = None
+    with pytest.raises(RuntimeError, match="transform"):
+        adapter._predict_transformed_tensor(image_path)
+
+    adapter.processor = None
+    with pytest.raises(RuntimeError, match="processor"):
+        adapter._predict_mobilevit(image_path)
 
 
 def test_detection_matching_iou_mapping_and_coco_map(tmp_path) -> None:
@@ -270,6 +429,70 @@ def test_object_detection_benchmark_runs_with_fake_predictions(
     assert result.mean_iou == 1.0
 
 
+def test_object_detection_inference_adapter_normalizes_ultralytics_boxes(
+    tmp_path,
+) -> None:
+    image_path = tmp_path / "image.jpg"
+    image_path.write_bytes(b"image")
+    predict_calls = []
+
+    class FakeTensor:
+        def __init__(self, values) -> None:
+            self.values = values
+
+        def detach(self):
+            return self
+
+        def cpu(self):
+            return self
+
+        def tolist(self):
+            return self.values
+
+    class FakeBoxes:
+        xyxy = FakeTensor([[1, 2, 3, 4], [5, 6, 7, 8]])
+        conf = FakeTensor([0.9, 0.8])
+        cls = FakeTensor([1.0, 2.0])
+
+    class FakeYolo:
+        def __init__(self, boxes) -> None:
+            self.boxes = boxes
+
+        def predict(self, **kwargs):
+            predict_calls.append(kwargs)
+            return [SimpleNamespace(boxes=self.boxes)]
+
+    adapter = ObjectDetectionInferenceAdapter(
+        "yolov8n",
+        FakeYolo(FakeBoxes()),
+        torch.device("cpu"),
+    )
+    predictions = adapter.predict(image_path)
+
+    assert predict_calls == [
+        {
+            "source": str(image_path),
+            "device": "cpu",
+            "conf": detection_adapter_module.PREDICTION_CONFIDENCE_FLOOR,
+            "verbose": False,
+        }
+    ]
+    assert predictions == [
+        PredictedBox(1, 0.9, (1.0, 2.0, 3.0, 4.0)),
+        PredictedBox(2, 0.8, (5.0, 6.0, 7.0, 8.0)),
+    ]
+
+    empty_adapter = ObjectDetectionInferenceAdapter(
+        "yolov8n",
+        FakeYolo(None),
+        torch.device("cpu"),
+    )
+    assert empty_adapter.predict(image_path) == []
+
+    with pytest.raises(ValueError, match="not an object detector"):
+        ObjectDetectionInferenceAdapter("mobilenet_v2", object(), torch.device("cpu"))
+
+
 def test_detection_experiment_model_resolution_validation_and_routing(
     monkeypatch,
     tmp_path,
@@ -328,6 +551,128 @@ def test_detection_experiment_model_resolution_validation_and_routing(
         iou_threshold=0.5,
     )
     assert appended == [(make_result("yolov8n"), experiment.RESULTS_CSV)]
+
+    manifest = tmp_path / "labels.csv"
+    image_path = tmp_path / "image.jpg"
+    image_path.write_bytes(b"image")
+    manifest.write_text(f"image_path,class_id\n{image_path.name},0\n", encoding="utf-8")
+    appended.clear()
+
+    class FakeClassificationBenchmark:
+        def __init__(self, **kwargs) -> None:
+            assert kwargs["model"] is loaded_model
+            assert kwargs["dataset_name"] == "imagenet"
+            assert kwargs["split"] == "validation"
+            assert kwargs["samples"] == [ClassificationSample(image_path.resolve(), 0)]
+
+        def run(self) -> DetectionBenchmarkResult:
+            return make_result("resnet18")
+
+    monkeypatch.setattr(
+        experiment,
+        "ClassificationBenchmark",
+        FakeClassificationBenchmark,
+    )
+    experiment.run_model_benchmark(
+        model_name="resnet18",
+        device=torch.device("cpu"),
+        num_images=None,
+        classification_labels=manifest,
+        classification_dataset_name="imagenet",
+        classification_split="validation",
+        coco_images_dir=tmp_path,
+        coco_annotations=tmp_path / "instances.json",
+        confidence_threshold=0.25,
+        iou_threshold=0.5,
+    )
+    assert appended == [(make_result("resnet18"), experiment.RESULTS_CSV)]
+
+    with pytest.raises(ValueError, match="classification_labels"):
+        experiment.run_model_benchmark(
+            model_name="resnet18",
+            device=torch.device("cpu"),
+            num_images=None,
+            classification_labels=None,
+            classification_dataset_name="imagenet",
+            classification_split="validation",
+            coco_images_dir=tmp_path,
+            coco_annotations=tmp_path / "instances.json",
+            confidence_threshold=0.25,
+            iou_threshold=0.5,
+        )
+
+
+def test_detection_experiment_subprocesses_and_main_flow(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    args = argparse.Namespace(
+        device="cpu",
+        confidence_threshold=0.25,
+        iou_threshold=0.5,
+        coco_images_dir=tmp_path / "coco",
+        coco_annotations=tmp_path / "instances.json",
+        classification_dataset_name="imagenette",
+        classification_split="validation",
+        classification_labels=tmp_path / "labels.csv",
+        num_images=2,
+    )
+    commands = []
+
+    def fake_run(command: list[str], check: bool) -> subprocess.CompletedProcess:
+        commands.append((command, check))
+        return_code = 1 if command[command.index("--model") + 1] == "bad" else 0
+        return subprocess.CompletedProcess(command, returncode=return_code)
+
+    monkeypatch.setattr(experiment.subprocess, "run", fake_run)
+    experiment.run_model_processes(["resnet18"], args)
+
+    assert commands[0][1] is False
+    assert commands[0][0][-4:] == [
+        "--classification-labels",
+        str(args.classification_labels),
+        "--num-images",
+        "2",
+    ] or "--classification-labels" in commands[0][0]
+
+    with pytest.raises(RuntimeError, match="bad"):
+        experiment.run_model_processes(["resnet18", "bad"], args)
+
+    output_path = tmp_path / "results.csv"
+    output_path.write_text("old", encoding="utf-8")
+    main_calls = []
+    monkeypatch.setattr(experiment, "RESULTS_CSV", output_path)
+    monkeypatch.setattr(experiment, "resolve_device", lambda name: torch.device(name))
+    monkeypatch.setattr(
+        experiment,
+        "run_model_processes",
+        lambda model_names, parsed_args: main_calls.append(
+            (model_names, parsed_args.device)
+        ),
+    )
+    monkeypatch.setattr(
+        experiment,
+        "validate_task_arguments",
+        lambda model_names, classification_labels, parser: None,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "detection_benchmark.py",
+            "--model",
+            "yolov8n",
+            "resnet18",
+            "--device",
+            "cpu",
+            "-o",
+        ],
+    )
+
+    experiment.main()
+
+    assert output_path.exists() is False
+    assert main_calls == [(["yolov8n", "resnet18"], "cpu")]
 
 
 def test_detection_plotting_creates_task_and_common_metric_plots(
