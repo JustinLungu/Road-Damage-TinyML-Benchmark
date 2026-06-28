@@ -47,6 +47,39 @@ uv run python -m src.rdd_training.prepare_binary_pothole
 See `datasets/rdd2022/README.md` for the dataset layout, classes, and source
 information.
 
+## Model Downloads
+
+Load/download selected pretrained models through the repository model registry:
+
+```bash
+./scripts/download_models.sh mobilenet_v2 resnet18 efficientnet_b0
+```
+
+List supported model names:
+
+```bash
+./scripts/download_models.sh --list
+```
+
+Load/download every supported model:
+
+```bash
+./scripts/download_models.sh --all
+```
+
+For the RDD2022 binary pothole fine-tuning work, start with the image
+classification models, for example:
+
+```bash
+./scripts/download_models.sh \
+  mobilenet_v2 \
+  mobilenet_v3_small \
+  mobilenet_v3_large \
+  efficientnet_b0 \
+  resnet18 \
+  inception_v3
+```
+
 ## Inference Demos
 
 Use `inference_demo.sh` to run any `demo.py` under `docs/models/<model-family>/` from one common entry point.
