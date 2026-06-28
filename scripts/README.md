@@ -37,6 +37,13 @@ Download every available country-specific annotated training split:
 ./scripts/download_rdd2022_subset.sh all
 ```
 
+Create binary pothole/non-pothole image-classification manifests from the
+downloaded RDD2022 XML annotations:
+
+```bash
+uv run python -m src.rdd_training.prepare_binary_pothole
+```
+
 See `datasets/rdd2022/README.md` for the dataset layout, classes, and source
 information.
 

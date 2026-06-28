@@ -95,6 +95,54 @@ datasets/rdd2022/
 Each XML file contains the image metadata, damage class, and bounding-box
 coordinates for its corresponding image.
 
+## Binary Pothole Image Classification
+
+For the initial supervisor-requested image-classification task, create binary
+pothole/non-pothole manifests from the downloaded XML annotations:
+
+```bash
+uv run python -m src.rdd_training.prepare_binary_pothole
+```
+
+The binary target is:
+
+- `1`, `pothole`: the image contains at least one `D40` object.
+- `0`, `non_pothole`: the image contains no `D40` object.
+
+`non_pothole` therefore includes images with other road-damage classes, repair
+labels, and images with no annotated objects. This keeps the first task aligned
+with the requested question: pothole versus non-pothole.
+
+The default country-aware split is:
+
+| Split | Countries |
+| --- | --- |
+| `train` | `China_Drone`, `China_MotorBike`, `Czech`, `India` |
+| `validation` | `United_States` |
+| `test` | `Japan`, `Norway` |
+
+The script writes local generated CSV files under:
+
+```text
+datasets/rdd2022/binary_pothole/
+├── all.csv
+├── train.csv
+├── validation.csv
+├── test.csv
+└── summary.csv
+```
+
+These generated manifests are ignored by Git. Each row contains the image path,
+annotation path, country, split, binary label, object-label metadata, and image
+size. Use `summary.csv` to check class balance before training.
+
+To change the country split, edit `SPLIT_COUNTRIES` in
+`src/rdd_training/constants.py`, then rerun:
+
+```bash
+uv run python -m src.rdd_training.prepare_binary_pothole
+```
+
 ## Source And License
 
 - Official project:
