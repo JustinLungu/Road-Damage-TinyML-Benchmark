@@ -19,6 +19,8 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "ipykernel>=7.3.0",
+    "jupyterlab>=4.6.0",
     "pysonar>=1.6.0.4905",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
