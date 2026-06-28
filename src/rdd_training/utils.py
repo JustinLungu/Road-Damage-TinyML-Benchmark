@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import csv
+import json
+import math
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -16,6 +19,8 @@ from src.rdd_training.constants import (
     NEGATIVE_LABEL,
     NUM_BINARY_CLASSES,
     POSITIVE_LABEL,
+    RDD_EVALUATION_RANKING_METRIC,
+    RDD_EVALUATION_TOP_K,
     RDD_MODEL_MODE,
     RDD_MODEL_NAMES,
     RDD_SINGLE_MODEL,
@@ -359,7 +364,262 @@ def compute_binary_classification_metrics(
     }
 
 
+def compute_binary_roc_auc(
+    positive_scores: torch.Tensor,
+    targets: torch.Tensor,
+) -> float:
+    scores = positive_scores.detach().cpu().float().tolist()
+    labels = targets.detach().cpu().long().tolist()
+    positive_count = sum(1 for label in labels if label == POSITIVE_LABEL)
+    negative_count = sum(1 for label in labels if label == NEGATIVE_LABEL)
+
+    if positive_count == 0 or negative_count == 0:
+        return float("nan")
+
+    ranked_scores = sorted(enumerate(scores), key=lambda item: item[1])
+    ranks = [0.0] * len(scores)
+    current_index = 0
+
+    while current_index < len(ranked_scores):
+        next_index = current_index + 1
+        while (
+            next_index < len(ranked_scores)
+            and ranked_scores[next_index][1] == ranked_scores[current_index][1]
+        ):
+            next_index += 1
+
+        average_rank = (current_index + 1 + next_index) / 2
+        for rank_index in range(current_index, next_index):
+            original_index = ranked_scores[rank_index][0]
+            ranks[original_index] = average_rank
+
+        current_index = next_index
+
+    positive_rank_sum = sum(
+        rank for rank, label in zip(ranks, labels, strict=True) if label == POSITIVE_LABEL
+    )
+    return (
+        positive_rank_sum - positive_count * (positive_count + 1) / 2
+    ) / (positive_count * negative_count)
+
+
+def compute_binary_roc_curve(
+    positive_scores: torch.Tensor,
+    targets: torch.Tensor,
+) -> tuple[list[float], list[float]]:
+    scores = positive_scores.detach().cpu().float()
+    labels = targets.detach().cpu().long()
+    thresholds = torch.cat(
+        [
+            torch.tensor([float("inf")]),
+            torch.sort(torch.unique(scores), descending=True).values,
+            torch.tensor([float("-inf")]),
+        ]
+    )
+    false_positive_rates = []
+    true_positive_rates = []
+
+    positive_count = int((labels == POSITIVE_LABEL).sum().item())
+    negative_count = int((labels == NEGATIVE_LABEL).sum().item())
+    if positive_count == 0 or negative_count == 0:
+        return [0.0, 1.0], [0.0, 1.0]
+
+    for threshold in thresholds:
+        predictions = (scores >= threshold).long()
+        true_positive = int(
+            ((predictions == POSITIVE_LABEL) & (labels == POSITIVE_LABEL)).sum().item()
+        )
+        false_positive = int(
+            ((predictions == POSITIVE_LABEL) & (labels == NEGATIVE_LABEL)).sum().item()
+        )
+        true_positive_rates.append(true_positive / positive_count)
+        false_positive_rates.append(false_positive / negative_count)
+
+    return false_positive_rates, true_positive_rates
+
+
 def safe_divide(numerator: float, denominator: float) -> float:
     if denominator == 0:
         return 0.0
     return numerator / denominator
+
+
+########### Evaluation Outputs ###########
+
+
+def write_evaluation_metrics_json(
+    metrics_path: Path,
+    metrics: dict[str, float],
+) -> None:
+    metrics_path.parent.mkdir(parents=True, exist_ok=True)
+    metrics_path.write_text(
+        json.dumps(sanitize_metrics_for_json(metrics), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def write_evaluation_metrics_csv(
+    metrics_path: Path,
+    model_name: str,
+    split: str,
+    metrics: dict[str, float],
+) -> None:
+    metrics_path.parent.mkdir(parents=True, exist_ok=True)
+    row = {"model_name": model_name, "split": split, **metrics}
+
+    with metrics_path.open("w", newline="", encoding="utf-8") as metrics_file:
+        writer = csv.DictWriter(metrics_file, fieldnames=list(row))
+        writer.writeheader()
+        writer.writerow(row)
+
+
+def write_confusion_matrix_csv(
+    confusion_matrix_path: Path,
+    metrics: dict[str, float],
+) -> None:
+    confusion_matrix_path.parent.mkdir(parents=True, exist_ok=True)
+    rows = [
+        {
+            "actual": "non_pothole",
+            "predicted_non_pothole": int(metrics["true_negative"]),
+            "predicted_pothole": int(metrics["false_positive"]),
+        },
+        {
+            "actual": "pothole",
+            "predicted_non_pothole": int(metrics["false_negative"]),
+            "predicted_pothole": int(metrics["true_positive"]),
+        },
+    ]
+
+    with confusion_matrix_path.open(
+        "w",
+        newline="",
+        encoding="utf-8",
+    ) as confusion_file:
+        writer = csv.DictWriter(confusion_file, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def write_confusion_matrix_plot(
+    plot_path: Path,
+    metrics: dict[str, float],
+) -> None:
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    matrix = [
+        [int(metrics["true_negative"]), int(metrics["false_positive"])],
+        [int(metrics["false_negative"]), int(metrics["true_positive"])],
+    ]
+    plot_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.figure(figsize=(5, 4))
+    sns.heatmap(
+        matrix,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=["non_pothole", "pothole"],
+        yticklabels=["non_pothole", "pothole"],
+    )
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+    plt.title("RDD Binary Pothole Confusion Matrix")
+    plt.tight_layout()
+    plt.savefig(plot_path, dpi=160)
+    plt.close()
+
+
+def write_roc_curve_plot(
+    plot_path: Path,
+    false_positive_rates: list[float],
+    true_positive_rates: list[float],
+    roc_auc: float,
+) -> None:
+    import matplotlib.pyplot as plt
+
+    plot_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.figure(figsize=(5, 4))
+    plt.plot(false_positive_rates, true_positive_rates, label=f"ROC-AUC={roc_auc:.3f}")
+    plt.plot([0, 1], [0, 1], linestyle="--", color="gray", label="random")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("RDD Binary Pothole ROC Curve")
+    plt.legend(loc="lower right")
+    plt.tight_layout()
+    plt.savefig(plot_path, dpi=160)
+    plt.close()
+
+
+def write_metric_bar_plot(
+    plot_path: Path,
+    metrics: dict[str, float],
+) -> None:
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    metric_names = ["balanced_accuracy", "precision", "recall", "f1", "roc_auc"]
+    metric_values = [metrics[metric_name] for metric_name in metric_names]
+    plot_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.figure(figsize=(7, 4))
+    sns.barplot(x=metric_names, y=metric_values, hue=metric_names, palette="viridis")
+    plt.ylim(0, 1)
+    plt.xlabel("")
+    plt.ylabel("Score")
+    plt.title("RDD Binary Pothole Test Metrics")
+    plt.xticks(rotation=20, ha="right")
+    plt.tight_layout()
+    plt.savefig(plot_path, dpi=160)
+    plt.close()
+
+
+def write_model_comparison_csv(
+    comparison_path: Path,
+    evaluation_rows: list[dict[str, Any]],
+    ranking_metric: str = RDD_EVALUATION_RANKING_METRIC,
+    top_k: int = RDD_EVALUATION_TOP_K,
+) -> list[dict[str, Any]]:
+    comparison_path.parent.mkdir(parents=True, exist_ok=True)
+    ranked_rows = rank_evaluation_rows(evaluation_rows, ranking_metric)
+
+    with comparison_path.open("w", newline="", encoding="utf-8") as comparison_file:
+        writer = csv.DictWriter(comparison_file, fieldnames=list(ranked_rows[0]))
+        writer.writeheader()
+        writer.writerows(ranked_rows)
+
+    top_models_path = comparison_path.with_name("top_models.csv")
+    with top_models_path.open("w", newline="", encoding="utf-8") as top_models_file:
+        writer = csv.DictWriter(top_models_file, fieldnames=list(ranked_rows[0]))
+        writer.writeheader()
+        writer.writerows(ranked_rows[:top_k])
+
+    return ranked_rows
+
+
+def rank_evaluation_rows(
+    evaluation_rows: list[dict[str, Any]],
+    ranking_metric: str,
+) -> list[dict[str, Any]]:
+    if not evaluation_rows:
+        raise ValueError("Cannot rank an empty evaluation result list.")
+
+    ranked_rows = sorted(
+        evaluation_rows,
+        key=lambda row: row[ranking_metric],
+        reverse=True,
+    )
+
+    return [
+        {
+            "rank": rank,
+            **row,
+        }
+        for rank, row in enumerate(ranked_rows, start=1)
+    ]
+
+
+def sanitize_metrics_for_json(metrics: dict[str, float]) -> dict[str, float | None]:
+    return {
+        key: None if isinstance(value, float) and math.isnan(value) else value
+        for key, value in metrics.items()
+    }

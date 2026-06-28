@@ -280,6 +280,7 @@ def test_rdd_training_main_runs_dataset_and_adapter_smoke(monkeypatch, capsys) -
         fake_load_and_adapt_model_for_binary_pothole,
     )
     monkeypatch.setattr(rdd_constants, "RUN_RDD_TRAINING", False)
+    monkeypatch.setattr(rdd_constants, "RUN_RDD_EVALUATION", False)
 
     runpy.run_module("src.rdd_training.main", run_name="__main__")
     output = capsys.readouterr().out

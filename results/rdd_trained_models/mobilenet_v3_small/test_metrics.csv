@@ -1,0 +1,2 @@
+model_name,split,accuracy,balanced_accuracy,precision,recall,f1,true_positive,true_negative,false_positive,false_negative,roc_auc
+mobilenet_v3_small,test,0.8451277655756148,0.5904706701028242,0.21326577614002765,0.28128797083839613,0.2425988996594184,463.0,15313.0,1708.0,1183.0,0.6907308340358344
