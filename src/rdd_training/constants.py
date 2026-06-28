@@ -38,3 +38,12 @@ SUMMARY_COLUMNS = [
     "objects",
     "pothole_objects",
 ]
+
+REQUIRED_MANIFEST_COLUMNS = {
+    "image_path",
+    "annotation_path",
+    "country",
+    "split",
+    "label",
+    "label_name",
+}

@@ -136,6 +136,25 @@ These generated manifests are ignored by Git. Each row contains the image path,
 annotation path, country, split, binary label, object-label metadata, and image
 size. Use `summary.csv` to check class balance before training.
 
+Load the generated manifests for training with:
+
+```python
+from pathlib import Path
+
+from src.rdd_training import BinaryPotholeDataset
+
+train_dataset = BinaryPotholeDataset(
+    Path("datasets/rdd2022/binary_pothole/train.csv"),
+    expected_split="train",
+)
+```
+
+Smoke-test the loader and print split summaries with:
+
+```bash
+uv run python -m src.rdd_training.main
+```
+
 To change the country split, edit `SPLIT_COUNTRIES` in
 `src/rdd_training/constants.py`, then rerun:
 
