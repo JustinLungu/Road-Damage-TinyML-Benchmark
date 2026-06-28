@@ -3,16 +3,22 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Iterable
 
+import torch
 import torch.nn as nn
 from PIL import Image
 
 from src.constants import PROJECT_ROOT
 from src.rdd_training.constants import (
+    DEFAULT_IMAGE_SIZE,
     ID_TO_LABEL,
     LABEL_TO_ID,
+    MODEL_IMAGE_SIZES,
     NEGATIVE_LABEL,
+    NUM_BINARY_CLASSES,
     POSITIVE_LABEL,
-    RDD_IMAGE_CLASSIFICATION_MODELS,
+    RDD_MODEL_MODE,
+    RDD_MODEL_NAMES,
+    RDD_SINGLE_MODEL,
     REQUIRED_MANIFEST_COLUMNS,
 )
 
@@ -84,6 +90,47 @@ def validate_existing_file(path: Path, column_name: str, row_number: int) -> Non
 def load_rgb_image(image_path: Path) -> Image.Image:
     with Image.open(image_path) as image:
         return image.convert("RGB")
+
+
+def make_image_transform(model_name: str, is_train: bool):
+    from torchvision import transforms
+
+    image_size = MODEL_IMAGE_SIZES.get(model_name, DEFAULT_IMAGE_SIZE)
+    augmentation = (
+        [
+            transforms.RandomResizedCrop(image_size, scale=(0.75, 1.0)),
+            transforms.RandomHorizontalFlip(),
+        ]
+        if is_train
+        else [
+            transforms.Resize((image_size, image_size)),
+        ]
+    )
+
+    return transforms.Compose(
+        [
+            *augmentation,
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=(0.485, 0.456, 0.406),
+                std=(0.229, 0.224, 0.225),
+            ),
+        ]
+    )
+
+
+def collate_binary_pothole_batch(batch: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "image": torch.stack([item["image"] for item in batch]),
+        "label": torch.as_tensor(
+            [int(item["label"]) for item in batch],
+            dtype=torch.long,
+        ),
+        "image_path": [item["image_path"] for item in batch],
+        "label_name": [item["label_name"] for item in batch],
+        "country": [item["country"] for item in batch],
+        "split": [item["split"] for item in batch],
+    }
 
 
 ########### Manifest Rows ###########
@@ -222,7 +269,7 @@ def load_and_adapt_model_for_binary_pothole(model_name: str) -> Any:
 
 
 def load_and_adapt_all_binary_pothole_models(
-    model_names: Iterable[str] = RDD_IMAGE_CLASSIFICATION_MODELS,
+    model_names: Iterable[str] = RDD_MODEL_NAMES,
 ) -> dict[str, Any]:
     adapted_models = {}
 
@@ -230,3 +277,89 @@ def load_and_adapt_all_binary_pothole_models(
         adapted_models[model_name] = load_and_adapt_model_for_binary_pothole(model_name)
 
     return adapted_models
+
+
+########### Training Helpers ###########
+
+
+def select_rdd_model_names(
+    mode: str = RDD_MODEL_MODE,
+    model_names: Iterable[str] = RDD_MODEL_NAMES,
+    single_model: str = RDD_SINGLE_MODEL,
+) -> tuple[str, ...]:
+    if mode == "single":
+        return (single_model,)
+    if mode == "all":
+        return tuple(model_names)
+
+    raise ValueError("RDD_MODEL_MODE must be 'single' or 'all'.")
+
+
+def calculate_class_weights(class_counts: dict[int, int]) -> torch.Tensor:
+    total_count = sum(class_counts.get(label, 0) for label in range(NUM_BINARY_CLASSES))
+    if total_count == 0:
+        raise ValueError("Cannot calculate class weights for an empty dataset.")
+
+    weights = []
+    for label in range(NUM_BINARY_CLASSES):
+        label_count = class_counts.get(label, 0)
+        if label_count == 0:
+            raise ValueError(f"Cannot calculate class weight for missing label: {label}")
+        weights.append(total_count / (NUM_BINARY_CLASSES * label_count))
+
+    return torch.tensor(weights, dtype=torch.float32)
+
+
+def extract_logits(model_output: Any) -> torch.Tensor:
+    if hasattr(model_output, "logits"):
+        return model_output.logits
+    if isinstance(model_output, tuple | list):
+        return model_output[0]
+    return model_output
+
+
+def compute_binary_classification_metrics(
+    predictions: torch.Tensor,
+    targets: torch.Tensor,
+) -> dict[str, float]:
+    predictions = predictions.detach().cpu().long()
+    targets = targets.detach().cpu().long()
+
+    true_positive = int(
+        ((predictions == POSITIVE_LABEL) & (targets == POSITIVE_LABEL)).sum().item()
+    )
+    true_negative = int(
+        ((predictions == NEGATIVE_LABEL) & (targets == NEGATIVE_LABEL)).sum().item()
+    )
+    false_positive = int(
+        ((predictions == POSITIVE_LABEL) & (targets == NEGATIVE_LABEL)).sum().item()
+    )
+    false_negative = int(
+        ((predictions == NEGATIVE_LABEL) & (targets == POSITIVE_LABEL)).sum().item()
+    )
+
+    total = true_positive + true_negative + false_positive + false_negative
+    accuracy = safe_divide(true_positive + true_negative, total)
+    precision = safe_divide(true_positive, true_positive + false_positive)
+    recall = safe_divide(true_positive, true_positive + false_negative)
+    specificity = safe_divide(true_negative, true_negative + false_positive)
+    balanced_accuracy = (recall + specificity) / 2
+    f1 = safe_divide(2 * precision * recall, precision + recall)
+
+    return {
+        "accuracy": accuracy,
+        "balanced_accuracy": balanced_accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "true_positive": float(true_positive),
+        "true_negative": float(true_negative),
+        "false_positive": float(false_positive),
+        "false_negative": float(false_negative),
+    }
+
+
+def safe_divide(numerator: float, denominator: float) -> float:
+    if denominator == 0:
+        return 0.0
+    return numerator / denominator

@@ -31,6 +31,7 @@ DETECTION_METRICS_RESULTS_DIR = RESULTS_DIR / "detection_metrics"
 DETECTION_BENCHMARK_RESULTS_CSV = (
     DETECTION_METRICS_RESULTS_DIR / "detection_benchmark_results.csv"
 )
+RDD_TRAINING_RESULTS_DIR = RESULTS_DIR / "rdd_trained_models"
 
 
 ######################

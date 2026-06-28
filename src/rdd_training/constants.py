@@ -78,5 +78,40 @@ RDD_IMAGE_CLASSIFICATION_MODELS = frozenset(
     }
 )
 
-MODEL_ADAPTATION_SMOKE_TEST_MODE = "all" # "all" or "single"
-MODEL_ADAPTATION_SMOKE_TEST_MODEL = "mobilevit_xxs"
+RDD_MODEL_MODE = "single"  # "all" or "single"
+# Used when RDD_MODEL_MODE is "single" for both adaptation smoke and training.
+RDD_SINGLE_MODEL = "mobilenet_v3_small"
+# Used when RDD_MODEL_MODE is "all" for both adaptation smoke and training.
+# This is the run subset, not necessarily every model that the adapter supports.
+RDD_MODEL_NAMES = (
+    "mobilenet_v2",
+    "mobilenet_v3_small",
+    "mobilenet_v3_large",
+    "efficientnet_b0",
+    "resnet18",
+)
+# Available image-classification models for this list:
+# "mobilenet_v2", "mobilenet_v3_small", "mobilenet_v3_large",
+# "efficientnet_b0", "resnet18", "inception_v3",
+# "mobilevit_xxs", "mobilevit_xs", "mobilevit_s",
+# "efficientformer_l1", "efficientformer_l3", "efficientformer_l7".
+
+
+################
+# Training Loop
+################
+
+RUN_RDD_TRAINING = True  # skip training loop if False
+RDD_TRAINING_BATCH_SIZE = 16
+RDD_TRAINING_NUM_WORKERS = 2
+RDD_TRAINING_EPOCHS = 5
+RDD_TRAINING_LEARNING_RATE = 1e-4
+RDD_TRAINING_WEIGHT_DECAY = 1e-4
+RDD_TRAINING_BEST_METRIC = "f1"
+RDD_TRAINING_USE_WEIGHTED_LOSS = True
+RDD_TRAINING_PROGRESS_INTERVAL = 50
+
+DEFAULT_IMAGE_SIZE = 224
+MODEL_IMAGE_SIZES = {
+    "inception_v3": 299,
+}

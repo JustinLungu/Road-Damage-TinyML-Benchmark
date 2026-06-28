@@ -5,6 +5,7 @@ import pytest
 import torch
 from PIL import Image
 
+import src.rdd_training.constants as rdd_constants
 import src.rdd_training.dataset as dataset_module
 import src.rdd_training.utils as rdd_utils
 from src.rdd_training.dataset import (
@@ -278,6 +279,7 @@ def test_rdd_training_main_runs_dataset_and_adapter_smoke(monkeypatch, capsys) -
         "load_and_adapt_model_for_binary_pothole",
         fake_load_and_adapt_model_for_binary_pothole,
     )
+    monkeypatch.setattr(rdd_constants, "RUN_RDD_TRAINING", False)
 
     runpy.run_module("src.rdd_training.main", run_name="__main__")
     output = capsys.readouterr().out
@@ -288,5 +290,5 @@ def test_rdd_training_main_runs_dataset_and_adapter_smoke(monkeypatch, capsys) -
     assert "test:" in output
     assert "pothole_fraction: 0.400" in output
     assert "Model adaptation smoke test" in output
-    assert "adapted_model: mobilevit_xxs -> FakeModel" in output
-    assert adapted_calls == ["mobilevit_xxs"]
+    assert "adapted_model: mobilenet_v3_small -> FakeModel" in output
+    assert adapted_calls == ["mobilenet_v3_small"]

@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from src.constants import RDD2022_BINARY_POTHOLE_DIR
 from src.rdd_training.constants import (
-    MODEL_ADAPTATION_SMOKE_TEST_MODE,
-    MODEL_ADAPTATION_SMOKE_TEST_MODEL,
+    RDD_MODEL_MODE,
+    RUN_RDD_TRAINING,
 )
 from src.rdd_training.dataset import BinaryPotholeDataset, BinaryPotholeManifest
+from src.rdd_training.trainer import BinaryPotholeTrainer, RDDTrainingConfig
 from src.rdd_training.utils import (
     load_and_adapt_all_binary_pothole_models,
     load_and_adapt_model_for_binary_pothole,
+    select_rdd_model_names,
 )
 
 
@@ -48,19 +50,31 @@ if __name__ == "__main__":
 
     print()
     print("Model adaptation smoke test")
-    if MODEL_ADAPTATION_SMOKE_TEST_MODE == "all":
+    if RDD_MODEL_MODE == "all":
         adapted_models = load_and_adapt_all_binary_pothole_models()
         for model_name, adapted_model in adapted_models.items():
             print(f"  adapted_model: {model_name} -> {type(adapted_model).__name__}")
-    elif MODEL_ADAPTATION_SMOKE_TEST_MODE == "single":
-        adapted_model = load_and_adapt_model_for_binary_pothole(
-            MODEL_ADAPTATION_SMOKE_TEST_MODEL,
-        )
+    elif RDD_MODEL_MODE == "single":
+        model_name = select_rdd_model_names()[0]
+        adapted_model = load_and_adapt_model_for_binary_pothole(model_name)
         print(
             "  adapted_model: "
-            f"{MODEL_ADAPTATION_SMOKE_TEST_MODEL} -> {type(adapted_model).__name__}"
+            f"{model_name} -> {type(adapted_model).__name__}"
         )
     else:
-        raise ValueError(
-            "MODEL_ADAPTATION_SMOKE_TEST_MODE must be 'single' or 'all'."
-        )
+        raise ValueError("RDD_MODEL_MODE must be 'single' or 'all'.")
+
+    if RUN_RDD_TRAINING:
+        print()
+        print("RDD2022 binary pothole training")
+        for model_name in select_rdd_model_names():
+            print()
+            print(f"Training {model_name}")
+            trainer = BinaryPotholeTrainer(RDDTrainingConfig(model_name=model_name))
+            result = trainer.train()
+            print(
+                "  best_checkpoint: "
+                f"{result.best_checkpoint_path} "
+                f"({result.best_metric_name}={result.best_metric_value:.4f}, "
+                f"epoch={result.best_epoch})"
+            )
