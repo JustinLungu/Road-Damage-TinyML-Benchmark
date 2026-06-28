@@ -1,15 +1,23 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, Iterable
 
+import torch.nn as nn
 from PIL import Image
 
 from src.constants import PROJECT_ROOT
 from src.rdd_training.constants import (
+    ID_TO_LABEL,
+    LABEL_TO_ID,
     NEGATIVE_LABEL,
     POSITIVE_LABEL,
+    RDD_IMAGE_CLASSIFICATION_MODELS,
     REQUIRED_MANIFEST_COLUMNS,
 )
+
+
+########### Manifest Validation ###########
 
 
 def validate_manifest_columns(
@@ -40,6 +48,9 @@ def parse_binary_label(raw_label: str, row_number: int) -> int:
     return label
 
 
+########### Manifest Paths ###########
+
+
 def expected_label_name(label: int) -> str:
     return "pothole" if label == POSITIVE_LABEL else "non_pothole"
 
@@ -67,9 +78,15 @@ def validate_existing_file(path: Path, column_name: str, row_number: int) -> Non
         )
 
 
+########### Images ###########
+
+
 def load_rgb_image(image_path: Path) -> Image.Image:
     with Image.open(image_path) as image:
         return image.convert("RGB")
+
+
+########### Manifest Rows ###########
 
 
 def parse_manifest_row(
@@ -131,3 +148,85 @@ def validate_manifest_split(
             f"Manifest {manifest_path} contains split values other than "
             f"{expected_split}: {', '.join(bad_splits)}"
         )
+
+
+########### Model Adaptation ###########
+
+
+def require_attribute(model: Any, attribute_name: str) -> Any:
+    if not hasattr(model, attribute_name):
+        raise ValueError(f"Model has no {attribute_name} attribute.")
+    return getattr(model, attribute_name)
+
+
+def require_linear_attribute(model: Any, attribute_name: str) -> nn.Linear:
+    layer = require_attribute(model, attribute_name)
+    if not isinstance(layer, nn.Linear):
+        raise ValueError(f"Expected {attribute_name} to be nn.Linear.")
+    return layer
+
+
+def make_replacement_linear(layer: nn.Linear, num_classes: int) -> nn.Linear:
+    return nn.Linear(
+        in_features=layer.in_features,
+        out_features=num_classes,
+        bias=layer.bias is not None,
+    )
+
+
+def replace_linear_attribute(
+    model: Any,
+    attribute_name: str,
+    num_classes: int,
+) -> None:
+    layer = require_linear_attribute(model, attribute_name)
+    setattr(model, attribute_name, make_replacement_linear(layer, num_classes))
+
+
+def replace_last_linear(module: Any, num_classes: int) -> None:
+    if isinstance(module, nn.Linear):
+        raise ValueError("Expected a classifier container, received nn.Linear.")
+    if not hasattr(module, "__len__") or not hasattr(module, "__getitem__"):
+        raise ValueError("Classifier does not support indexed layer replacement.")
+
+    for index in reversed(range(len(module))):
+        layer = module[index]
+        if isinstance(layer, nn.Linear):
+            module[index] = make_replacement_linear(layer, num_classes)
+            return
+
+    raise ValueError("Classifier contains no nn.Linear layer to replace.")
+
+
+def update_hugging_face_label_config(model: Any, num_classes: int) -> None:
+    config = getattr(model, "config", None)
+    if config is None:
+        return
+
+    config.num_labels = num_classes
+    config.id2label = dict(ID_TO_LABEL)
+    config.label2id = dict(LABEL_TO_ID)
+
+
+def adapt_model_for_binary_pothole(model_name: str, model: Any) -> Any:
+    from src.rdd_training.model_adapter import BinaryPotholeModelAdapter
+
+    return BinaryPotholeModelAdapter(model_name).adapt(model)
+
+
+def load_and_adapt_model_for_binary_pothole(model_name: str) -> Any:
+    from src.load_model import load_model
+
+    model = load_model(model_name)
+    return adapt_model_for_binary_pothole(model_name, model)
+
+
+def load_and_adapt_all_binary_pothole_models(
+    model_names: Iterable[str] = RDD_IMAGE_CLASSIFICATION_MODELS,
+) -> dict[str, Any]:
+    adapted_models = {}
+
+    for model_name in sorted(model_names):
+        adapted_models[model_name] = load_and_adapt_model_for_binary_pothole(model_name)
+
+    return adapted_models

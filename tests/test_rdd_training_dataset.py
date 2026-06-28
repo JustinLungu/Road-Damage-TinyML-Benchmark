@@ -1,10 +1,12 @@
+import runpy
 from pathlib import Path
 
 import pytest
 import torch
 from PIL import Image
 
-import src.rdd_training.main as rdd_main
+import src.rdd_training.dataset as dataset_module
+import src.rdd_training.utils as rdd_utils
 from src.rdd_training.dataset import (
     BinaryPotholeDataset,
     BinaryPotholeManifest,
@@ -225,7 +227,7 @@ def test_rdd_training_utils_parse_labels_and_resolve_paths(tmp_path) -> None:
         parse_binary_label("bad", 4)
 
 
-def test_rdd_training_main_summarizes_configured_splits(monkeypatch, capsys) -> None:
+def test_rdd_training_main_runs_dataset_and_adapter_smoke(monkeypatch, capsys) -> None:
     class FakeManifest:
         def __init__(self, split: str) -> None:
             self.split = split
@@ -260,10 +262,24 @@ def test_rdd_training_main_summarizes_configured_splits(monkeypatch, capsys) -> 
                 "country": "India",
             }
 
-    monkeypatch.setattr(rdd_main, "BinaryPotholeManifest", FakeManifest)
-    monkeypatch.setattr(rdd_main, "BinaryPotholeDataset", FakeDataset)
+    class FakeModel:
+        pass
 
-    rdd_main.main()
+    adapted_calls = []
+
+    def fake_load_and_adapt_model_for_binary_pothole(model_name):
+        adapted_calls.append(model_name)
+        return FakeModel()
+
+    monkeypatch.setattr(dataset_module, "BinaryPotholeManifest", FakeManifest)
+    monkeypatch.setattr(dataset_module, "BinaryPotholeDataset", FakeDataset)
+    monkeypatch.setattr(
+        rdd_utils,
+        "load_and_adapt_model_for_binary_pothole",
+        fake_load_and_adapt_model_for_binary_pothole,
+    )
+
+    runpy.run_module("src.rdd_training.main", run_name="__main__")
     output = capsys.readouterr().out
 
     assert "RDD2022 binary pothole dataset loader" in output
@@ -271,3 +287,6 @@ def test_rdd_training_main_summarizes_configured_splits(monkeypatch, capsys) -> 
     assert "validation:" in output
     assert "test:" in output
     assert "pothole_fraction: 0.400" in output
+    assert "Model adaptation smoke test" in output
+    assert "adapted_model: mobilevit_xxs -> FakeModel" in output
+    assert adapted_calls == ["mobilevit_xxs"]

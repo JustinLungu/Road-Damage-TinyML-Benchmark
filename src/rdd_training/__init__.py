@@ -5,12 +5,24 @@ from src.rdd_training.dataset import (
     BinaryPotholeManifest,
     BinaryPotholeSample,
 )
-from src.rdd_training.utils import load_rgb_image
+from src.rdd_training.model_adapter import (
+    BinaryPotholeModelAdapter,
+)
+from src.rdd_training.utils import (
+    adapt_model_for_binary_pothole,
+    load_and_adapt_all_binary_pothole_models,
+    load_and_adapt_model_for_binary_pothole,
+    load_rgb_image,
+)
 
 
 __all__ = [
     "BinaryPotholeDataset",
     "BinaryPotholeManifest",
+    "BinaryPotholeModelAdapter",
     "BinaryPotholeSample",
+    "adapt_model_for_binary_pothole",
+    "load_and_adapt_all_binary_pothole_models",
+    "load_and_adapt_model_for_binary_pothole",
     "load_rgb_image",
 ]

@@ -1,3 +1,13 @@
+from src.constants import (
+    EFFICIENTFORMER_MODEL_IDS,
+    EFFICIENTNET_MODEL_CHECKPOINTS,
+    INCEPTION_MODEL_CHECKPOINTS,
+    MOBILENET_MODEL_CHECKPOINTS,
+    MOBILEVIT_MODEL_IDS,
+    RESNET_MODEL_CHECKPOINTS,
+)
+
+
 ##########################
 # Binary Pothole Manifests
 ##########################
@@ -5,6 +15,10 @@
 POTHOLE_LABEL = "D40"
 POSITIVE_LABEL = 1
 NEGATIVE_LABEL = 0
+BINARY_CLASS_NAMES = ("non_pothole", "pothole")
+NUM_BINARY_CLASSES = len(BINARY_CLASS_NAMES)
+ID_TO_LABEL = dict(enumerate(BINARY_CLASS_NAMES))
+LABEL_TO_ID = {label: index for index, label in ID_TO_LABEL.items()}
 
 SPLIT_COUNTRIES = {
     "train": ("China_Drone", "China_MotorBike", "Czech", "India"),
@@ -47,3 +61,22 @@ REQUIRED_MANIFEST_COLUMNS = {
     "label",
     "label_name",
 }
+
+
+######################
+# Fine-Tuning Models
+######################
+
+RDD_IMAGE_CLASSIFICATION_MODELS = frozenset(
+    {
+        *MOBILENET_MODEL_CHECKPOINTS,
+        *EFFICIENTNET_MODEL_CHECKPOINTS,
+        *RESNET_MODEL_CHECKPOINTS,
+        *INCEPTION_MODEL_CHECKPOINTS,
+        *MOBILEVIT_MODEL_IDS,
+        *EFFICIENTFORMER_MODEL_IDS,
+    }
+)
+
+MODEL_ADAPTATION_SMOKE_TEST_MODE = "all" # "all" or "single"
+MODEL_ADAPTATION_SMOKE_TEST_MODEL = "mobilevit_xxs"

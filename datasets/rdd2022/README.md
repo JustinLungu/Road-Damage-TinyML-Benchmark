@@ -155,6 +155,22 @@ Smoke-test the loader and print split summaries with:
 uv run python -m src.rdd_training.main
 ```
 
+Adapt a pretrained image-classification model for binary pothole fine-tuning:
+
+```python
+from src.load_model import load_model
+from src.rdd_training import adapt_model_for_binary_pothole
+
+model_name = "mobilenet_v3_small"
+model = load_model(model_name)
+model = adapt_model_for_binary_pothole(model_name, model)
+```
+
+Only image-classification models are supported for this RDD fine-tuning path:
+MobileNet, EfficientNet-B0, ResNet18, InceptionV3, MobileViT, and
+EfficientFormer. YOLO detectors and SmolVLM vision-language models are
+intentionally excluded.
+
 To change the country split, edit `SPLIT_COUNTRIES` in
 `src/rdd_training/constants.py`, then rerun:
 
