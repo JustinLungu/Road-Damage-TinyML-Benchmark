@@ -109,7 +109,7 @@ def test_adapts_inception_main_and_auxiliary_heads() -> None:
     adapt_model_for_binary_pothole("inception_v3", model)
 
     assert_binary_linear(model.fc, in_features=64)
-    assert_binary_linear(model.AuxLogits.fc, in_features=24)
+    assert model.AuxLogits is None
     assert model.aux_logits is False
 
 

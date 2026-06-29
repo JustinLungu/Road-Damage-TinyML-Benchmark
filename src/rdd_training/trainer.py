@@ -13,6 +13,7 @@ from src.constants import RDD2022_BINARY_POTHOLE_DIR, RDD_TRAINING_RESULTS_DIR
 from src.rdd_training.constants import (
     RDD_TRAINING_BATCH_SIZE,
     RDD_TRAINING_BEST_METRIC,
+    RDD_TRAINING_DROP_LAST_BATCH,
     RDD_TRAINING_EARLY_STOPPING_MIN_DELTA,
     RDD_TRAINING_EARLY_STOPPING_PATIENCE,
     RDD_TRAINING_EPOCHS,
@@ -53,6 +54,7 @@ class RDDTrainingConfig:
     use_weighted_loss: bool = RDD_TRAINING_USE_WEIGHTED_LOSS
     progress_interval: int = RDD_TRAINING_PROGRESS_INTERVAL
     save_plots: bool = RDD_TRAINING_SAVE_PLOTS
+    drop_last_train_batch: bool = RDD_TRAINING_DROP_LAST_BATCH
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -296,6 +298,7 @@ class BinaryPotholeTrainer:
             shuffle=is_train,
             num_workers=self.config.num_workers,
             collate_fn=collate_binary_pothole_batch,
+            drop_last=is_train and self.config.drop_last_train_batch,
         )
 
     def _make_criterion(self, train_manifest: BinaryPotholeManifest) -> nn.Module:

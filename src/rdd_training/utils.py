@@ -497,6 +497,14 @@ def write_training_metric_plot(
     plt.close()
 
 
+def write_failure_log(
+    log_path: Path,
+    message: str,
+) -> None:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text(message, encoding="utf-8")
+
+
 ########### Evaluation Outputs ###########
 
 
@@ -652,12 +660,15 @@ def write_model_comparison_csv(
 def load_evaluation_rows_from_metrics_csv(
     model_names: Iterable[str],
     output_dir: Path,
+    skip_missing: bool = False,
 ) -> list[dict[str, Any]]:
     evaluation_rows = []
 
     for model_name in model_names:
         metrics_path = output_dir / model_name / "test_metrics.csv"
         if not metrics_path.is_file():
+            if skip_missing:
+                continue
             raise FileNotFoundError(
                 f"Evaluation metrics do not exist for {model_name}: {metrics_path}"
             )

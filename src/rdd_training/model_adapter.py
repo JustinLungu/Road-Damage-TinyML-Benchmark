@@ -80,6 +80,8 @@ class BinaryPotholeModelAdapter:
         # Keep downstream training output handling simple: one logits tensor.
         if hasattr(model, "aux_logits"):
             model.aux_logits = False
+        if hasattr(model, "AuxLogits"):
+            model.AuxLogits = None
 
         return model
 
