@@ -13,6 +13,8 @@ from src.constants import RDD2022_BINARY_POTHOLE_DIR, RDD_TRAINING_RESULTS_DIR
 from src.rdd_training.constants import (
     RDD_TRAINING_BATCH_SIZE,
     RDD_TRAINING_BEST_METRIC,
+    RDD_TRAINING_EARLY_STOPPING_MIN_DELTA,
+    RDD_TRAINING_EARLY_STOPPING_PATIENCE,
     RDD_TRAINING_EPOCHS,
     RDD_TRAINING_LEARNING_RATE,
     RDD_TRAINING_NUM_WORKERS,
@@ -46,6 +48,8 @@ class RDDTrainingConfig:
     learning_rate: float = RDD_TRAINING_LEARNING_RATE
     weight_decay: float = RDD_TRAINING_WEIGHT_DECAY
     best_metric: str = RDD_TRAINING_BEST_METRIC
+    early_stopping_patience: int = RDD_TRAINING_EARLY_STOPPING_PATIENCE
+    early_stopping_min_delta: float = RDD_TRAINING_EARLY_STOPPING_MIN_DELTA
     use_weighted_loss: bool = RDD_TRAINING_USE_WEIGHTED_LOSS
     progress_interval: int = RDD_TRAINING_PROGRESS_INTERVAL
     save_plots: bool = RDD_TRAINING_SAVE_PLOTS
@@ -77,6 +81,8 @@ class BinaryPotholeTrainer:
             raise ValueError("epochs must be at least one.")
         if config.batch_size < 1:
             raise ValueError("batch_size must be at least one.")
+        if config.early_stopping_patience < 0:
+            raise ValueError("early_stopping_patience cannot be negative.")
 
         self.config = config
         self.device = torch.device(config.device)
@@ -121,6 +127,7 @@ class BinaryPotholeTrainer:
 
         best_metric_value = float("-inf")
         best_epoch = 0
+        epochs_without_improvement = 0
         history = []
         best_checkpoint_path = model_output_dir / "best.pt"
 
@@ -157,9 +164,11 @@ class BinaryPotholeTrainer:
                 f"val_recall={validation_metrics['recall']:.4f}"
             )
 
-            if selected_metric > best_metric_value:
+            improvement = selected_metric - best_metric_value
+            if improvement > self.config.early_stopping_min_delta:
                 best_metric_value = selected_metric
                 best_epoch = epoch
+                epochs_without_improvement = 0
                 self._save_checkpoint(
                     model=model,
                     checkpoint_path=best_checkpoint_path,
@@ -172,6 +181,27 @@ class BinaryPotholeTrainer:
                     f"{best_checkpoint_path} "
                     f"({self.config.best_metric}={selected_metric:.4f})"
                 )
+            else:
+                epochs_without_improvement += 1
+                print(
+                    "  no validation improvement: "
+                    f"{epochs_without_improvement}/"
+                    f"{self.config.early_stopping_patience} "
+                    f"(best {self.config.best_metric}="
+                    f"{best_metric_value:.4f} at epoch {best_epoch})"
+                )
+
+            if (
+                self.config.early_stopping_patience > 0
+                and epochs_without_improvement >= self.config.early_stopping_patience
+            ):
+                print(
+                    "  early stopping: "
+                    f"{self.config.best_metric} did not improve by at least "
+                    f"{self.config.early_stopping_min_delta} for "
+                    f"{self.config.early_stopping_patience} epochs."
+                )
+                break
 
         history_path = model_output_dir / "history.csv"
         self._write_history(history_path, history)

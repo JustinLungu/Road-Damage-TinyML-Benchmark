@@ -84,8 +84,18 @@ RDD_SINGLE_MODEL = "mobilenet_v3_small"
 # Used when RDD_MODEL_MODE is "all" for both adaptation smoke and training.
 # This is the run subset, not necessarily every model that the adapter supports.
 RDD_MODEL_NAMES = (
+    "mobilenet_v2",
     "mobilenet_v3_small",
+    "mobilenet_v3_large",
+    "efficientnet_b0",
     "resnet18",
+    "inception_v3",
+    "mobilevit_xxs",
+    "mobilevit_xs",
+    "mobilevit_s",
+    "efficientformer_l1",
+    "efficientformer_l3",
+    "efficientformer_l7",
 )
 # Available image-classification models for this list:
 # "mobilenet_v2", "mobilenet_v3_small", "mobilenet_v3_large",
@@ -101,20 +111,22 @@ RDD_MODEL_NAMES = (
 RUN_RDD_TRAINING = True  # skip training loop if False
 RDD_TRAINING_BATCH_SIZE = 16
 RDD_TRAINING_NUM_WORKERS = 2
-RDD_TRAINING_EPOCHS = 5
+RDD_TRAINING_EPOCHS = 20
 RDD_TRAINING_LEARNING_RATE = 1e-4
 RDD_TRAINING_WEIGHT_DECAY = 1e-4
 RDD_TRAINING_BEST_METRIC = "f1"
 RDD_TRAINING_USE_WEIGHTED_LOSS = True
 RDD_TRAINING_PROGRESS_INTERVAL = 50
 RDD_TRAINING_SAVE_PLOTS = True
+RDD_TRAINING_EARLY_STOPPING_PATIENCE = 4
+RDD_TRAINING_EARLY_STOPPING_MIN_DELTA = 1e-4
 
 
 ################
 # Evaluation
 ################
 
-RUN_RDD_EVALUATION = False  # skip evaluation loop if False
+RUN_RDD_EVALUATION = True  # skip evaluation loop if False
 RDD_EVALUATION_BATCH_SIZE = 32
 RDD_EVALUATION_NUM_WORKERS = 2
 RDD_EVALUATION_PROGRESS_INTERVAL = 50

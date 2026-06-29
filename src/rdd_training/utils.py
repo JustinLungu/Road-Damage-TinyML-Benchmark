@@ -288,10 +288,14 @@ def load_and_adapt_all_binary_pothole_models(
 
 
 def select_rdd_model_names(
-    mode: str = RDD_MODEL_MODE,
-    model_names: Iterable[str] = RDD_MODEL_NAMES,
-    single_model: str = RDD_SINGLE_MODEL,
+    mode: str | None = None,
+    model_names: Iterable[str] | None = None,
+    single_model: str | None = None,
 ) -> tuple[str, ...]:
+    mode = RDD_MODEL_MODE if mode is None else mode
+    model_names = RDD_MODEL_NAMES if model_names is None else model_names
+    single_model = RDD_SINGLE_MODEL if single_model is None else single_model
+
     if mode == "single":
         return (single_model,)
     if mode == "all":

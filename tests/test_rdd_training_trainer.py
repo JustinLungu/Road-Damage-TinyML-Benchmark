@@ -150,3 +150,13 @@ def test_binary_pothole_trainer_runs_and_saves_best_checkpoint(
     assert "loss_curve:" in output
     assert "f1_curve:" in output
     assert "accuracy_curve:" in output
+
+
+def test_binary_pothole_trainer_rejects_invalid_early_stopping_patience() -> None:
+    config = RDDTrainingConfig(
+        model_name="tiny",
+        early_stopping_patience=-1,
+    )
+
+    with pytest.raises(ValueError, match="patience cannot be negative"):
+        BinaryPotholeTrainer(config=config, model=TinyClassifier())

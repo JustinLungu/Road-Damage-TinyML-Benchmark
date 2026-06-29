@@ -21,6 +21,8 @@ docs/models/*/outputs/
 results/system_metrics/*
 results/detection_metrics/*
 !results/detection_metrics/README.md
+results/rdd_trained_models/*
+!results/rdd_trained_models/README.md
 
 
 
