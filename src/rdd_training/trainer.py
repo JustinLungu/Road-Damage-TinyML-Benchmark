@@ -30,6 +30,7 @@ from src.rdd_training.utils import (
     load_and_adapt_model_for_binary_pothole,
     make_image_transform,
     write_training_loss_plot,
+    write_training_metric_plot,
 )
 
 
@@ -60,6 +61,8 @@ class RDDTrainingResult:
     best_checkpoint_path: Path
     history_path: Path
     loss_curve_path: Path | None
+    f1_curve_path: Path | None
+    accuracy_curve_path: Path | None
 
 
 class BinaryPotholeTrainer:
@@ -124,7 +127,7 @@ class BinaryPotholeTrainer:
         for epoch in range(1, self.config.epochs + 1):
             print()
             print(f"  epoch {epoch}/{self.config.epochs}: training")
-            train_loss = self._run_training_epoch(
+            train_metrics = self._run_training_epoch(
                 model,
                 train_loader,
                 criterion,
@@ -137,7 +140,7 @@ class BinaryPotholeTrainer:
 
             epoch_row = {
                 "epoch": epoch,
-                "train_loss": train_loss,
+                **{f"train_{key}": value for key, value in train_metrics.items()},
                 **{f"validation_{key}": value for key, value in validation_metrics.items()},
             }
             history.append(epoch_row)
@@ -145,7 +148,8 @@ class BinaryPotholeTrainer:
             print(
                 "  epoch "
                 f"{epoch}/{self.config.epochs}: "
-                f"train_loss={train_loss:.4f}, "
+                f"train_loss={train_metrics['loss']:.4f}, "
+                f"train_f1={train_metrics['f1']:.4f}, "
                 f"val_loss={validation_metrics['loss']:.4f}, "
                 f"val_f1={validation_metrics['f1']:.4f}, "
                 f"val_balanced_accuracy="
@@ -172,11 +176,31 @@ class BinaryPotholeTrainer:
         history_path = model_output_dir / "history.csv"
         self._write_history(history_path, history)
         loss_curve_path = model_output_dir / "loss_curve.png"
+        f1_curve_path = model_output_dir / "f1_curve.png"
+        accuracy_curve_path = model_output_dir / "accuracy_curve.png"
         if self.config.save_plots:
             write_training_loss_plot(loss_curve_path, history)
+            write_training_metric_plot(
+                plot_path=f1_curve_path,
+                history=history,
+                metric_name="f1",
+                y_label="F1-score",
+                title="RDD Binary Pothole Training F1",
+            )
+            write_training_metric_plot(
+                plot_path=accuracy_curve_path,
+                history=history,
+                metric_name="accuracy",
+                y_label="Accuracy",
+                title="RDD Binary Pothole Training Accuracy",
+            )
             print(f"  loss_curve: {loss_curve_path}")
+            print(f"  f1_curve: {f1_curve_path}")
+            print(f"  accuracy_curve: {accuracy_curve_path}")
         else:
             loss_curve_path = None
+            f1_curve_path = None
+            accuracy_curve_path = None
 
         return RDDTrainingResult(
             model_name=self.config.model_name,
@@ -186,6 +210,8 @@ class BinaryPotholeTrainer:
             best_checkpoint_path=best_checkpoint_path,
             history_path=history_path,
             loss_curve_path=loss_curve_path,
+            f1_curve_path=f1_curve_path,
+            accuracy_curve_path=accuracy_curve_path,
         )
 
     def evaluate(
@@ -258,10 +284,12 @@ class BinaryPotholeTrainer:
         criterion: nn.Module,
         optimizer: torch.optim.Optimizer,
         epoch: int,
-    ) -> float:
+    ) -> dict[str, float]:
         model.train()
         total_loss = 0.0
         sample_count = 0
+        predictions = []
+        targets = []
 
         for batch_index, batch in enumerate(train_loader, start=1):
             images = batch["image"].to(self.device)
@@ -276,6 +304,8 @@ class BinaryPotholeTrainer:
             batch_size = labels.size(0)
             total_loss += loss.item() * batch_size
             sample_count += batch_size
+            predictions.append(logits.detach().argmax(dim=1))
+            targets.append(labels.detach())
 
             if self._should_print_batch_progress(batch_index, len(train_loader)):
                 average_loss = total_loss / sample_count
@@ -287,7 +317,12 @@ class BinaryPotholeTrainer:
                     f"loss={average_loss:.4f}"
                 )
 
-        return total_loss / sample_count
+        metrics = compute_binary_classification_metrics(
+            predictions=torch.cat(predictions),
+            targets=torch.cat(targets),
+        )
+        metrics["loss"] = total_loss / sample_count
+        return metrics
 
     def _should_print_batch_progress(
         self,

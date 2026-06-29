@@ -89,6 +89,10 @@ if __name__ == "__main__":
             )
             if result.loss_curve_path is not None:
                 print(f"  loss_curve: {result.loss_curve_path}")
+            if result.f1_curve_path is not None:
+                print(f"  f1_curve: {result.f1_curve_path}")
+            if result.accuracy_curve_path is not None:
+                print(f"  accuracy_curve: {result.accuracy_curve_path}")
 
     if RUN_RDD_EVALUATION:
         print()

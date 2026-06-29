@@ -279,6 +279,8 @@ def test_rdd_training_main_runs_dataset_and_adapter_smoke(monkeypatch, capsys) -
         "load_and_adapt_model_for_binary_pothole",
         fake_load_and_adapt_model_for_binary_pothole,
     )
+    monkeypatch.setattr(rdd_constants, "RDD_MODEL_MODE", "single")
+    monkeypatch.setattr(rdd_constants, "RDD_SINGLE_MODEL", "mobilenet_v3_small")
     monkeypatch.setattr(rdd_constants, "RUN_RDD_TRAINING", False)
     monkeypatch.setattr(rdd_constants, "RUN_RDD_EVALUATION", False)
 

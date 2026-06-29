@@ -451,19 +451,42 @@ def write_training_loss_plot(
     plot_path: Path,
     history: list[dict[str, Any]],
 ) -> None:
+    write_training_metric_plot(
+        plot_path=plot_path,
+        history=history,
+        metric_name="loss",
+        y_label="Loss",
+        title="RDD Binary Pothole Training Loss",
+    )
+
+
+def write_training_metric_plot(
+    plot_path: Path,
+    history: list[dict[str, Any]],
+    metric_name: str,
+    y_label: str,
+    title: str,
+) -> None:
     import matplotlib.pyplot as plt
 
     epochs = [int(row["epoch"]) for row in history]
-    train_losses = [float(row["train_loss"]) for row in history]
-    validation_losses = [float(row["validation_loss"]) for row in history]
+    train_values = [float(row[f"train_{metric_name}"]) for row in history]
+    validation_values = [
+        float(row[f"validation_{metric_name}"]) for row in history
+    ]
 
     plot_path.parent.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(6, 4))
-    plt.plot(epochs, train_losses, marker="o", label="train loss")
-    plt.plot(epochs, validation_losses, marker="o", label="validation loss")
+    plt.plot(epochs, train_values, marker="o", label=f"train {metric_name}")
+    plt.plot(
+        epochs,
+        validation_values,
+        marker="o",
+        label=f"validation {metric_name}",
+    )
     plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title("RDD Binary Pothole Training Loss")
+    plt.ylabel(y_label)
+    plt.title(title)
     plt.legend()
     plt.tight_layout()
     plt.savefig(plot_path, dpi=160)
