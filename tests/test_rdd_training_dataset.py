@@ -283,6 +283,7 @@ def test_rdd_training_main_runs_dataset_and_adapter_smoke(monkeypatch, capsys) -
     monkeypatch.setattr(rdd_constants, "RDD_SINGLE_MODEL", "mobilenet_v3_small")
     monkeypatch.setattr(rdd_constants, "RUN_RDD_TRAINING", False)
     monkeypatch.setattr(rdd_constants, "RUN_RDD_EVALUATION", False)
+    monkeypatch.setattr(rdd_constants, "RUN_RDD_COMPARISON", False)
 
     runpy.run_module("src.rdd_training.main", run_name="__main__")
     output = capsys.readouterr().out

@@ -10,7 +10,9 @@ from src.rdd_training.evaluation import BinaryPotholeEvaluator, RDDEvaluationCon
 from src.rdd_training.utils import (
     collate_binary_pothole_batch,
     compute_binary_roc_auc,
+    load_evaluation_rows_from_metrics_csv,
     rank_evaluation_rows,
+    write_evaluation_metrics_csv,
     write_model_comparison_csv,
 )
 
@@ -137,3 +139,39 @@ def test_model_comparison_ranking_and_top_models_csv(tmp_path) -> None:
     assert written[0]["model_name"] == "b"
     assert comparison_path.is_file()
     assert (tmp_path / "top_models.csv").is_file()
+
+
+def test_load_evaluation_rows_from_existing_metrics_csv(tmp_path) -> None:
+    model_dir = tmp_path / "mobilenet_v3_small"
+    metrics_path = model_dir / "test_metrics.csv"
+    write_evaluation_metrics_csv(
+        metrics_path,
+        model_name="mobilenet_v3_small",
+        split="test",
+        metrics={
+            "accuracy": 0.8,
+            "balanced_accuracy": 0.7,
+            "precision": 0.6,
+            "recall": 0.5,
+            "f1": 0.55,
+            "roc_auc": 0.75,
+        },
+    )
+
+    rows = load_evaluation_rows_from_metrics_csv(
+        model_names=("mobilenet_v3_small",),
+        output_dir=tmp_path,
+    )
+
+    assert rows == [
+        {
+            "model_name": "mobilenet_v3_small",
+            "checkpoint_path": str(model_dir / "best.pt"),
+            "accuracy": 0.8,
+            "balanced_accuracy": 0.7,
+            "precision": 0.6,
+            "recall": 0.5,
+            "f1": 0.55,
+            "roc_auc": 0.75,
+        }
+    ]

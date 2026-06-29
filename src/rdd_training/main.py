@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from src.constants import RDD2022_BINARY_POTHOLE_DIR, RDD_TRAINING_RESULTS_DIR
 from src.rdd_training.constants import (
-    RDD_EVALUATION_RANKING_METRIC,
-    RDD_EVALUATION_TOP_K,
+    RDD_COMPARISON_RANKING_METRIC,
+    RDD_COMPARISON_TOP_K,
     RDD_MODEL_MODE,
+    RUN_RDD_COMPARISON,
     RUN_RDD_EVALUATION,
     RUN_RDD_TRAINING,
 )
@@ -12,6 +13,7 @@ from src.rdd_training.dataset import BinaryPotholeDataset, BinaryPotholeManifest
 from src.rdd_training.evaluation import BinaryPotholeEvaluator, RDDEvaluationConfig
 from src.rdd_training.trainer import BinaryPotholeTrainer, RDDTrainingConfig
 from src.rdd_training.utils import (
+    load_evaluation_rows_from_metrics_csv,
     load_and_adapt_all_binary_pothole_models,
     load_and_adapt_model_for_binary_pothole,
     select_rdd_model_names,
@@ -72,6 +74,7 @@ if __name__ == "__main__":
         raise ValueError("RDD_MODEL_MODE must be 'single' or 'all'.")
 
     trained_model_names = []
+    evaluation_rows = []
     if RUN_RDD_TRAINING:
         print()
         print("RDD2022 binary pothole training")
@@ -98,7 +101,6 @@ if __name__ == "__main__":
         print()
         print("RDD2022 binary pothole evaluation")
         evaluation_model_names = tuple(trained_model_names) or selected_model_names
-        evaluation_rows = []
 
         for model_name in evaluation_model_names:
             print()
@@ -115,26 +117,36 @@ if __name__ == "__main__":
             if result.metric_bar_plot_path is not None:
                 print(f"  metric_bar_plot: {result.metric_bar_plot_path}")
 
+    if RUN_RDD_COMPARISON:
+        print()
+        print("RDD2022 binary pothole model comparison")
+        comparison_model_names = tuple(trained_model_names) or selected_model_names
+        if not evaluation_rows:
+            evaluation_rows = load_evaluation_rows_from_metrics_csv(
+                comparison_model_names,
+                output_dir=RDD_TRAINING_RESULTS_DIR,
+            )
+
         comparison_path = RDD_TRAINING_RESULTS_DIR / "model_comparison.csv"
         ranked_rows = write_model_comparison_csv(
             comparison_path,
             evaluation_rows=evaluation_rows,
-            ranking_metric=RDD_EVALUATION_RANKING_METRIC,
-            top_k=RDD_EVALUATION_TOP_K,
+            ranking_metric=RDD_COMPARISON_RANKING_METRIC,
+            top_k=RDD_COMPARISON_TOP_K,
         )
         print()
         print(
             "Model comparison: "
             f"{comparison_path} "
-            f"(ranked by {RDD_EVALUATION_RANKING_METRIC})"
+            f"(ranked by {RDD_COMPARISON_RANKING_METRIC})"
         )
-        print(f"Top {RDD_EVALUATION_TOP_K}:")
-        for row in ranked_rows[:RDD_EVALUATION_TOP_K]:
+        print(f"Top {RDD_COMPARISON_TOP_K}:")
+        for row in ranked_rows[:RDD_COMPARISON_TOP_K]:
             print(
                 "  "
                 f"#{row['rank']} {row['model_name']} "
-                f"{RDD_EVALUATION_RANKING_METRIC}="
-                f"{row[RDD_EVALUATION_RANKING_METRIC]:.4f}, "
+                f"{RDD_COMPARISON_RANKING_METRIC}="
+                f"{row[RDD_COMPARISON_RANKING_METRIC]:.4f}, "
                 f"recall={row['recall']:.4f}, "
                 f"balanced_accuracy={row['balanced_accuracy']:.4f}"
             )

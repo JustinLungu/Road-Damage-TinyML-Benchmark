@@ -19,8 +19,8 @@ from src.rdd_training.constants import (
     NEGATIVE_LABEL,
     NUM_BINARY_CLASSES,
     POSITIVE_LABEL,
-    RDD_EVALUATION_RANKING_METRIC,
-    RDD_EVALUATION_TOP_K,
+    RDD_COMPARISON_RANKING_METRIC,
+    RDD_COMPARISON_TOP_K,
     RDD_MODEL_MODE,
     RDD_MODEL_NAMES,
     RDD_SINGLE_MODEL,
@@ -625,8 +625,8 @@ def write_metric_bar_plot(
 def write_model_comparison_csv(
     comparison_path: Path,
     evaluation_rows: list[dict[str, Any]],
-    ranking_metric: str = RDD_EVALUATION_RANKING_METRIC,
-    top_k: int = RDD_EVALUATION_TOP_K,
+    ranking_metric: str = RDD_COMPARISON_RANKING_METRIC,
+    top_k: int = RDD_COMPARISON_TOP_K,
 ) -> list[dict[str, Any]]:
     comparison_path.parent.mkdir(parents=True, exist_ok=True)
     ranked_rows = rank_evaluation_rows(evaluation_rows, ranking_metric)
@@ -643,6 +643,38 @@ def write_model_comparison_csv(
         writer.writerows(ranked_rows[:top_k])
 
     return ranked_rows
+
+
+def load_evaluation_rows_from_metrics_csv(
+    model_names: Iterable[str],
+    output_dir: Path,
+) -> list[dict[str, Any]]:
+    evaluation_rows = []
+
+    for model_name in model_names:
+        metrics_path = output_dir / model_name / "test_metrics.csv"
+        if not metrics_path.is_file():
+            raise FileNotFoundError(
+                f"Evaluation metrics do not exist for {model_name}: {metrics_path}"
+            )
+
+        with metrics_path.open(newline="", encoding="utf-8") as metrics_file:
+            reader = csv.DictReader(metrics_file)
+            row = next(reader)
+
+        evaluation_rows.append(
+            {
+                "model_name": model_name,
+                "checkpoint_path": str(output_dir / model_name / "best.pt"),
+                **{
+                    key: parse_metric_value(value)
+                    for key, value in row.items()
+                    if key not in {"model_name", "split"}
+                },
+            }
+        )
+
+    return evaluation_rows
 
 
 def rank_evaluation_rows(
@@ -672,3 +704,9 @@ def sanitize_metrics_for_json(metrics: dict[str, float]) -> dict[str, float | No
         key: None if isinstance(value, float) and math.isnan(value) else value
         for key, value in metrics.items()
     }
+
+
+def parse_metric_value(value: str) -> float:
+    if value == "":
+        return float("nan")
+    return float(value)
