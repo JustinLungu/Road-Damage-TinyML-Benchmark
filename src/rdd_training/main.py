@@ -87,6 +87,8 @@ if __name__ == "__main__":
                 f"({result.best_metric_name}={result.best_metric_value:.4f}, "
                 f"epoch={result.best_epoch})"
             )
+            if result.loss_curve_path is not None:
+                print(f"  loss_curve: {result.loss_curve_path}")
 
     if RUN_RDD_EVALUATION:
         print()

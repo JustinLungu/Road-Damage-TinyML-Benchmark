@@ -444,6 +444,32 @@ def safe_divide(numerator: float, denominator: float) -> float:
     return numerator / denominator
 
 
+########### Training Outputs ###########
+
+
+def write_training_loss_plot(
+    plot_path: Path,
+    history: list[dict[str, Any]],
+) -> None:
+    import matplotlib.pyplot as plt
+
+    epochs = [int(row["epoch"]) for row in history]
+    train_losses = [float(row["train_loss"]) for row in history]
+    validation_losses = [float(row["validation_loss"]) for row in history]
+
+    plot_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.figure(figsize=(6, 4))
+    plt.plot(epochs, train_losses, marker="o", label="train loss")
+    plt.plot(epochs, validation_losses, marker="o", label="validation loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("RDD Binary Pothole Training Loss")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(plot_path, dpi=160)
+    plt.close()
+
+
 ########### Evaluation Outputs ###########
 
 

@@ -133,6 +133,8 @@ def test_binary_pothole_trainer_runs_and_saves_best_checkpoint(
     assert result.best_metric_name == "f1"
     assert result.best_checkpoint_path.is_file()
     assert result.history_path.is_file()
+    assert result.loss_curve_path is not None
+    assert result.loss_curve_path.is_file()
     checkpoint = torch.load(result.best_checkpoint_path, map_location="cpu")
     assert checkpoint["model_name"] == "tiny"
     assert "model_state_dict" in checkpoint
@@ -141,3 +143,4 @@ def test_binary_pothole_trainer_runs_and_saves_best_checkpoint(
     assert "batch 1/2 epoch=1/2" in output
     assert "epoch 1/2: validating" in output
     assert "saved new best checkpoint" in output
+    assert "loss_curve:" in output

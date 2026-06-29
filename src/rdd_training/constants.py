@@ -78,16 +78,13 @@ RDD_IMAGE_CLASSIFICATION_MODELS = frozenset(
     }
 )
 
-RDD_MODEL_MODE = "single"  # "all" or "single"
+RDD_MODEL_MODE = "all"  # "all" or "single"
 # Used when RDD_MODEL_MODE is "single" for both adaptation smoke and training.
 RDD_SINGLE_MODEL = "mobilenet_v3_small"
 # Used when RDD_MODEL_MODE is "all" for both adaptation smoke and training.
 # This is the run subset, not necessarily every model that the adapter supports.
 RDD_MODEL_NAMES = (
-    "mobilenet_v2",
     "mobilenet_v3_small",
-    "mobilenet_v3_large",
-    "efficientnet_b0",
     "resnet18",
 )
 # Available image-classification models for this list:
@@ -101,7 +98,7 @@ RDD_MODEL_NAMES = (
 # Training Loop
 ################
 
-RUN_RDD_TRAINING = False  # skip training loop if False
+RUN_RDD_TRAINING = True  # skip training loop if False
 RDD_TRAINING_BATCH_SIZE = 16
 RDD_TRAINING_NUM_WORKERS = 2
 RDD_TRAINING_EPOCHS = 5
@@ -110,13 +107,14 @@ RDD_TRAINING_WEIGHT_DECAY = 1e-4
 RDD_TRAINING_BEST_METRIC = "f1"
 RDD_TRAINING_USE_WEIGHTED_LOSS = True
 RDD_TRAINING_PROGRESS_INTERVAL = 50
+RDD_TRAINING_SAVE_PLOTS = True
 
 
 ################
 # Evaluation
 ################
 
-RUN_RDD_EVALUATION = True # skip evaluation loop if False
+RUN_RDD_EVALUATION = False  # skip evaluation loop if False
 RDD_EVALUATION_BATCH_SIZE = 32
 RDD_EVALUATION_NUM_WORKERS = 2
 RDD_EVALUATION_RANKING_METRIC = "f1"

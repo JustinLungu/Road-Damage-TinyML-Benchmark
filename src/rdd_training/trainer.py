@@ -17,6 +17,7 @@ from src.rdd_training.constants import (
     RDD_TRAINING_LEARNING_RATE,
     RDD_TRAINING_NUM_WORKERS,
     RDD_TRAINING_PROGRESS_INTERVAL,
+    RDD_TRAINING_SAVE_PLOTS,
     RDD_TRAINING_USE_WEIGHTED_LOSS,
     RDD_TRAINING_WEIGHT_DECAY,
 )
@@ -28,6 +29,7 @@ from src.rdd_training.utils import (
     extract_logits,
     load_and_adapt_model_for_binary_pothole,
     make_image_transform,
+    write_training_loss_plot,
 )
 
 
@@ -45,6 +47,7 @@ class RDDTrainingConfig:
     best_metric: str = RDD_TRAINING_BEST_METRIC
     use_weighted_loss: bool = RDD_TRAINING_USE_WEIGHTED_LOSS
     progress_interval: int = RDD_TRAINING_PROGRESS_INTERVAL
+    save_plots: bool = RDD_TRAINING_SAVE_PLOTS
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -56,6 +59,7 @@ class RDDTrainingResult:
     best_metric_value: float
     best_checkpoint_path: Path
     history_path: Path
+    loss_curve_path: Path | None
 
 
 class BinaryPotholeTrainer:
@@ -167,6 +171,12 @@ class BinaryPotholeTrainer:
 
         history_path = model_output_dir / "history.csv"
         self._write_history(history_path, history)
+        loss_curve_path = model_output_dir / "loss_curve.png"
+        if self.config.save_plots:
+            write_training_loss_plot(loss_curve_path, history)
+            print(f"  loss_curve: {loss_curve_path}")
+        else:
+            loss_curve_path = None
 
         return RDDTrainingResult(
             model_name=self.config.model_name,
@@ -175,6 +185,7 @@ class BinaryPotholeTrainer:
             best_metric_value=best_metric_value,
             best_checkpoint_path=best_checkpoint_path,
             history_path=history_path,
+            loss_curve_path=loss_curve_path,
         )
 
     def evaluate(
