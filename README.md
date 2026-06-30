@@ -192,6 +192,42 @@ Examples:
 This project can be checked locally with SonarQube for code smells,
 duplication, security findings, and imported test coverage.
 
+If SonarQube is already set up, run the full local analysis from the repository
+root with:
+
+```bash
+docker start sonarqube
+curl http://localhost:9000/api/system/status
+
+mkdir -p reports
+
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 MPLBACKEND=Agg UV_CACHE_DIR=.uv-cache uv run pytest \
+  -p pytest_cov \
+  --cov=src \
+  --cov=experiments \
+  --cov-report=xml:coverage.xml \
+  --junitxml=reports/pytest.xml
+
+set -a
+source .env
+set +a
+
+UV_CACHE_DIR=.uv-cache uv run pysonar
+```
+
+Open the project dashboard after the scanner finishes:
+
+```text
+http://localhost:9000/dashboard?id=cascaded-tinyvlm
+```
+
+If the status endpoint fails immediately after `docker start`, wait for the
+server to finish booting:
+
+```bash
+docker logs -f sonarqube
+```
+
 Start the local SonarQube server with Docker:
 
 ```bash
