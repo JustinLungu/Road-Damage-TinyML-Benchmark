@@ -416,9 +416,10 @@ def compute_binary_roc_curve(
     thresholds = torch.cat(
         [
             torch.tensor([float("inf")]),
-            torch.sort(torch.unique(scores), descending=True).values,
+            torch.sort(torch.unique(scores, dim=0), descending=True).values,
             torch.tensor([float("-inf")]),
-        ]
+        ],
+        dim=0,
     )
     false_positive_rates = []
     true_positive_rates = []

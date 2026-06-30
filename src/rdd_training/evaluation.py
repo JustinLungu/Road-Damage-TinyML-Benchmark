@@ -196,7 +196,11 @@ class BinaryPotholeEvaluator:
         if model is None:
             model = load_and_adapt_model_for_binary_pothole(self.config.model_name)
 
-        checkpoint = torch.load(self.config.checkpoint_path, map_location=self.device)
+        checkpoint = torch.load(
+            self.config.checkpoint_path,
+            map_location=self.device,
+            weights_only=True,
+        )
         model.load_state_dict(checkpoint["model_state_dict"])
         return model
 
