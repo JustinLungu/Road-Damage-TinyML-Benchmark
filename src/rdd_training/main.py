@@ -4,6 +4,7 @@ import traceback
 
 from src.constants import RDD2022_BINARY_POTHOLE_DIR, RDD_TRAINING_RESULTS_DIR
 from src.rdd_training.constants import (
+    RDD_EXPERIMENT_NAME,
     RDD_COMPARISON_RANKING_METRIC,
     RDD_COMPARISON_TOP_K,
     RDD_MODEL_MODE,
@@ -41,6 +42,7 @@ SPLIT_MANIFESTS = {
 
 if __name__ == "__main__":
     selected_model_names = select_rdd_model_names()
+    experiment_output_dir = RDD_TRAINING_RESULTS_DIR / RDD_EXPERIMENT_NAME
 
     if RUN_RDD_FULL_IMAGE_PREPROCESSING:
         print("RDD2022 binary pothole full-image preprocessing")
@@ -98,11 +100,11 @@ if __name__ == "__main__":
     evaluation_rows = []
     if RUN_RDD_TRAINING:
         print()
-        print("RDD2022 binary pothole training")
+        print(f"RDD2022 binary pothole training: {RDD_EXPERIMENT_NAME}")
         for model_name in selected_model_names:
             print()
             print(f"Training {model_name}")
-            checkpoint_path = RDD_TRAINING_RESULTS_DIR / model_name / "best.pt"
+            checkpoint_path = experiment_output_dir / model_name / "best.pt"
             if RDD_TRAINING_SKIP_EXISTING_CHECKPOINTS and checkpoint_path.is_file():
                 trained_model_names.append(model_name)
                 print(f"  skipping existing checkpoint: {checkpoint_path}")
@@ -126,7 +128,7 @@ if __name__ == "__main__":
                     print(f"  accuracy_curve: {result.accuracy_curve_path}")
             except Exception:
                 error_log_path = (
-                    RDD_TRAINING_RESULTS_DIR / model_name / "training_error.log"
+                    experiment_output_dir / model_name / "training_error.log"
                 )
                 write_failure_log(error_log_path, traceback.format_exc())
                 print(f"  training failed for {model_name}: {error_log_path}")
@@ -144,7 +146,10 @@ if __name__ == "__main__":
             print(f"Evaluating {model_name}")
             try:
                 evaluator = BinaryPotholeEvaluator(
-                    RDDEvaluationConfig(model_name=model_name)
+                    RDDEvaluationConfig(
+                        model_name=model_name,
+                        output_dir=experiment_output_dir,
+                    )
                 )
                 result = evaluator.evaluate()
                 evaluation_rows.append(result.comparison_row())
@@ -158,7 +163,7 @@ if __name__ == "__main__":
                     print(f"  metric_bar_plot: {result.metric_bar_plot_path}")
             except Exception:
                 error_log_path = (
-                    RDD_TRAINING_RESULTS_DIR / model_name / "evaluation_error.log"
+                    experiment_output_dir / model_name / "evaluation_error.log"
                 )
                 write_failure_log(error_log_path, traceback.format_exc())
                 print(f"  evaluation failed for {model_name}: {error_log_path}")
@@ -173,14 +178,14 @@ if __name__ == "__main__":
         if not evaluation_rows:
             evaluation_rows = load_evaluation_rows_from_metrics_csv(
                 comparison_model_names,
-                output_dir=RDD_TRAINING_RESULTS_DIR,
+                output_dir=experiment_output_dir,
                 skip_missing=RDD_SKIP_FAILED_MODELS,
             )
         if not evaluation_rows:
             print("  no evaluation rows available; skipping comparison.")
             raise SystemExit(0)
 
-        comparison_path = RDD_TRAINING_RESULTS_DIR / "model_comparison.csv"
+        comparison_path = experiment_output_dir / "model_comparison.csv"
         ranked_rows = write_model_comparison_csv(
             comparison_path,
             evaluation_rows=evaluation_rows,

@@ -29,10 +29,6 @@ class TinyClassifier(nn.Module):
 
 
 class FakeManifest:
-    @classmethod
-    def from_csv(cls, manifest_path: Path, expected_split: str):
-        return cls(expected_split)
-
     def __init__(self, split: str) -> None:
         self.split = split
 
@@ -41,6 +37,15 @@ class FakeManifest:
 
     def class_counts(self):
         return {0: 3, 1: 1}
+
+
+class FakeDataset:
+    def __init__(self, split: str) -> None:
+        self.split = split
+        self.manifest = FakeManifest(split)
+
+    def __len__(self):
+        return 4
 
 
 def make_loader() -> DataLoader:
@@ -101,12 +106,8 @@ def test_binary_pothole_trainer_runs_and_saves_best_checkpoint(
     tmp_path,
     capsys,
 ) -> None:
-    monkeypatch.setattr(trainer_module, "BinaryPotholeManifest", FakeManifest)
-
     config = RDDTrainingConfig(
         model_name="tiny",
-        train_manifest_path=tmp_path / "train.csv",
-        validation_manifest_path=tmp_path / "validation.csv",
         output_dir=tmp_path / "results",
         batch_size=2,
         num_workers=0,
@@ -119,16 +120,23 @@ def test_binary_pothole_trainer_runs_and_saves_best_checkpoint(
     )
     trainer = BinaryPotholeTrainer(config=config, model=TinyClassifier())
 
-    def fake_make_data_loader(manifest, is_train: bool):
-        assert manifest.split == ("train" if is_train else "validation")
+    def fake_make_dataset(split: str, is_train: bool):
+        assert split == ("train" if is_train else "validation")
+        return FakeDataset(split)
+
+    def fake_make_data_loader(dataset, is_train: bool):
+        assert dataset.split == ("train" if is_train else "validation")
         return make_loader()
 
+    monkeypatch.setattr(trainer, "_make_dataset", fake_make_dataset)
     monkeypatch.setattr(trainer, "_make_data_loader", fake_make_data_loader)
 
     result = trainer.train()
     output = capsys.readouterr().out
 
     assert result.model_name == "tiny"
+    assert result.experiment_name == "full_image_baseline"
+    assert result.training_input_mode == "full_image"
     assert result.best_epoch in {1, 2}
     assert result.best_metric_name == "f1"
     assert result.best_checkpoint_path.is_file()
@@ -139,10 +147,16 @@ def test_binary_pothole_trainer_runs_and_saves_best_checkpoint(
     assert result.f1_curve_path.is_file()
     assert result.accuracy_curve_path is not None
     assert result.accuracy_curve_path.is_file()
+    assert result.best_checkpoint_path.parent == (
+        tmp_path / "results" / "full_image_baseline" / "tiny"
+    )
     checkpoint = torch.load(result.best_checkpoint_path, map_location="cpu")
     assert checkpoint["model_name"] == "tiny"
     assert "model_state_dict" in checkpoint
-    assert "setup: device=cpu, epochs=2, batch_size=2" in output
+    assert (
+        "setup: device=cpu, epochs=2, batch_size=2, "
+        "training_input_mode=full_image"
+    ) in output
     assert "epoch 1/2: training" in output
     assert "batch 1/2 epoch=1/2" in output
     assert "epoch 1/2: validating" in output
@@ -152,6 +166,41 @@ def test_binary_pothole_trainer_runs_and_saves_best_checkpoint(
     assert "accuracy_curve:" in output
 
 
+def test_binary_pothole_trainer_uses_configured_training_input_mode(
+    monkeypatch,
+) -> None:
+    captured = {}
+    trainer = BinaryPotholeTrainer(
+        config=RDDTrainingConfig(
+            model_name="tiny",
+            training_input_mode="annotation_patch",
+            device="cpu",
+        ),
+        model=TinyClassifier(),
+    )
+
+    def fake_make_image_transform(model_name: str, is_train: bool):
+        captured["transform"] = (model_name, is_train)
+        return "transform"
+
+    def fake_make_rdd_dataset(split, input_mode, transform):
+        captured["dataset"] = (split, input_mode, transform)
+        return FakeDataset(split)
+
+    monkeypatch.setattr(
+        trainer_module,
+        "make_image_transform",
+        fake_make_image_transform,
+    )
+    monkeypatch.setattr(trainer_module, "make_rdd_dataset", fake_make_rdd_dataset)
+
+    dataset = trainer._make_dataset(split="train", is_train=True)
+
+    assert isinstance(dataset, FakeDataset)
+    assert captured["transform"] == ("tiny", True)
+    assert captured["dataset"] == ("train", "annotation_patch", "transform")
+
+
 def test_binary_pothole_trainer_rejects_invalid_early_stopping_patience() -> None:
     config = RDDTrainingConfig(
         model_name="tiny",
@@ -159,4 +208,14 @@ def test_binary_pothole_trainer_rejects_invalid_early_stopping_patience() -> Non
     )
 
     with pytest.raises(ValueError, match="patience cannot be negative"):
+        BinaryPotholeTrainer(config=config, model=TinyClassifier())
+
+
+def test_binary_pothole_trainer_rejects_invalid_training_input_mode() -> None:
+    config = RDDTrainingConfig(
+        model_name="tiny",
+        training_input_mode="bad_mode",
+    )
+
+    with pytest.raises(ValueError, match="training_input_mode must be one of"):
         BinaryPotholeTrainer(config=config, model=TinyClassifier())

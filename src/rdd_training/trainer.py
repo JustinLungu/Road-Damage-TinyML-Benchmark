@@ -7,10 +7,13 @@ from typing import Any
 
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
-from src.constants import RDD2022_BINARY_POTHOLE_DIR, RDD_TRAINING_RESULTS_DIR
+from src.constants import RDD_TRAINING_RESULTS_DIR
 from src.rdd_training.constants import (
+    RDD_EXPERIMENT_NAME,
+    RDD_SUPPORTED_TRAINING_INPUT_MODES,
+    RDD_TRAINING_INPUT_MODE,
     RDD_TRAINING_BATCH_SIZE,
     RDD_TRAINING_BEST_METRIC,
     RDD_TRAINING_DROP_LAST_BATCH,
@@ -32,6 +35,7 @@ from src.rdd_training.utils import (
     extract_logits,
     load_and_adapt_model_for_binary_pothole,
     make_image_transform,
+    make_rdd_dataset,
     write_training_loss_plot,
     write_training_metric_plot,
 )
@@ -40,8 +44,10 @@ from src.rdd_training.utils import (
 @dataclass(frozen=True)
 class RDDTrainingConfig:
     model_name: str
-    train_manifest_path: Path = RDD2022_BINARY_POTHOLE_DIR / "train.csv"
-    validation_manifest_path: Path = RDD2022_BINARY_POTHOLE_DIR / "validation.csv"
+    experiment_name: str = RDD_EXPERIMENT_NAME
+    training_input_mode: str = RDD_TRAINING_INPUT_MODE
+    train_manifest_path: Path | None = None
+    validation_manifest_path: Path | None = None
     output_dir: Path = RDD_TRAINING_RESULTS_DIR
     batch_size: int = RDD_TRAINING_BATCH_SIZE
     num_workers: int = RDD_TRAINING_NUM_WORKERS
@@ -57,10 +63,20 @@ class RDDTrainingConfig:
     drop_last_train_batch: bool = RDD_TRAINING_DROP_LAST_BATCH
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
+    @property
+    def experiment_output_dir(self) -> Path:
+        return self.output_dir / self.experiment_name
+
+    @property
+    def model_output_dir(self) -> Path:
+        return self.experiment_output_dir / self.model_name
+
 
 @dataclass(frozen=True)
 class RDDTrainingResult:
     model_name: str
+    experiment_name: str
+    training_input_mode: str
     best_epoch: int
     best_metric_name: str
     best_metric_value: float
@@ -85,42 +101,42 @@ class BinaryPotholeTrainer:
             raise ValueError("batch_size must be at least one.")
         if config.early_stopping_patience < 0:
             raise ValueError("early_stopping_patience cannot be negative.")
+        if config.training_input_mode not in RDD_SUPPORTED_TRAINING_INPUT_MODES:
+            raise ValueError(
+                "training_input_mode must be one of: "
+                f"{', '.join(RDD_SUPPORTED_TRAINING_INPUT_MODES)}."
+            )
 
         self.config = config
         self.device = torch.device(config.device)
         self.model = model
 
     def train(self) -> RDDTrainingResult:
-        self.config.output_dir.mkdir(parents=True, exist_ok=True)
-        model_output_dir = self.config.output_dir / self.config.model_name
+        self.config.experiment_output_dir.mkdir(parents=True, exist_ok=True)
+        model_output_dir = self.config.model_output_dir
         model_output_dir.mkdir(parents=True, exist_ok=True)
 
-        train_manifest = BinaryPotholeManifest.from_csv(
-            self.config.train_manifest_path,
-            expected_split="train",
-        )
-        validation_manifest = BinaryPotholeManifest.from_csv(
-            self.config.validation_manifest_path,
-            expected_split="validation",
-        )
-        train_loader = self._make_data_loader(train_manifest, is_train=True)
-        validation_loader = self._make_data_loader(validation_manifest, is_train=False)
+        train_dataset = self._make_dataset(split="train", is_train=True)
+        validation_dataset = self._make_dataset(split="validation", is_train=False)
+        train_loader = self._make_data_loader(train_dataset, is_train=True)
+        validation_loader = self._make_data_loader(validation_dataset, is_train=False)
 
         print(
             "  setup: "
             f"device={self.device}, epochs={self.config.epochs}, "
-            f"batch_size={self.config.batch_size}"
+            f"batch_size={self.config.batch_size}, "
+            f"training_input_mode={self.config.training_input_mode}"
         )
         print(
             "  data: "
-            f"train_samples={len(train_manifest)}, "
-            f"validation_samples={len(validation_manifest)}, "
+            f"train_samples={len(train_dataset)}, "
+            f"validation_samples={len(validation_dataset)}, "
             f"train_batches={len(train_loader)}, "
             f"validation_batches={len(validation_loader)}"
         )
         print(f"  loading/adapting model: {self.config.model_name}")
         model = self._load_model().to(self.device)
-        criterion = self._make_criterion(train_manifest)
+        criterion = self._make_criterion(train_dataset.manifest)
         optimizer = torch.optim.AdamW(
             model.parameters(),
             lr=self.config.learning_rate,
@@ -236,6 +252,8 @@ class BinaryPotholeTrainer:
 
         return RDDTrainingResult(
             model_name=self.config.model_name,
+            experiment_name=self.config.experiment_name,
+            training_input_mode=self.config.training_input_mode,
             best_epoch=best_epoch,
             best_metric_name=self.config.best_metric,
             best_metric_value=best_metric_value,
@@ -283,15 +301,36 @@ class BinaryPotholeTrainer:
             return self.model
         return load_and_adapt_model_for_binary_pothole(self.config.model_name)
 
+    def _make_dataset(
+        self,
+        split: str,
+        is_train: bool,
+    ) -> BinaryPotholeDataset:
+        manifest_path = (
+            self.config.train_manifest_path
+            if split == "train"
+            else self.config.validation_manifest_path
+        )
+        transform = make_image_transform(self.config.model_name, is_train=is_train)
+
+        if manifest_path is not None:
+            return BinaryPotholeDataset(
+                manifest_path,
+                transform=transform,
+                expected_split=split,
+            )
+
+        return make_rdd_dataset(
+            split=split,
+            input_mode=self.config.training_input_mode,
+            transform=transform,
+        )
+
     def _make_data_loader(
         self,
-        manifest: BinaryPotholeManifest,
+        dataset: Dataset,
         is_train: bool,
     ) -> DataLoader:
-        dataset = BinaryPotholeDataset(
-            manifest=manifest,
-            transform=make_image_transform(self.config.model_name, is_train=is_train),
-        )
         return DataLoader(
             dataset,
             batch_size=self.config.batch_size,
