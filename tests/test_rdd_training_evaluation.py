@@ -66,6 +66,49 @@ class FakeGridRunner:
         )
 
 
+class FakeGridInferenceRunner:
+    scores_by_path: dict[Path, float] = {}
+
+    def __init__(self, *args, decision_threshold: float = 0.5, **kwargs) -> None:
+        self.decision_threshold = decision_threshold
+
+    def predict_image(self, image_path: Path) -> GridImagePrediction:
+        score = self.scores_by_path[image_path]
+        return GridImagePrediction(
+            image_path=image_path,
+            patch_boxes=((0, 0, 1, 1),),
+            patch_scores=(score,),
+            image_score=score,
+            prediction=int(score >= self.decision_threshold),
+        )
+
+
+class IterableManifest:
+    def __init__(
+        self,
+        split: str,
+        labels_by_path: dict[Path, int],
+    ) -> None:
+        self.split = split
+        self.samples = [
+            BinaryPotholeSample(
+                image_path=image_path,
+                annotation_path=Path("annotation.xml"),
+                label=label,
+                label_name="pothole" if label == 1 else "non_pothole",
+                country="Japan",
+                split=split,
+            )
+            for image_path, label in labels_by_path.items()
+        ]
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __iter__(self):
+        return iter(self.samples)
+
+
 def make_loader() -> DataLoader:
     return DataLoader(
         [
@@ -278,9 +321,20 @@ def test_binary_pothole_evaluator_writes_metrics_and_confusion_matrix(
     assert result.metrics["recall"] == pytest.approx(1.0)
     assert result.metrics["f1"] == pytest.approx(1.0)
     assert result.metrics["roc_auc"] == pytest.approx(1.0)
+    assert result.metrics["experiment_name"] == "full_image_baseline"
+    assert result.metrics["training_input_mode"] == "full_image"
+    assert result.metrics["evaluation_input_mode"] == "full_image"
+    assert result.metrics["grid_size"] == pytest.approx(0.0)
+    assert result.metrics["threshold"] == pytest.approx(0.5)
+    assert result.metrics["num_images"] == pytest.approx(4.0)
+    assert result.metrics["num_patches_per_image"] == pytest.approx(1.0)
+    assert result.metrics["avg_image_inference_ms"] >= 0.0
+    assert result.metrics["images_per_second"] >= 0.0
     assert result.metrics_json_path.is_file()
     assert result.metrics_csv_path.is_file()
     assert result.confusion_matrix_path.is_file()
+    assert result.inference_metrics_path is not None
+    assert result.inference_metrics_path.is_file()
     assert result.confusion_matrix_plot_path is not None
     assert result.confusion_matrix_plot_path.is_file()
     assert result.roc_curve_plot_path is not None
@@ -288,6 +342,102 @@ def test_binary_pothole_evaluator_writes_metrics_and_confusion_matrix(
     assert result.metric_bar_plot_path is not None
     assert result.metric_bar_plot_path.is_file()
     assert "test metrics: accuracy=1.0000" in output
+
+
+def test_binary_pothole_evaluator_grid_image_mode_tunes_threshold_and_saves_timing(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    validation_paths = [tmp_path / f"validation_{index}.jpg" for index in range(4)]
+    test_paths = [tmp_path / f"test_{index}.jpg" for index in range(4)]
+    validation_manifest = IterableManifest(
+        "validation",
+        {
+            validation_paths[0]: 0,
+            validation_paths[1]: 1,
+            validation_paths[2]: 0,
+            validation_paths[3]: 1,
+        },
+    )
+    test_manifest = IterableManifest(
+        "test",
+        {
+            test_paths[0]: 0,
+            test_paths[1]: 1,
+            test_paths[2]: 0,
+            test_paths[3]: 1,
+        },
+    )
+    FakeGridInferenceRunner.scores_by_path = {
+        validation_paths[0]: 0.2,
+        validation_paths[1]: 0.4,
+        validation_paths[2]: 0.6,
+        validation_paths[3]: 0.8,
+        test_paths[0]: 0.2,
+        test_paths[1]: 0.4,
+        test_paths[2]: 0.6,
+        test_paths[3]: 0.8,
+    }
+
+    def fake_from_csv(manifest_path: Path, expected_split: str):
+        return validation_manifest if expected_split == "validation" else test_manifest
+
+    monkeypatch.setattr(
+        evaluation_module.BinaryPotholeManifest,
+        "from_csv",
+        staticmethod(fake_from_csv),
+    )
+    monkeypatch.setattr(
+        evaluation_module,
+        "GridImageInferenceRunner",
+        FakeGridInferenceRunner,
+    )
+    monkeypatch.setattr(
+        evaluation_module,
+        "make_image_transform",
+        lambda model_name, is_train: lambda image: torch.ones(3, 4, 4),
+    )
+
+    config = RDDEvaluationConfig(
+        model_name="tiny",
+        evaluation_input_mode="grid_image",
+        output_dir=tmp_path / "results",
+        device="cpu",
+        save_plots=False,
+        threshold_values=(0.3, 0.5, 0.7),
+    )
+    config.model_output_dir.mkdir(parents=True)
+    torch.save(
+        {"model_state_dict": FixedClassifier().state_dict()},
+        config.checkpoint_path,
+    )
+
+    evaluator = BinaryPotholeEvaluator(config=config, model=FixedClassifier())
+    result = evaluator.evaluate()
+
+    assert result.metrics["threshold"] == pytest.approx(0.3)
+    assert result.metrics["evaluation_input_mode"] == "grid_image"
+    assert result.metrics["grid_size"] == pytest.approx(3.0)
+    assert result.metrics["num_images"] == pytest.approx(4.0)
+    assert result.metrics["num_patches_per_image"] == pytest.approx(9.0)
+    assert result.metrics["f1"] == pytest.approx(0.8)
+    assert config.threshold_path.is_file()
+    assert result.inference_metrics_path == config.inference_metrics_path
+    assert result.inference_metrics_path.is_file()
+    assert result.confusion_matrix_plot_path is None
+    assert result.roc_curve_plot_path is None
+    assert result.metric_bar_plot_path is None
+
+
+def test_binary_pothole_evaluator_rejects_invalid_evaluation_input_mode() -> None:
+    with pytest.raises(ValueError, match="evaluation_input_mode must be one of"):
+        BinaryPotholeEvaluator(
+            RDDEvaluationConfig(
+                model_name="tiny",
+                evaluation_input_mode="bad_mode",
+            ),
+            model=FixedClassifier(),
+        )
 
 
 def test_model_comparison_ranking_and_top_models_csv(tmp_path) -> None:

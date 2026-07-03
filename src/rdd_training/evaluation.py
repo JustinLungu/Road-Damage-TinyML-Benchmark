@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,15 +12,20 @@ from torch.utils.data import DataLoader
 from src.constants import RDD2022_BINARY_POTHOLE_DIR, RDD_TRAINING_RESULTS_DIR
 from src.rdd_training.constants import (
     POSITIVE_LABEL,
+    RDD_EVALUATION_INPUT_MODE,
     RDD_EVALUATION_BATCH_SIZE,
     RDD_EVALUATION_NUM_WORKERS,
     RDD_EVALUATION_PROGRESS_INTERVAL,
     RDD_EVALUATION_SAVE_PLOTS,
+    RDD_EXPERIMENT_NAME,
     RDD_GRID_OVERLAP,
     RDD_GRID_SIZE,
     RDD_PATCH_DECISION_THRESHOLD,
+    RDD_SUPPORTED_EVALUATION_INPUT_MODES,
+    RDD_TRAINING_INPUT_MODE,
     RDD_THRESHOLD_METRIC,
     RDD_THRESHOLD_VALUES,
+    RDD_TUNE_PATCH_THRESHOLD,
 )
 from src.rdd_training.dataset import BinaryPotholeDataset, BinaryPotholeManifest
 from src.rdd_training.utils import (
@@ -247,15 +253,36 @@ def load_grid_decision_threshold(
     return float(threshold_data["threshold"])
 
 
+def write_inference_metrics_json(
+    inference_metrics_path: Path,
+    inference_metrics: dict[str, float],
+) -> None:
+    inference_metrics_path.parent.mkdir(parents=True, exist_ok=True)
+    inference_metrics_path.write_text(
+        json.dumps(inference_metrics, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 @dataclass(frozen=True)
 class RDDEvaluationConfig:
     model_name: str
+    experiment_name: str = RDD_EXPERIMENT_NAME
+    training_input_mode: str = RDD_TRAINING_INPUT_MODE
+    evaluation_input_mode: str = RDD_EVALUATION_INPUT_MODE
+    validation_manifest_path: Path = RDD2022_BINARY_POTHOLE_DIR / "validation.csv"
     test_manifest_path: Path = RDD2022_BINARY_POTHOLE_DIR / "test.csv"
     output_dir: Path = RDD_TRAINING_RESULTS_DIR
     batch_size: int = RDD_EVALUATION_BATCH_SIZE
     num_workers: int = RDD_EVALUATION_NUM_WORKERS
     progress_interval: int = RDD_EVALUATION_PROGRESS_INTERVAL
     save_plots: bool = RDD_EVALUATION_SAVE_PLOTS
+    grid_size: int = RDD_GRID_SIZE
+    grid_overlap: float = RDD_GRID_OVERLAP
+    decision_threshold: float = RDD_PATCH_DECISION_THRESHOLD
+    tune_threshold: bool = RDD_TUNE_PATCH_THRESHOLD
+    threshold_values: tuple[float, ...] = RDD_THRESHOLD_VALUES
+    threshold_metric: str = RDD_THRESHOLD_METRIC
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
     @property
@@ -270,18 +297,23 @@ class RDDEvaluationConfig:
     def threshold_path(self) -> Path:
         return self.model_output_dir / "threshold.json"
 
+    @property
+    def inference_metrics_path(self) -> Path:
+        return self.model_output_dir / "inference_metrics.json"
+
 
 @dataclass(frozen=True)
 class RDDEvaluationResult:
     model_name: str
     checkpoint_path: Path
-    metrics: dict[str, float]
+    metrics: dict[str, float | str]
     metrics_json_path: Path
     metrics_csv_path: Path
     confusion_matrix_path: Path
     confusion_matrix_plot_path: Path | None
     roc_curve_plot_path: Path | None
     metric_bar_plot_path: Path | None
+    inference_metrics_path: Path | None
 
     def comparison_row(self) -> dict[str, float | str]:
         return {
@@ -299,6 +331,12 @@ class BinaryPotholeEvaluator:
         config: RDDEvaluationConfig,
         model: nn.Module | None = None,
     ) -> None:
+        if config.evaluation_input_mode not in RDD_SUPPORTED_EVALUATION_INPUT_MODES:
+            raise ValueError(
+                "evaluation_input_mode must be one of: "
+                f"{', '.join(RDD_SUPPORTED_EVALUATION_INPUT_MODES)}."
+            )
+
         self.config = config
         self.device = torch.device(config.device)
         self.model = model
@@ -308,7 +346,11 @@ class BinaryPotholeEvaluator:
             raise FileNotFoundError(
                 f"Trained checkpoint does not exist: {self.config.checkpoint_path}"
             )
+        if self.config.evaluation_input_mode == "grid_image":
+            return self._evaluate_grid_images()
+        return self._evaluate_full_images()
 
+    def _evaluate_full_images(self) -> RDDEvaluationResult:
         test_manifest = BinaryPotholeManifest.from_csv(
             self.config.test_manifest_path,
             expected_split="test",
@@ -327,6 +369,7 @@ class BinaryPotholeEvaluator:
         targets = []
         positive_scores = []
 
+        start_time = time.perf_counter()
         with torch.no_grad():
             for batch_index, batch in enumerate(test_loader, start=1):
                 images = batch["image"].to(self.device)
@@ -341,6 +384,7 @@ class BinaryPotholeEvaluator:
                 if self._should_print_batch_progress(batch_index, len(test_loader)):
                     print(f"  evaluated batches: {batch_index}/{len(test_loader)}")
 
+        total_seconds = time.perf_counter() - start_time
         all_predictions = torch.cat(predictions)
         all_targets = torch.cat(targets)
         all_positive_scores = torch.cat(positive_scores)
@@ -352,11 +396,137 @@ class BinaryPotholeEvaluator:
             positive_scores=all_positive_scores,
             targets=all_targets,
         )
+        metrics.update(self._make_output_metadata(threshold=self.config.decision_threshold))
+        inference_metrics = self._make_inference_metrics(
+            image_count=len(test_manifest),
+            total_seconds=total_seconds,
+        )
+        metrics.update(inference_metrics)
+        write_inference_metrics_json(
+            self.config.inference_metrics_path,
+            inference_metrics,
+        )
         false_positive_rates, true_positive_rates = compute_binary_roc_curve(
             positive_scores=all_positive_scores,
             targets=all_targets,
         )
 
+        return self._write_evaluation_outputs(
+            metrics=metrics,
+            false_positive_rates=false_positive_rates,
+            true_positive_rates=true_positive_rates,
+            inference_metrics_path=self.config.inference_metrics_path,
+        )
+
+    def _evaluate_grid_images(self) -> RDDEvaluationResult:
+        validation_manifest = BinaryPotholeManifest.from_csv(
+            self.config.validation_manifest_path,
+            expected_split="validation",
+        )
+        test_manifest = BinaryPotholeManifest.from_csv(
+            self.config.test_manifest_path,
+            expected_split="test",
+        )
+        model = self._load_model().to(self.device)
+        model.eval()
+        transform = make_image_transform(self.config.model_name, is_train=False)
+        patch_generator = GridPatchGenerator(
+            grid_size=self.config.grid_size,
+            overlap=self.config.grid_overlap,
+        )
+        tuning_runner = GridImageInferenceRunner(
+            model=model,
+            transform=transform,
+            device=self.device,
+            patch_generator=patch_generator,
+            decision_threshold=self.config.decision_threshold,
+        )
+
+        if self.config.tune_threshold:
+            tuning_result = GridThresholdTuner(
+                inference_runner=tuning_runner,
+                threshold_values=self.config.threshold_values,
+                metric_name=self.config.threshold_metric,
+            ).tune(validation_manifest, threshold_path=self.config.threshold_path)
+            threshold = tuning_result.threshold
+            print(
+                "  tuned grid threshold: "
+                f"{threshold:.4f} "
+                f"({tuning_result.metric_name}={tuning_result.metric_value:.4f})"
+            )
+        else:
+            threshold = load_grid_decision_threshold(
+                self.config.threshold_path,
+                default_threshold=self.config.decision_threshold,
+            )
+
+        inference_runner = GridImageInferenceRunner(
+            model=model,
+            transform=transform,
+            device=self.device,
+            patch_generator=patch_generator,
+            decision_threshold=threshold,
+        )
+        print(
+            "  grid evaluation setup: "
+            f"device={self.device}, test_samples={len(test_manifest)}, "
+            f"grid_size={self.config.grid_size}, threshold={threshold:.4f}, "
+            f"checkpoint={self.config.checkpoint_path}"
+        )
+
+        predictions = []
+        targets = []
+        positive_scores = []
+        start_time = time.perf_counter()
+        for sample_index, sample in enumerate(test_manifest, start=1):
+            prediction = inference_runner.predict_image(sample.image_path)
+            predictions.append(prediction.prediction)
+            targets.append(sample.label)
+            positive_scores.append(prediction.image_score)
+            if self._should_print_batch_progress(sample_index, len(test_manifest)):
+                print(f"  evaluated images: {sample_index}/{len(test_manifest)}")
+
+        total_seconds = time.perf_counter() - start_time
+        all_predictions = torch.tensor(predictions, dtype=torch.long)
+        all_targets = torch.tensor(targets, dtype=torch.long)
+        all_positive_scores = torch.tensor(positive_scores, dtype=torch.float32)
+        metrics = compute_binary_classification_metrics(
+            predictions=all_predictions,
+            targets=all_targets,
+        )
+        metrics["roc_auc"] = compute_binary_roc_auc(
+            positive_scores=all_positive_scores,
+            targets=all_targets,
+        )
+        inference_metrics = self._make_inference_metrics(
+            image_count=len(test_manifest),
+            total_seconds=total_seconds,
+        )
+        metrics.update(self._make_output_metadata(threshold=threshold))
+        metrics.update(inference_metrics)
+        false_positive_rates, true_positive_rates = compute_binary_roc_curve(
+            positive_scores=all_positive_scores,
+            targets=all_targets,
+        )
+        write_inference_metrics_json(
+            self.config.inference_metrics_path,
+            inference_metrics,
+        )
+
+        return self._write_evaluation_outputs(
+            metrics=metrics,
+            false_positive_rates=false_positive_rates,
+            true_positive_rates=true_positive_rates,
+            inference_metrics_path=self.config.inference_metrics_path,
+        )
+
+    def _write_evaluation_outputs(
+        self,
+        metrics: dict[str, float | str],
+        false_positive_rates: list[float],
+        true_positive_rates: list[float],
+        inference_metrics_path: Path | None,
+    ) -> RDDEvaluationResult:
         metrics_json_path = self.config.model_output_dir / "test_metrics.json"
         metrics_csv_path = self.config.model_output_dir / "test_metrics.csv"
         confusion_matrix_path = self.config.model_output_dir / "confusion_matrix.csv"
@@ -379,7 +549,7 @@ class BinaryPotholeEvaluator:
                 roc_curve_plot_path,
                 false_positive_rates=false_positive_rates,
                 true_positive_rates=true_positive_rates,
-                roc_auc=metrics["roc_auc"],
+                roc_auc=float(metrics["roc_auc"]),
             )
             write_metric_bar_plot(metric_bar_plot_path, metrics)
         else:
@@ -407,7 +577,46 @@ class BinaryPotholeEvaluator:
             confusion_matrix_plot_path=confusion_matrix_plot_path,
             roc_curve_plot_path=roc_curve_plot_path,
             metric_bar_plot_path=metric_bar_plot_path,
+            inference_metrics_path=inference_metrics_path,
         )
+
+    def _make_output_metadata(self, threshold: float) -> dict[str, float | str]:
+        return {
+            "experiment_name": self.config.experiment_name,
+            "training_input_mode": self.config.training_input_mode,
+            "evaluation_input_mode": self.config.evaluation_input_mode,
+            "grid_size": float(
+                self.config.grid_size
+                if self.config.evaluation_input_mode == "grid_image"
+                else 0
+            ),
+            "threshold": threshold,
+        }
+
+    def _make_inference_metrics(
+        self,
+        image_count: int,
+        total_seconds: float,
+    ) -> dict[str, float]:
+        patches_per_image = (
+            self.config.grid_size * self.config.grid_size
+            if self.config.evaluation_input_mode == "grid_image"
+            else 1
+        )
+        patch_count = image_count * patches_per_image
+        return {
+            "num_images": float(image_count),
+            "num_patches_per_image": float(patches_per_image),
+            "total_inference_seconds": total_seconds,
+            "avg_image_inference_ms": (
+                total_seconds * 1000 / image_count if image_count else 0.0
+            ),
+            "avg_patch_inference_ms": (
+                total_seconds * 1000 / patch_count if patch_count else 0.0
+            ),
+            "images_per_second": image_count / total_seconds if total_seconds else 0.0,
+            "patches_per_second": patch_count / total_seconds if total_seconds else 0.0,
+        }
 
     def _load_model(self) -> nn.Module:
         model = self.model

@@ -628,7 +628,7 @@ def write_failure_log(
 
 def write_evaluation_metrics_json(
     metrics_path: Path,
-    metrics: dict[str, float],
+    metrics: dict[str, Any],
 ) -> None:
     metrics_path.parent.mkdir(parents=True, exist_ok=True)
     metrics_path.write_text(
@@ -641,7 +641,7 @@ def write_evaluation_metrics_csv(
     metrics_path: Path,
     model_name: str,
     split: str,
-    metrics: dict[str, float],
+    metrics: dict[str, Any],
 ) -> None:
     metrics_path.parent.mkdir(parents=True, exist_ok=True)
     row = {"model_name": model_name, "split": split, **metrics}
@@ -832,14 +832,17 @@ def rank_evaluation_rows(
     ]
 
 
-def sanitize_metrics_for_json(metrics: dict[str, float]) -> dict[str, float | None]:
+def sanitize_metrics_for_json(metrics: dict[str, Any]) -> dict[str, Any]:
     return {
         key: None if isinstance(value, float) and math.isnan(value) else value
         for key, value in metrics.items()
     }
 
 
-def parse_metric_value(value: str) -> float:
+def parse_metric_value(value: str) -> float | str:
     if value == "":
         return float("nan")
-    return float(value)
+    try:
+        return float(value)
+    except ValueError:
+        return value
