@@ -63,6 +63,33 @@ REQUIRED_MANIFEST_COLUMNS = {
 }
 
 
+#################################
+# Patch-Grid Experiment Settings
+#################################
+
+RDD_EXPERIMENT_NAME = "full_image_baseline"
+
+RDD_TRAINING_INPUT_MODE = "full_image"
+RDD_EVALUATION_INPUT_MODE = "full_image"
+RDD_SUPPORTED_TRAINING_INPUT_MODES = ("full_image", "annotation_patch")
+RDD_SUPPORTED_EVALUATION_INPUT_MODES = ("full_image", "grid_image")
+
+RDD_PATCH_SIZE = 224
+RDD_PATCH_PADDING = 0.15
+RDD_PATCH_INCLUDE_DAMAGE_NEGATIVES = True
+RDD_PATCH_INCLUDE_BACKGROUND_NEGATIVES = True
+RDD_BACKGROUND_NEGATIVES_PER_IMAGE = 1
+RDD_MIN_BOX_AREA = 400
+
+RDD_GRID_SIZE = 3
+RDD_GRID_OVERLAP = 0.0
+RDD_PATCH_AGGREGATION = "max_threshold"
+RDD_PATCH_DECISION_THRESHOLD = 0.5
+RDD_TUNE_PATCH_THRESHOLD = True
+RDD_THRESHOLD_METRIC = "f1"
+RDD_THRESHOLD_VALUES = tuple(index / 100 for index in range(5, 96, 5))
+
+
 ######################
 # Fine-Tuning Models
 ######################
