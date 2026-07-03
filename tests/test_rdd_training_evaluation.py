@@ -497,3 +497,43 @@ def test_load_evaluation_rows_from_existing_metrics_csv(tmp_path) -> None:
             "roc_auc": 0.75,
         }
     ]
+
+
+def test_load_evaluation_rows_preserves_mode_metadata(tmp_path) -> None:
+    model_dir = tmp_path / "mobilevit_xxs"
+    metrics_path = model_dir / "test_metrics.csv"
+    write_evaluation_metrics_csv(
+        metrics_path,
+        model_name="mobilevit_xxs",
+        split="test",
+        metrics={
+            "experiment_name": "annotation_patch_grid3",
+            "training_input_mode": "annotation_patch",
+            "evaluation_input_mode": "grid_image",
+            "grid_size": 3.0,
+            "threshold": 0.35,
+            "avg_image_inference_ms": 12.5,
+            "images_per_second": 80.0,
+            "f1": 0.6,
+        },
+    )
+
+    rows = load_evaluation_rows_from_metrics_csv(
+        model_names=("mobilevit_xxs",),
+        output_dir=tmp_path,
+    )
+
+    assert rows == [
+        {
+            "model_name": "mobilevit_xxs",
+            "checkpoint_path": str(model_dir / "best.pt"),
+            "experiment_name": "annotation_patch_grid3",
+            "training_input_mode": "annotation_patch",
+            "evaluation_input_mode": "grid_image",
+            "grid_size": 3.0,
+            "threshold": 0.35,
+            "avg_image_inference_ms": 12.5,
+            "images_per_second": 80.0,
+            "f1": 0.6,
+        }
+    ]
