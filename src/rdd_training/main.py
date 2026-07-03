@@ -9,12 +9,18 @@ from src.rdd_training.constants import (
     RDD_MODEL_MODE,
     RDD_SKIP_FAILED_MODELS,
     RDD_TRAINING_SKIP_EXISTING_CHECKPOINTS,
+    RUN_RDD_FULL_IMAGE_PREPROCESSING,
+    RUN_RDD_PATCH_PREPROCESSING,
     RUN_RDD_COMPARISON,
     RUN_RDD_EVALUATION,
     RUN_RDD_TRAINING,
 )
 from src.rdd_training.dataset import BinaryPotholeDataset, BinaryPotholeManifest
 from src.rdd_training.evaluation import BinaryPotholeEvaluator, RDDEvaluationConfig
+from src.rdd_training.prepare_binary_pothole import prepare_binary_pothole_manifests
+from src.rdd_training.prepare_binary_pothole_patches import (
+    prepare_binary_pothole_patch_manifests,
+)
 from src.rdd_training.trainer import BinaryPotholeTrainer, RDDTrainingConfig
 from src.rdd_training.utils import (
     load_evaluation_rows_from_metrics_csv,
@@ -35,6 +41,16 @@ SPLIT_MANIFESTS = {
 
 if __name__ == "__main__":
     selected_model_names = select_rdd_model_names()
+
+    if RUN_RDD_FULL_IMAGE_PREPROCESSING:
+        print("RDD2022 binary pothole full-image preprocessing")
+        prepare_binary_pothole_manifests()
+        print()
+
+    if RUN_RDD_PATCH_PREPROCESSING:
+        print("RDD2022 binary pothole patch preprocessing")
+        prepare_binary_pothole_patch_manifests()
+        print()
 
     print("RDD2022 binary pothole dataset loader")
     print(f"Manifest directory: {RDD2022_BINARY_POTHOLE_DIR}")

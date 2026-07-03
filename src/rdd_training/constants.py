@@ -12,6 +12,7 @@ from src.constants import (
 # Binary Pothole Manifests
 ##########################
 
+RUN_RDD_FULL_IMAGE_PREPROCESSING = False
 POTHOLE_LABEL = "D40"
 POSITIVE_LABEL = 1
 NEGATIVE_LABEL = 0
@@ -53,6 +54,36 @@ SUMMARY_COLUMNS = [
     "pothole_objects",
 ]
 
+PATCH_MANIFEST_COLUMNS = [
+    "image_path",
+    "annotation_path",
+    "country",
+    "split",
+    "label",
+    "label_name",
+    "source_object_label",
+    "patch_source",
+    "bbox_xmin",
+    "bbox_ymin",
+    "bbox_xmax",
+    "bbox_ymax",
+    "patch_xmin",
+    "patch_ymin",
+    "patch_xmax",
+    "patch_ymax",
+    "image_width",
+    "image_height",
+]
+
+PATCH_SUMMARY_COLUMNS = [
+    "split",
+    "country",
+    "patches",
+    "pothole_patches",
+    "non_pothole_patches",
+    "pothole_fraction",
+]
+
 REQUIRED_MANIFEST_COLUMNS = {
     "image_path",
     "annotation_path",
@@ -67,6 +98,7 @@ REQUIRED_MANIFEST_COLUMNS = {
 # Patch-Grid Experiment Settings
 #################################
 
+RUN_RDD_PATCH_PREPROCESSING = True
 RDD_EXPERIMENT_NAME = "full_image_baseline"
 
 RDD_TRAINING_INPUT_MODE = "full_image"
@@ -135,7 +167,7 @@ RDD_MODEL_NAMES = (
 # Training Loop
 ################
 
-RUN_RDD_TRAINING = True  # skip training loop if False
+RUN_RDD_TRAINING = False  # skip training loop if False
 RDD_TRAINING_BATCH_SIZE = 16
 RDD_TRAINING_NUM_WORKERS = 2
 RDD_TRAINING_EPOCHS = 20
@@ -156,7 +188,7 @@ RDD_SKIP_FAILED_MODELS = True
 # Evaluation
 ################
 
-RUN_RDD_EVALUATION = True  # skip evaluation loop if False
+RUN_RDD_EVALUATION = False  # skip evaluation loop if False
 RDD_EVALUATION_BATCH_SIZE = 32
 RDD_EVALUATION_NUM_WORKERS = 2
 RDD_EVALUATION_PROGRESS_INTERVAL = 50
@@ -167,7 +199,7 @@ RDD_EVALUATION_SAVE_PLOTS = True
 # Comparison
 ################
 
-RUN_RDD_COMPARISON = True
+RUN_RDD_COMPARISON = False
 RDD_COMPARISON_RANKING_METRIC = "f1"
 RDD_COMPARISON_TOP_K = 3
 

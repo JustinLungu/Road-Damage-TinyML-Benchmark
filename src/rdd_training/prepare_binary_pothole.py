@@ -16,7 +16,7 @@ from src.rdd_training.constants import (
 )
 
 
-def main() -> None:
+def prepare_binary_pothole_manifests() -> list[dict[str, str | int]]:
     validate_split_countries(SPLIT_COUNTRIES)
 
     manifest_rows = build_manifest_rows(
@@ -27,6 +27,7 @@ def main() -> None:
 
     print(f"Binary pothole manifests written to: {RDD2022_BINARY_POTHOLE_DIR}")
     print_summary(manifest_rows)
+    return manifest_rows
 
 
 def validate_split_countries(split_countries: dict[str, tuple[str, ...]]) -> None:
@@ -224,7 +225,3 @@ def repo_relative_path(path: Path) -> str:
         return str(path.resolve().relative_to(PROJECT_ROOT))
     except ValueError:
         return str(path.resolve())
-
-
-if __name__ == "__main__":
-    main()
