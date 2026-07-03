@@ -26,6 +26,9 @@ from src.rdd_training.utils import (
     load_and_adapt_all_binary_pothole_models,
     load_and_adapt_model_for_binary_pothole,
     load_rgb_image,
+    make_rdd_training_dataset,
+    make_rdd_validation_dataset,
+    select_rdd_manifest_path,
 )
 
 
@@ -47,4 +50,7 @@ __all__ = [
     "load_and_adapt_all_binary_pothole_models",
     "load_and_adapt_model_for_binary_pothole",
     "load_rgb_image",
+    "make_rdd_training_dataset",
+    "make_rdd_validation_dataset",
+    "select_rdd_manifest_path",
 ]

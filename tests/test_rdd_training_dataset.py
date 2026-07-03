@@ -18,8 +18,11 @@ from src.rdd_training.dataset import (
 )
 from src.rdd_training.utils import (
     expected_label_name,
+    make_rdd_training_dataset,
+    make_rdd_validation_dataset,
     parse_binary_label,
     resolve_manifest_path,
+    select_rdd_manifest_path,
 )
 
 
@@ -386,6 +389,74 @@ def test_binary_pothole_patch_manifest_rejects_invalid_rows(tmp_path) -> None:
     write_patch_manifest(out_of_bounds, [row])
     with pytest.raises(ValueError, match="exceeds image bounds"):
         BinaryPotholePatchManifest.from_csv(out_of_bounds)
+
+
+def test_rdd_dataset_factories_select_full_image_and_patch_datasets(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    full_manifest_dir = tmp_path / "binary_pothole"
+    patch_manifest_dir = tmp_path / "binary_pothole_patches"
+    monkeypatch.setattr(
+        rdd_utils,
+        "RDD2022_BINARY_POTHOLE_DIR",
+        full_manifest_dir,
+    )
+    monkeypatch.setattr(
+        rdd_utils,
+        "RDD2022_BINARY_POTHOLE_PATCH_DIR",
+        patch_manifest_dir,
+    )
+
+    train_image = tmp_path / "images" / "train.jpg"
+    validation_image = tmp_path / "images" / "validation.jpg"
+    train_annotation = tmp_path / "annotations" / "train.xml"
+    validation_annotation = tmp_path / "annotations" / "validation.xml"
+    write_image(train_image)
+    write_image(validation_image)
+    train_annotation.parent.mkdir(parents=True)
+    train_annotation.write_text("<annotation />", encoding="utf-8")
+    validation_annotation.write_text("<annotation />", encoding="utf-8")
+
+    write_manifest(
+        full_manifest_dir / "train.csv",
+        [make_row(train_image, train_annotation, 1, "pothole")],
+    )
+    write_patch_manifest(
+        patch_manifest_dir / "validation.csv",
+        [
+            make_patch_row(
+                validation_image,
+                validation_annotation,
+                0,
+                "non_pothole",
+                split="validation",
+            )
+        ],
+    )
+
+    assert select_rdd_manifest_path("train", "full_image") == (
+        full_manifest_dir / "train.csv"
+    )
+    assert select_rdd_manifest_path("validation", "annotation_patch") == (
+        patch_manifest_dir / "validation.csv"
+    )
+
+    full_dataset = make_rdd_training_dataset(input_mode="full_image")
+    patch_dataset = make_rdd_validation_dataset(input_mode="annotation_patch")
+
+    assert isinstance(full_dataset, BinaryPotholeDataset)
+    assert isinstance(patch_dataset, BinaryPotholePatchDataset)
+    assert len(full_dataset) == 1
+    assert len(patch_dataset) == 1
+
+
+def test_rdd_dataset_factories_reject_invalid_modes_and_splits() -> None:
+    with pytest.raises(ValueError, match="must be one of"):
+        select_rdd_manifest_path("train", "bad_mode")
+
+    with pytest.raises(ValueError, match="Unsupported RDD split"):
+        select_rdd_manifest_path("holdout", "full_image")
 
 
 def test_rdd_training_utils_parse_labels_and_resolve_paths(tmp_path) -> None:

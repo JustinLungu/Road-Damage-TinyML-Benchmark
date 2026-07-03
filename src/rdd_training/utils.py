@@ -10,7 +10,11 @@ import torch
 import torch.nn as nn
 from PIL import Image
 
-from src.constants import PROJECT_ROOT
+from src.constants import (
+    PROJECT_ROOT,
+    RDD2022_BINARY_POTHOLE_DIR,
+    RDD2022_BINARY_POTHOLE_PATCH_DIR,
+)
 from src.rdd_training.constants import (
     DEFAULT_IMAGE_SIZE,
     ID_TO_LABEL,
@@ -24,6 +28,8 @@ from src.rdd_training.constants import (
     RDD_MODEL_MODE,
     RDD_MODEL_NAMES,
     RDD_SINGLE_MODEL,
+    RDD_SUPPORTED_TRAINING_INPUT_MODES,
+    RDD_TRAINING_INPUT_MODE,
     REQUIRED_MANIFEST_COLUMNS,
 )
 
@@ -122,6 +128,82 @@ def validate_existing_file(path: Path, column_name: str, row_number: int) -> Non
         raise FileNotFoundError(
             f"{column_name} on row {row_number} does not exist: {path}"
         )
+
+
+def select_rdd_manifest_path(
+    split: str,
+    input_mode: str | None = None,
+) -> Path:
+    mode = RDD_TRAINING_INPUT_MODE if input_mode is None else input_mode
+    if mode not in RDD_SUPPORTED_TRAINING_INPUT_MODES:
+        raise ValueError(
+            "RDD training input mode must be one of: "
+            f"{', '.join(RDD_SUPPORTED_TRAINING_INPUT_MODES)}."
+        )
+    if split not in {"train", "validation", "test"}:
+        raise ValueError(f"Unsupported RDD split: {split}")
+
+    if mode == "full_image":
+        return RDD2022_BINARY_POTHOLE_DIR / f"{split}.csv"
+    if mode == "annotation_patch":
+        return RDD2022_BINARY_POTHOLE_PATCH_DIR / f"{split}.csv"
+
+    raise ValueError(f"Unsupported RDD training input mode: {mode}")
+
+
+def make_rdd_dataset(
+    split: str,
+    input_mode: str | None = None,
+    transform=None,
+    target_transform=None,
+):
+    from src.rdd_training.dataset import BinaryPotholeDataset, BinaryPotholePatchDataset
+
+    mode = RDD_TRAINING_INPUT_MODE if input_mode is None else input_mode
+    manifest_path = select_rdd_manifest_path(split=split, input_mode=mode)
+
+    if mode == "full_image":
+        return BinaryPotholeDataset(
+            manifest_path,
+            transform=transform,
+            target_transform=target_transform,
+            expected_split=split,
+        )
+    if mode == "annotation_patch":
+        return BinaryPotholePatchDataset(
+            manifest_path,
+            transform=transform,
+            target_transform=target_transform,
+            expected_split=split,
+        )
+
+    raise ValueError(f"Unsupported RDD training input mode: {mode}")
+
+
+def make_rdd_training_dataset(
+    input_mode: str | None = None,
+    transform=None,
+    target_transform=None,
+):
+    return make_rdd_dataset(
+        split="train",
+        input_mode=input_mode,
+        transform=transform,
+        target_transform=target_transform,
+    )
+
+
+def make_rdd_validation_dataset(
+    input_mode: str | None = None,
+    transform=None,
+    target_transform=None,
+):
+    return make_rdd_dataset(
+        split="validation",
+        input_mode=input_mode,
+        transform=transform,
+        target_transform=target_transform,
+    )
 
 
 ########### Images ###########
