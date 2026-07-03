@@ -3,6 +3,9 @@
 from src.rdd_training.dataset import (
     BinaryPotholeDataset,
     BinaryPotholeManifest,
+    BinaryPotholePatchDataset,
+    BinaryPotholePatchManifest,
+    BinaryPotholePatchSample,
     BinaryPotholeSample,
 )
 from src.rdd_training.evaluation import (
@@ -31,6 +34,9 @@ __all__ = [
     "BinaryPotholeEvaluator",
     "BinaryPotholeManifest",
     "BinaryPotholeModelAdapter",
+    "BinaryPotholePatchDataset",
+    "BinaryPotholePatchManifest",
+    "BinaryPotholePatchSample",
     "BinaryPotholeSample",
     "RDDEvaluationConfig",
     "RDDEvaluationResult",

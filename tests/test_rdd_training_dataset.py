@@ -11,6 +11,9 @@ import src.rdd_training.utils as rdd_utils
 from src.rdd_training.dataset import (
     BinaryPotholeDataset,
     BinaryPotholeManifest,
+    BinaryPotholePatchDataset,
+    BinaryPotholePatchManifest,
+    BinaryPotholePatchSample,
     BinaryPotholeSample,
 )
 from src.rdd_training.utils import (
@@ -54,6 +57,40 @@ def write_manifest(
     )
 
 
+def write_patch_manifest(
+    path: Path,
+    rows: list[dict[str, str]],
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    header = [
+        "image_path",
+        "annotation_path",
+        "country",
+        "split",
+        "label",
+        "label_name",
+        "source_object_label",
+        "patch_source",
+        "bbox_xmin",
+        "bbox_ymin",
+        "bbox_xmax",
+        "bbox_ymax",
+        "patch_xmin",
+        "patch_ymin",
+        "patch_xmax",
+        "patch_ymax",
+        "image_width",
+        "image_height",
+    ]
+    path.write_text(
+        ",".join(header)
+        + "\n"
+        + "\n".join(",".join(row[column] for column in header) for row in rows)
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def make_row(
     image_path: Path,
     annotation_path: Path,
@@ -69,6 +106,31 @@ def make_row(
         "split": split,
         "label": str(label),
         "label_name": label_name,
+    }
+
+
+def make_patch_row(
+    image_path: Path,
+    annotation_path: Path,
+    label: int,
+    label_name: str,
+    split: str = "train",
+    country: str = "India",
+) -> dict[str, str]:
+    return {
+        **make_row(image_path, annotation_path, label, label_name, split, country),
+        "source_object_label": "D40" if label == 1 else "D00",
+        "patch_source": "annotation_box",
+        "bbox_xmin": "1",
+        "bbox_ymin": "1",
+        "bbox_xmax": "3",
+        "bbox_ymax": "3",
+        "patch_xmin": "1",
+        "patch_ymin": "0",
+        "patch_xmax": "4",
+        "patch_ymax": "2",
+        "image_width": "4",
+        "image_height": "3",
     }
 
 
@@ -152,6 +214,102 @@ def test_binary_pothole_dataset_returns_image_label_and_metadata(tmp_path) -> No
     assert item["split"] == "validation"
 
 
+def test_binary_pothole_patch_manifest_loads_samples_counts_and_paths(tmp_path) -> None:
+    image_a = tmp_path / "images" / "a.jpg"
+    image_b = tmp_path / "images" / "b.jpg"
+    annotation_a = tmp_path / "annotations" / "a.xml"
+    annotation_b = tmp_path / "annotations" / "b.xml"
+    write_image(image_a)
+    write_image(image_b)
+    annotation_a.parent.mkdir(parents=True)
+    annotation_a.write_text("<annotation />", encoding="utf-8")
+    annotation_b.write_text("<annotation />", encoding="utf-8")
+
+    manifest_path = tmp_path / "patch_train.csv"
+    write_patch_manifest(
+        manifest_path,
+        [
+            make_patch_row(image_a, annotation_a, 1, "pothole", country="India"),
+            make_patch_row(image_b, annotation_b, 0, "non_pothole", country="Czech"),
+        ],
+    )
+
+    manifest = BinaryPotholePatchManifest.from_csv(
+        manifest_path,
+        expected_split="train",
+    )
+
+    assert len(manifest) == 2
+    assert list(manifest)[0] == BinaryPotholePatchSample(
+        image_path=image_a,
+        annotation_path=annotation_a,
+        label=1,
+        label_name="pothole",
+        country="India",
+        split="train",
+        source_object_label="D40",
+        patch_source="annotation_box",
+        bbox=(1, 1, 3, 3),
+        patch_box=(1, 0, 4, 2),
+        image_size=(4, 3),
+    )
+    assert manifest.class_counts() == {1: 1, 0: 1}
+    assert manifest.country_counts() == {"India": 1, "Czech": 1}
+    assert manifest.positive_fraction() == pytest.approx(0.5)
+
+
+def test_binary_pothole_patch_dataset_returns_cropped_patch_and_metadata(
+    tmp_path,
+) -> None:
+    image_path = tmp_path / "images" / "sample.jpg"
+    annotation_path = tmp_path / "annotations" / "sample.xml"
+    write_image(image_path)
+    annotation_path.parent.mkdir(parents=True)
+    annotation_path.write_text("<annotation />", encoding="utf-8")
+
+    manifest_path = tmp_path / "patch_validation.csv"
+    write_patch_manifest(
+        manifest_path,
+        [
+            make_patch_row(
+                image_path,
+                annotation_path,
+                1,
+                "pothole",
+                split="validation",
+                country="United_States",
+            )
+        ],
+    )
+
+    def image_transform(image: Image.Image) -> torch.Tensor:
+        assert image.mode == "RGB"
+        assert image.size == (3, 2)
+        return torch.ones(3, image.height, image.width)
+
+    dataset = BinaryPotholePatchDataset(
+        manifest_path,
+        expected_split="validation",
+        transform=image_transform,
+        target_transform=lambda label: torch.tensor(label),
+    )
+    item = dataset[0]
+
+    assert len(dataset) == 1
+    assert item["image"].shape == (3, 2, 3)
+    assert item["label"].item() == 1
+    assert item["image_path"] == image_path
+    assert item["annotation_path"] == annotation_path
+    assert item["label_name"] == "pothole"
+    assert item["country"] == "United_States"
+    assert item["split"] == "validation"
+    assert item["source_object_label"] == "D40"
+    assert item["patch_source"] == "annotation_box"
+    assert item["bbox"] == (1, 1, 3, 3)
+    assert item["patch_box"] == (1, 0, 4, 2)
+    assert item["image_size"] == (4, 3)
+
+
 def test_binary_pothole_manifest_rejects_invalid_rows(tmp_path) -> None:
     image_path = tmp_path / "images" / "sample.jpg"
     annotation_path = tmp_path / "annotations" / "sample.xml"
@@ -198,6 +356,36 @@ def test_binary_pothole_manifest_rejects_invalid_rows(tmp_path) -> None:
     )
     with pytest.raises(ValueError, match="Missing country"):
         BinaryPotholeManifest.from_csv(bad_country)
+
+
+def test_binary_pothole_patch_manifest_rejects_invalid_rows(tmp_path) -> None:
+    image_path = tmp_path / "images" / "sample.jpg"
+    annotation_path = tmp_path / "annotations" / "sample.xml"
+    write_image(image_path)
+    annotation_path.parent.mkdir(parents=True)
+    annotation_path.write_text("<annotation />", encoding="utf-8")
+
+    bad_header = tmp_path / "bad_patch_header.csv"
+    bad_header.write_text(
+        "image_path,annotation_path,country,split,label,label_name\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="Patch manifest is missing"):
+        BinaryPotholePatchManifest.from_csv(bad_header)
+
+    bad_bounds = tmp_path / "bad_patch_bounds.csv"
+    row = make_patch_row(image_path, annotation_path, 1, "pothole")
+    row["patch_xmax"] = "1"
+    write_patch_manifest(bad_bounds, [row])
+    with pytest.raises(ValueError, match="invalid bounds"):
+        BinaryPotholePatchManifest.from_csv(bad_bounds)
+
+    out_of_bounds = tmp_path / "out_of_bounds.csv"
+    row = make_patch_row(image_path, annotation_path, 1, "pothole")
+    row["patch_xmax"] = "5"
+    write_patch_manifest(out_of_bounds, [row])
+    with pytest.raises(ValueError, match="exceeds image bounds"):
+        BinaryPotholePatchManifest.from_csv(out_of_bounds)
 
 
 def test_rdd_training_utils_parse_labels_and_resolve_paths(tmp_path) -> None:

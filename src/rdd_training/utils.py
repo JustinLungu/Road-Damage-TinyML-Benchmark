@@ -59,6 +59,41 @@ def parse_binary_label(raw_label: str, row_number: int) -> int:
     return label
 
 
+def parse_manifest_int(
+    row: dict[str, str],
+    column_name: str,
+    row_number: int,
+) -> int:
+    try:
+        return int(row[column_name])
+    except KeyError as exc:
+        raise ValueError(
+            f"Manifest row {row_number} is missing column: {column_name}"
+        ) from exc
+    except ValueError as exc:
+        raise ValueError(
+            f"Invalid integer for {column_name} on row {row_number}: "
+            f"{row.get(column_name, '')}"
+        ) from exc
+
+
+def parse_patch_coordinates(
+    row: dict[str, str],
+    row_number: int,
+) -> tuple[int, int, int, int]:
+    patch_xmin = parse_manifest_int(row, "patch_xmin", row_number)
+    patch_ymin = parse_manifest_int(row, "patch_ymin", row_number)
+    patch_xmax = parse_manifest_int(row, "patch_xmax", row_number)
+    patch_ymax = parse_manifest_int(row, "patch_ymax", row_number)
+
+    if patch_xmin < 0 or patch_ymin < 0:
+        raise ValueError(f"Patch coordinates must be non-negative on row {row_number}.")
+    if patch_xmax <= patch_xmin or patch_ymax <= patch_ymin:
+        raise ValueError(f"Patch box has invalid bounds on row {row_number}.")
+
+    return patch_xmin, patch_ymin, patch_xmax, patch_ymax
+
+
 ########### Manifest Paths ###########
 
 
