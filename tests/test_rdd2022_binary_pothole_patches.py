@@ -165,6 +165,46 @@ def test_patch_preprocessor_writes_split_manifests_and_summary(tmp_path) -> None
     assert dataset_total["pothole_patches"] == 2
 
 
+def test_patch_preprocessor_can_inherit_stratified_full_image_split(tmp_path) -> None:
+    for index in range(3):
+        write_rdd_patch_sample(
+            tmp_path,
+            "India",
+            f"positive_{index}.jpg",
+            [("D40", (10, 10, 50, 50))],
+        )
+        write_rdd_patch_sample(
+            tmp_path,
+            "India",
+            f"negative_{index}.jpg",
+            [("D20", (100, 100, 150, 150))],
+        )
+
+    preprocessor = BinaryPotholePatchManifestPreprocessor(
+        rdd_root=tmp_path,
+        output_dir=tmp_path / "patch_manifests",
+        split_countries={
+            "train": ("UnusedTrainCountry",),
+            "validation": ("UnusedValidationCountry",),
+            "test": ("UnusedTestCountry",),
+        },
+        split_mode="stratified_by_country",
+        countries=("India",),
+        split_fractions={"train": 0.70, "validation": 0.15, "test": 0.15},
+        random_seed=42,
+        patch_padding=0.0,
+        min_box_area=400,
+    )
+
+    rows = preprocessor.build_rows()
+
+    assert {row["split"] for row in rows} == {"train", "validation", "test"}
+    assert {
+        split: sum(row["split"] == split for row in rows)
+        for split in ("train", "validation", "test")
+    } == {"train": 2, "validation": 2, "test": 2}
+
+
 def test_patch_preprocessor_validation_errors(tmp_path) -> None:
     with pytest.raises(FileNotFoundError, match="RDD2022 root"):
         BinaryPotholePatchManifestPreprocessor(

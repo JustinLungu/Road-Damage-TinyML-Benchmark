@@ -118,7 +118,15 @@ The binary target is:
 labels, and images with no annotated objects. This keeps the first task aligned
 with the requested question: pothole versus non-pothole.
 
-The default country-aware split is:
+The default fine-tuning split is now `stratified_by_country`:
+
+- every country contributes to train, validation, and test;
+- pothole and non-pothole images are split separately inside each country;
+- the default ratio is `70%` train, `15%` validation, and `15%` test.
+
+This gives validation enough pothole examples for threshold tuning while keeping
+the test set meaningful. The older country-holdout split is still available for
+a harder cross-country generalization benchmark:
 
 | Split | Countries |
 | --- | --- |

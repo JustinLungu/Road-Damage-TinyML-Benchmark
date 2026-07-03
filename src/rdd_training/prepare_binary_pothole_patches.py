@@ -17,11 +17,18 @@ from src.rdd_training.constants import (
     PATCH_SUMMARY_COLUMNS,
     POSITIVE_LABEL,
     POTHOLE_LABEL,
+    RDD_AVAILABLE_COUNTRIES,
     RDD_MIN_BOX_AREA,
     RDD_PATCH_PADDING,
+    RDD_SPLIT_FRACTIONS,
+    RDD_SPLIT_MODE,
+    RDD_SPLIT_RANDOM_SEED,
     SPLIT_COUNTRIES,
 )
-from src.rdd_training.prepare_binary_pothole import validate_split_countries
+from src.rdd_training.prepare_binary_pothole import (
+    build_manifest_rows,
+    validate_split_countries,
+)
 
 
 @dataclass(frozen=True)
@@ -67,18 +74,29 @@ class BinaryPotholePatchManifestPreprocessor:
         rdd_root: Path,
         output_dir: Path,
         split_countries: dict[str, tuple[str, ...]],
+        split_mode: str = "country_holdout",
+        countries: tuple[str, ...] = RDD_AVAILABLE_COUNTRIES,
+        split_fractions: dict[str, float] = RDD_SPLIT_FRACTIONS,
+        random_seed: int = RDD_SPLIT_RANDOM_SEED,
         patch_padding: float = RDD_PATCH_PADDING,
         min_box_area: int = RDD_MIN_BOX_AREA,
     ) -> None:
         self.rdd_root = rdd_root
         self.output_dir = output_dir
         self.split_countries = split_countries
+        self.split_mode = split_mode
+        self.countries = countries
+        self.split_fractions = split_fractions
+        self.random_seed = random_seed
         self.patch_padding = patch_padding
         self.min_box_area = min_box_area
 
     def build_rows(self) -> list[dict[str, str | int]]:
         if not self.rdd_root.is_dir():
             raise FileNotFoundError(f"RDD2022 root does not exist: {self.rdd_root}")
+
+        if self.split_mode == "stratified_by_country":
+            return self._build_rows_from_full_image_split()
 
         rows = []
         for split, countries in self.split_countries.items():
@@ -89,6 +107,37 @@ class BinaryPotholePatchManifestPreprocessor:
             raise ValueError("No RDD2022 patch rows were created.")
 
         return rows
+
+    def _build_rows_from_full_image_split(self) -> list[dict[str, str | int]]:
+        full_image_rows = build_manifest_rows(
+            rdd_root=self.rdd_root,
+            split_mode=self.split_mode,
+            split_countries=self.split_countries,
+            countries=self.countries,
+            split_fractions=self.split_fractions,
+            random_seed=self.random_seed,
+        )
+
+        patch_rows = []
+        for full_image_row in full_image_rows:
+            image_annotation = parse_image_annotation(
+                annotation_path=repo_path(str(full_image_row["annotation_path"])),
+                image_dir=repo_path(str(full_image_row["image_path"])).parent,
+                country=str(full_image_row["country"]),
+                split=str(full_image_row["split"]),
+            )
+            patch_rows.extend(
+                make_patch_rows(
+                    image_annotation=image_annotation,
+                    patch_padding=self.patch_padding,
+                    min_box_area=self.min_box_area,
+                )
+            )
+
+        if not patch_rows:
+            raise ValueError("No RDD2022 patch rows were created.")
+
+        return patch_rows
 
     def write_manifests(self, rows: list[dict[str, str | int]]) -> None:
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -342,12 +391,24 @@ def repo_relative_path(path: Path) -> str:
         return str(path.resolve())
 
 
+def repo_path(path: str) -> Path:
+    raw_path = Path(path)
+    if raw_path.is_absolute():
+        return raw_path
+    return PROJECT_ROOT / raw_path
+
+
 def prepare_binary_pothole_patch_manifests() -> list[dict[str, str | int]]:
-    validate_split_countries(SPLIT_COUNTRIES)
+    if RDD_SPLIT_MODE == "country_holdout":
+        validate_split_countries(SPLIT_COUNTRIES)
     preprocessor = BinaryPotholePatchManifestPreprocessor(
         rdd_root=RDD2022_DIR,
         output_dir=RDD2022_BINARY_POTHOLE_PATCH_DIR,
         split_countries=SPLIT_COUNTRIES,
+        split_mode=RDD_SPLIT_MODE,
+        countries=RDD_AVAILABLE_COUNTRIES,
+        split_fractions=RDD_SPLIT_FRACTIONS,
+        random_seed=RDD_SPLIT_RANDOM_SEED,
     )
     rows = preprocessor.build_rows()
     preprocessor.write_manifests(rows)

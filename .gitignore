@@ -2,6 +2,7 @@ annotations*
 images*
 datasets/imagenette/validation_labels.csv
 datasets/rdd2022/binary_pothole/
+datasets/rdd2022/binary_pothole_patches/
 
 .vscode/
 *.pt

@@ -40,6 +40,31 @@ pothole patches. Non-`D40` boxes are negative non-pothole patches.
 After the CSVs exist, set preprocessing flags back to `False` unless you want to
 overwrite the manifests.
 
+## Dataset Split
+
+```python
+RDD_SPLIT_MODE = "stratified_by_country"
+RDD_SPLIT_FRACTIONS = {
+    "train": 0.70,
+    "validation": 0.15,
+    "test": 0.15,
+}
+RDD_SPLIT_RANDOM_SEED = 42
+```
+
+Available split modes:
+
+- `"stratified_by_country"`: each country contributes examples to
+  train/validation/test, while splitting pothole and non-pothole images
+  separately. This is the recommended mode for development runs because
+  validation gets more pothole examples for threshold tuning.
+- `"country_holdout"`: entire countries are held out into one split using
+  `SPLIT_COUNTRIES`. This is useful as a harder cross-country generalization
+  benchmark after the model behaves well.
+
+Patch manifests inherit the full-image split, so all annotation patches from the
+same original image stay in the same split.
+
 ## Experiment Name
 
 ```python

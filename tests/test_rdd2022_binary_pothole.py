@@ -5,6 +5,7 @@ import pytest
 from src.rdd_training.prepare_binary_pothole import (
     build_manifest_rows,
     build_summary_rows,
+    calculate_split_counts,
     parse_annotation,
     validate_split_countries,
     write_manifests,
@@ -137,6 +138,45 @@ def test_build_manifest_rows_writes_split_manifests_and_summary(tmp_path) -> Non
     assert train_total["pothole_images"] == 1
     assert dataset_total["images"] == 4
     assert dataset_total["pothole_images"] == 2
+
+
+def test_build_manifest_rows_can_use_stratified_country_split(tmp_path) -> None:
+    for index in range(10):
+        write_rdd_sample(tmp_path, "India", f"positive_{index}.jpg", ["D40"])
+        write_rdd_sample(tmp_path, "India", f"negative_{index}.jpg", ["D10"])
+
+    rows = build_manifest_rows(
+        tmp_path,
+        split_countries={
+            "train": ("UnusedTrainCountry",),
+            "validation": ("UnusedValidationCountry",),
+            "test": ("UnusedTestCountry",),
+        },
+        split_mode="stratified_by_country",
+        countries=("India",),
+        split_fractions={"train": 0.70, "validation": 0.15, "test": 0.15},
+        random_seed=42,
+    )
+
+    split_counts = {
+        split: sum(row["split"] == split for row in rows)
+        for split in ("train", "validation", "test")
+    }
+    positive_counts = {
+        split: sum(row["split"] == split and int(row["has_pothole"]) for row in rows)
+        for split in ("train", "validation", "test")
+    }
+
+    assert split_counts == {"train": 12, "validation": 4, "test": 4}
+    assert positive_counts == {"train": 6, "validation": 2, "test": 2}
+    assert {row["country"] for row in rows} == {"India"}
+
+
+def test_calculate_split_counts_keeps_small_groups_available_for_training() -> None:
+    assert calculate_split_counts(
+        total_rows=1,
+        split_fractions={"train": 0.70, "validation": 0.15, "test": 0.15},
+    ) == {"train": 1, "validation": 0, "test": 0}
 
 
 def test_binary_pothole_manifest_validation_errors(tmp_path) -> None:

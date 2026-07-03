@@ -13,8 +13,8 @@ from src.constants import (
 ##########################
 
 # True regenerates datasets/rdd2022/binary_pothole/*.csv before the rest of main.
-# Use this when SPLIT_COUNTRIES changed or the full-image manifests are missing.
-RUN_RDD_FULL_IMAGE_PREPROCESSING = False
+# Use this when split settings changed or the full-image manifests are missing.
+RUN_RDD_FULL_IMAGE_PREPROCESSING = True
 POTHOLE_LABEL = "D40"
 POSITIVE_LABEL = 1
 NEGATIVE_LABEL = 0
@@ -23,6 +23,32 @@ NUM_BINARY_CLASSES = len(BINARY_CLASS_NAMES)
 ID_TO_LABEL = dict(enumerate(BINARY_CLASS_NAMES))
 LABEL_TO_ID = {label: index for index, label in ID_TO_LABEL.items()}
 
+RDD_AVAILABLE_COUNTRIES = (
+    "China_Drone",
+    "China_MotorBike",
+    "Czech",
+    "India",
+    "Japan",
+    "Norway",
+    "United_States",
+)
+
+# Split modes:
+# "stratified_by_country": every country contributes train/validation/test rows,
+# keeping pothole/non-pothole proportions closer across splits. This is the
+# recommended development split for fine-tuning and threshold tuning.
+# "country_holdout": whole countries are assigned to one split, useful later as
+# a harder cross-country generalization benchmark.
+RDD_SPLIT_MODE = "stratified_by_country"
+RDD_SUPPORTED_SPLIT_MODES = ("stratified_by_country", "country_holdout")
+RDD_SPLIT_FRACTIONS = {
+    "train": 0.70,
+    "validation": 0.15,
+    "test": 0.15,
+}
+RDD_SPLIT_RANDOM_SEED = 42
+
+# Used only when RDD_SPLIT_MODE is "country_holdout".
 SPLIT_COUNTRIES = {
     "train": ("China_Drone", "China_MotorBike", "Czech", "India"),
     "validation": ("United_States",),
@@ -103,7 +129,7 @@ REQUIRED_MANIFEST_COLUMNS = {
 # True regenerates datasets/rdd2022/binary_pothole_patches/*.csv before training.
 # Keep False after CSVs exist unless patch/country-split settings changed.
 RUN_RDD_PATCH_PREPROCESSING = True
-RDD_EXPERIMENT_NAME = "annotation_patch_grid3_smoke"
+RDD_EXPERIMENT_NAME = "annotation_patch_grid3_stratified"
 
 # Training modes:
 # "full_image": train on datasets/rdd2022/binary_pothole/*.csv full images.

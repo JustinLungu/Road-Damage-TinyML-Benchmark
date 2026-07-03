@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import csv
+import random
 import xml.etree.ElementTree as ET
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 
 from src.constants import PROJECT_ROOT, RDD2022_BINARY_POTHOLE_DIR, RDD2022_DIR
@@ -11,17 +12,24 @@ from src.rdd_training.constants import (
     NEGATIVE_LABEL,
     POSITIVE_LABEL,
     POTHOLE_LABEL,
+    RDD_AVAILABLE_COUNTRIES,
+    RDD_SPLIT_FRACTIONS,
+    RDD_SPLIT_MODE,
+    RDD_SPLIT_RANDOM_SEED,
+    RDD_SUPPORTED_SPLIT_MODES,
     SPLIT_COUNTRIES,
     SUMMARY_COLUMNS,
 )
 
 
 def prepare_binary_pothole_manifests() -> list[dict[str, str | int]]:
-    validate_split_countries(SPLIT_COUNTRIES)
-
     manifest_rows = build_manifest_rows(
         rdd_root=RDD2022_DIR,
+        split_mode=RDD_SPLIT_MODE,
         split_countries=SPLIT_COUNTRIES,
+        countries=RDD_AVAILABLE_COUNTRIES,
+        split_fractions=RDD_SPLIT_FRACTIONS,
+        random_seed=RDD_SPLIT_RANDOM_SEED,
     )
     write_manifests(manifest_rows, RDD2022_BINARY_POTHOLE_DIR)
 
@@ -47,10 +55,27 @@ def validate_split_countries(split_countries: dict[str, tuple[str, ...]]) -> Non
 def build_manifest_rows(
     rdd_root: Path,
     split_countries: dict[str, tuple[str, ...]],
+    split_mode: str = "country_holdout",
+    countries: tuple[str, ...] = RDD_AVAILABLE_COUNTRIES,
+    split_fractions: dict[str, float] = RDD_SPLIT_FRACTIONS,
+    random_seed: int = RDD_SPLIT_RANDOM_SEED,
 ) -> list[dict[str, str | int]]:
     if not rdd_root.is_dir():
         raise FileNotFoundError(f"RDD2022 root does not exist: {rdd_root}")
 
+    validate_split_mode(split_mode)
+    if split_mode == "stratified_by_country":
+        rows = build_stratified_country_rows(
+            rdd_root=rdd_root,
+            countries=countries,
+            split_fractions=split_fractions,
+            random_seed=random_seed,
+        )
+        if not rows:
+            raise ValueError("No RDD2022 images were found for the selected countries.")
+        return rows
+
+    validate_split_countries(split_countries)
     rows = []
     for split, countries in split_countries.items():
         for country in countries:
@@ -60,6 +85,116 @@ def build_manifest_rows(
         raise ValueError("No RDD2022 images were found for the selected countries.")
 
     return rows
+
+
+def validate_split_mode(split_mode: str) -> None:
+    if split_mode not in RDD_SUPPORTED_SPLIT_MODES:
+        raise ValueError(
+            f"Unsupported RDD split mode: {split_mode}. "
+            f"Expected one of: {', '.join(RDD_SUPPORTED_SPLIT_MODES)}."
+        )
+
+
+def validate_split_fractions(split_fractions: dict[str, float]) -> None:
+    expected_splits = {"train", "validation", "test"}
+    if set(split_fractions) != expected_splits:
+        raise ValueError("RDD_SPLIT_FRACTIONS must define train, validation, and test.")
+    if any(fraction <= 0 for fraction in split_fractions.values()):
+        raise ValueError("RDD split fractions must be positive.")
+    total = sum(split_fractions.values())
+    if abs(total - 1.0) > 1e-6:
+        raise ValueError("RDD split fractions must sum to 1.0.")
+
+
+def build_stratified_country_rows(
+    rdd_root: Path,
+    countries: tuple[str, ...],
+    split_fractions: dict[str, float],
+    random_seed: int,
+) -> list[dict[str, str | int]]:
+    validate_split_fractions(split_fractions)
+
+    rows = []
+    for country in countries:
+        country_rows = parse_country(rdd_root, country, split="unassigned")
+        rows.extend(
+            assign_country_stratified_splits(
+                rows=country_rows,
+                split_fractions=split_fractions,
+                random_seed=random_seed,
+            )
+        )
+
+    return rows
+
+
+def assign_country_stratified_splits(
+    rows: list[dict[str, str | int]],
+    split_fractions: dict[str, float],
+    random_seed: int,
+) -> list[dict[str, str | int]]:
+    by_label: dict[int, list[dict[str, str | int]]] = defaultdict(list)
+    country = str(rows[0]["country"]) if rows else "unknown"
+
+    for row in rows:
+        by_label[int(row["label"])].append(row)
+
+    assigned_rows = []
+    for label, label_rows in sorted(by_label.items()):
+        shuffled_rows = list(label_rows)
+        random.Random(f"{random_seed}:{country}:{label}").shuffle(shuffled_rows)
+        assigned_rows.extend(
+            assign_split_to_rows(shuffled_rows, split_fractions=split_fractions)
+        )
+
+    return sorted(assigned_rows, key=lambda row: str(row["image_path"]))
+
+
+def assign_split_to_rows(
+    rows: list[dict[str, str | int]],
+    split_fractions: dict[str, float],
+) -> list[dict[str, str | int]]:
+    split_counts = calculate_split_counts(len(rows), split_fractions)
+    assigned_rows = []
+    start_index = 0
+    for split in ("train", "validation", "test"):
+        end_index = start_index + split_counts[split]
+        for row in rows[start_index:end_index]:
+            split_row = dict(row)
+            split_row["split"] = split
+            assigned_rows.append(split_row)
+        start_index = end_index
+    return assigned_rows
+
+
+def calculate_split_counts(
+    total_rows: int,
+    split_fractions: dict[str, float],
+) -> dict[str, int]:
+    validation_count = round(total_rows * split_fractions["validation"])
+    test_count = round(total_rows * split_fractions["test"])
+    train_count = total_rows - validation_count - test_count
+
+    if total_rows >= 3:
+        counts = {
+            "train": max(1, train_count),
+            "validation": max(1, validation_count),
+            "test": max(1, test_count),
+        }
+        while sum(counts.values()) > total_rows:
+            largest_split = max(counts, key=counts.get)
+            counts[largest_split] -= 1
+        while sum(counts.values()) < total_rows:
+            counts["train"] += 1
+        return counts
+
+    validation_count = round(total_rows * split_fractions["validation"])
+    test_count = round(total_rows * split_fractions["test"])
+    return {
+        "train": total_rows - validation_count - test_count,
+        "validation": validation_count,
+        "test": test_count,
+    }
 
 
 def parse_country(
