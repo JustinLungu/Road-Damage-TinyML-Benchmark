@@ -108,6 +108,8 @@ def test_binary_pothole_trainer_runs_and_saves_best_checkpoint(
 ) -> None:
     config = RDDTrainingConfig(
         model_name="tiny",
+        experiment_name="full_image_baseline",
+        training_input_mode="full_image",
         output_dir=tmp_path / "results",
         batch_size=2,
         num_workers=0,

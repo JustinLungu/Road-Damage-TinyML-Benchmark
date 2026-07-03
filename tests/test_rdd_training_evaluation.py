@@ -297,6 +297,9 @@ def test_binary_pothole_evaluator_writes_metrics_and_confusion_matrix(
 
     config = RDDEvaluationConfig(
         model_name="tiny",
+        experiment_name="full_image_baseline",
+        training_input_mode="full_image",
+        evaluation_input_mode="full_image",
         test_manifest_path=tmp_path / "test.csv",
         output_dir=tmp_path / "results",
         batch_size=2,

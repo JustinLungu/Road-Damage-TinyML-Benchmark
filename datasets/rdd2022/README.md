@@ -106,6 +106,9 @@ annotations. All RDD training actions are controlled from
 uv run python -m src.rdd_training.main
 ```
 
+For a detailed explanation of each RDD pipeline constant, see
+`docs/rdd_training_constants.md`.
+
 The binary target is:
 
 - `1`, `pothole`: the image contains at least one `D40` object.
