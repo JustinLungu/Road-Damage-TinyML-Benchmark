@@ -10,9 +10,13 @@ import src.rdd_training.evaluation as evaluation_module
 from src.rdd_training.evaluation import (
     BinaryPotholeEvaluator,
     GridImageInferenceRunner,
+    GridImagePrediction,
     GridPatchGenerator,
+    GridThresholdTuner,
     RDDEvaluationConfig,
+    load_grid_decision_threshold,
 )
+from src.rdd_training.dataset import BinaryPotholeManifest, BinaryPotholeSample
 from src.rdd_training.utils import (
     collate_binary_pothole_batch,
     compute_binary_roc_auc,
@@ -45,6 +49,21 @@ class FakeManifest:
 
     def __len__(self):
         return 4
+
+
+class FakeGridRunner:
+    def __init__(self, scores_by_path: dict[Path, float]) -> None:
+        self.scores_by_path = scores_by_path
+
+    def predict_image(self, image_path: Path) -> GridImagePrediction:
+        score = self.scores_by_path[image_path]
+        return GridImagePrediction(
+            image_path=image_path,
+            patch_boxes=((0, 0, 1, 1),),
+            patch_scores=(score,),
+            image_score=score,
+            prediction=int(score >= 0.5),
+        )
 
 
 def make_loader() -> DataLoader:
@@ -145,6 +164,85 @@ def test_grid_image_inference_uses_max_patch_score_for_image_prediction(
     assert prediction.patch_scores[4] == pytest.approx(0.9999938, rel=1e-5)
     assert prediction.image_score == pytest.approx(max(prediction.patch_scores))
     assert prediction.prediction == 1
+
+
+def test_grid_threshold_tuner_selects_best_validation_f1_and_writes_json(
+    tmp_path,
+) -> None:
+    image_paths = [tmp_path / f"image_{index}.jpg" for index in range(4)]
+    annotation_path = tmp_path / "annotation.xml"
+    threshold_path = tmp_path / "threshold.json"
+    manifest = BinaryPotholeManifest(
+        samples=[
+            BinaryPotholeSample(
+                image_path=image_paths[0],
+                annotation_path=annotation_path,
+                label=0,
+                label_name="non_pothole",
+                country="United_States",
+                split="validation",
+            ),
+            BinaryPotholeSample(
+                image_path=image_paths[1],
+                annotation_path=annotation_path,
+                label=1,
+                label_name="pothole",
+                country="United_States",
+                split="validation",
+            ),
+            BinaryPotholeSample(
+                image_path=image_paths[2],
+                annotation_path=annotation_path,
+                label=0,
+                label_name="non_pothole",
+                country="United_States",
+                split="validation",
+            ),
+            BinaryPotholeSample(
+                image_path=image_paths[3],
+                annotation_path=annotation_path,
+                label=1,
+                label_name="pothole",
+                country="United_States",
+                split="validation",
+            ),
+        ],
+        manifest_path=tmp_path / "validation.csv",
+    )
+    tuner = GridThresholdTuner(
+        inference_runner=FakeGridRunner(
+            {
+                image_paths[0]: 0.2,
+                image_paths[1]: 0.4,
+                image_paths[2]: 0.6,
+                image_paths[3]: 0.8,
+            }
+        ),
+        threshold_values=(0.3, 0.5, 0.7),
+        metric_name="f1",
+    )
+
+    result = tuner.tune(manifest, threshold_path=threshold_path)
+
+    assert result.threshold == pytest.approx(0.3)
+    assert result.metric_name == "f1"
+    assert result.metric_value == pytest.approx(0.8)
+    assert result.threshold_path == threshold_path
+    assert len(result.threshold_metrics) == 3
+    assert threshold_path.is_file()
+    assert load_grid_decision_threshold(threshold_path) == pytest.approx(0.3)
+    assert load_grid_decision_threshold(
+        tmp_path / "missing_threshold.json",
+        default_threshold=0.55,
+    ) == pytest.approx(0.55)
+
+
+def test_grid_threshold_tuner_rejects_empty_threshold_values() -> None:
+    with pytest.raises(ValueError, match="threshold_values"):
+        GridThresholdTuner(
+            inference_runner=FakeGridRunner({}),
+            threshold_values=(),
+        )
 
 
 def test_binary_pothole_evaluator_writes_metrics_and_confusion_matrix(

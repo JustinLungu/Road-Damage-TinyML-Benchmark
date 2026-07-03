@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -17,6 +18,8 @@ from src.rdd_training.constants import (
     RDD_GRID_OVERLAP,
     RDD_GRID_SIZE,
     RDD_PATCH_DECISION_THRESHOLD,
+    RDD_THRESHOLD_METRIC,
+    RDD_THRESHOLD_VALUES,
 )
 from src.rdd_training.dataset import BinaryPotholeDataset, BinaryPotholeManifest
 from src.rdd_training.utils import (
@@ -47,6 +50,15 @@ class GridImagePrediction:
     patch_scores: tuple[float, ...]
     image_score: float
     prediction: int
+
+
+@dataclass(frozen=True)
+class GridThresholdTuningResult:
+    threshold: float
+    metric_name: str
+    metric_value: float
+    threshold_metrics: tuple[dict[str, float], ...]
+    threshold_path: Path | None
 
 
 class GridPatchGenerator:
@@ -134,6 +146,107 @@ class GridImageInferenceRunner:
         )
 
 
+class GridThresholdTuner:
+    """Tune image-level decision threshold from full-image validation scores."""
+
+    def __init__(
+        self,
+        inference_runner: GridImageInferenceRunner,
+        threshold_values: tuple[float, ...] = RDD_THRESHOLD_VALUES,
+        metric_name: str = RDD_THRESHOLD_METRIC,
+    ) -> None:
+        if not threshold_values:
+            raise ValueError("threshold_values must contain at least one threshold.")
+        self.inference_runner = inference_runner
+        self.threshold_values = threshold_values
+        self.metric_name = metric_name
+
+    def tune(
+        self,
+        manifest: BinaryPotholeManifest,
+        threshold_path: Path | None = None,
+    ) -> GridThresholdTuningResult:
+        scores = []
+        targets = []
+        for sample in manifest:
+            prediction = self.inference_runner.predict_image(sample.image_path)
+            scores.append(prediction.image_score)
+            targets.append(sample.label)
+
+        score_tensor = torch.tensor(scores, dtype=torch.float32)
+        target_tensor = torch.tensor(targets, dtype=torch.long)
+        threshold_metrics = tuple(
+            self._evaluate_threshold(
+                threshold=threshold,
+                scores=score_tensor,
+                targets=target_tensor,
+            )
+            for threshold in self.threshold_values
+        )
+
+        best_metrics = max(
+            threshold_metrics,
+            key=lambda metrics: metrics[self.metric_name],
+        )
+        result = GridThresholdTuningResult(
+            threshold=best_metrics["threshold"],
+            metric_name=self.metric_name,
+            metric_value=best_metrics[self.metric_name],
+            threshold_metrics=threshold_metrics,
+            threshold_path=threshold_path,
+        )
+
+        if threshold_path is not None:
+            write_grid_threshold_json(threshold_path, result)
+
+        return result
+
+    def _evaluate_threshold(
+        self,
+        threshold: float,
+        scores: torch.Tensor,
+        targets: torch.Tensor,
+    ) -> dict[str, float]:
+        predictions = (scores >= threshold).long()
+        metrics = compute_binary_classification_metrics(
+            predictions=predictions,
+            targets=targets,
+        )
+        return {"threshold": threshold, **metrics}
+
+
+def write_grid_threshold_json(
+    threshold_path: Path,
+    result: GridThresholdTuningResult,
+) -> None:
+    threshold_path.parent.mkdir(parents=True, exist_ok=True)
+    threshold_path.write_text(
+        json.dumps(
+            {
+                "threshold": result.threshold,
+                "metric_name": result.metric_name,
+                "metric_value": result.metric_value,
+                "threshold_metrics": list(result.threshold_metrics),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def load_grid_decision_threshold(
+    threshold_path: Path,
+    default_threshold: float = RDD_PATCH_DECISION_THRESHOLD,
+) -> float:
+    if not threshold_path.is_file():
+        return default_threshold
+
+    threshold_data = json.loads(threshold_path.read_text(encoding="utf-8"))
+    return float(threshold_data["threshold"])
+
+
 @dataclass(frozen=True)
 class RDDEvaluationConfig:
     model_name: str
@@ -152,6 +265,10 @@ class RDDEvaluationConfig:
     @property
     def checkpoint_path(self) -> Path:
         return self.model_output_dir / "best.pt"
+
+    @property
+    def threshold_path(self) -> Path:
+        return self.model_output_dir / "threshold.json"
 
 
 @dataclass(frozen=True)
