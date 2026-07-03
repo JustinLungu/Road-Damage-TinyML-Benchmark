@@ -14,6 +14,9 @@ from src.rdd_training.constants import (
     RDD_EVALUATION_NUM_WORKERS,
     RDD_EVALUATION_PROGRESS_INTERVAL,
     RDD_EVALUATION_SAVE_PLOTS,
+    RDD_GRID_OVERLAP,
+    RDD_GRID_SIZE,
+    RDD_PATCH_DECISION_THRESHOLD,
 )
 from src.rdd_training.dataset import BinaryPotholeDataset, BinaryPotholeManifest
 from src.rdd_training.utils import (
@@ -22,6 +25,7 @@ from src.rdd_training.utils import (
     compute_binary_roc_auc,
     compute_binary_roc_curve,
     extract_logits,
+    load_rgb_image,
     load_and_adapt_model_for_binary_pothole,
     make_image_transform,
     write_confusion_matrix_csv,
@@ -31,6 +35,103 @@ from src.rdd_training.utils import (
     write_metric_bar_plot,
     write_roc_curve_plot,
 )
+
+
+PatchBox = tuple[int, int, int, int]
+
+
+@dataclass(frozen=True)
+class GridImagePrediction:
+    image_path: Path
+    patch_boxes: tuple[PatchBox, ...]
+    patch_scores: tuple[float, ...]
+    image_score: float
+    prediction: int
+
+
+class GridPatchGenerator:
+    """Generate fixed grid crop boxes covering a full image."""
+
+    def __init__(
+        self,
+        grid_size: int = RDD_GRID_SIZE,
+        overlap: float = RDD_GRID_OVERLAP,
+    ) -> None:
+        if grid_size < 1:
+            raise ValueError("grid_size must be at least one.")
+        if overlap != 0.0:
+            raise NotImplementedError("Only non-overlapping grid patches are supported.")
+
+        self.grid_size = grid_size
+        self.overlap = overlap
+
+    def generate(self, image_width: int, image_height: int) -> tuple[PatchBox, ...]:
+        if image_width < 1 or image_height < 1:
+            raise ValueError("image_width and image_height must be positive.")
+
+        x_edges = self._make_edges(image_width)
+        y_edges = self._make_edges(image_height)
+
+        return tuple(
+            (
+                x_edges[column],
+                y_edges[row],
+                x_edges[column + 1],
+                y_edges[row + 1],
+            )
+            for row in range(self.grid_size)
+            for column in range(self.grid_size)
+        )
+
+    def _make_edges(self, size: int) -> list[int]:
+        return [
+            round(index * size / self.grid_size)
+            for index in range(self.grid_size + 1)
+        ]
+
+
+class GridImageInferenceRunner:
+    """Run a binary patch classifier over grid patches from a full image."""
+
+    def __init__(
+        self,
+        model: nn.Module,
+        transform,
+        device: torch.device | str,
+        patch_generator: GridPatchGenerator | None = None,
+        decision_threshold: float = RDD_PATCH_DECISION_THRESHOLD,
+    ) -> None:
+        self.model = model
+        self.transform = transform
+        self.device = torch.device(device)
+        self.patch_generator = patch_generator or GridPatchGenerator()
+        self.decision_threshold = decision_threshold
+
+    def predict_image(self, image_path: Path) -> GridImagePrediction:
+        image = load_rgb_image(image_path)
+        patch_boxes = self.patch_generator.generate(*image.size)
+        patch_tensors = [
+            self.transform(image.crop(patch_box))
+            for patch_box in patch_boxes
+        ]
+        images = torch.stack(patch_tensors).to(self.device)
+
+        self.model.eval()
+        with torch.no_grad():
+            logits = extract_logits(self.model(images))
+            probabilities = torch.softmax(logits, dim=1)
+            positive_scores = probabilities[:, POSITIVE_LABEL].detach().cpu()
+
+        image_score = float(positive_scores.max().item())
+        prediction = int(image_score >= self.decision_threshold)
+
+        return GridImagePrediction(
+            image_path=image_path,
+            patch_boxes=patch_boxes,
+            patch_scores=tuple(float(score) for score in positive_scores.tolist()),
+            image_score=image_score,
+            prediction=prediction,
+        )
 
 
 @dataclass(frozen=True)

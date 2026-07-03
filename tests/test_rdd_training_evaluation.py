@@ -2,11 +2,17 @@ from pathlib import Path
 
 import pytest
 import torch
+from PIL import Image
 from torch import nn
 from torch.utils.data import DataLoader
 
 import src.rdd_training.evaluation as evaluation_module
-from src.rdd_training.evaluation import BinaryPotholeEvaluator, RDDEvaluationConfig
+from src.rdd_training.evaluation import (
+    BinaryPotholeEvaluator,
+    GridImageInferenceRunner,
+    GridPatchGenerator,
+    RDDEvaluationConfig,
+)
 from src.rdd_training.utils import (
     collate_binary_pothole_batch,
     compute_binary_roc_auc,
@@ -20,6 +26,12 @@ from src.rdd_training.utils import (
 class FixedClassifier(nn.Module):
     def forward(self, images):
         scores = images.flatten(start_dim=1).mean(dim=1)
+        return torch.stack([-scores, scores], dim=1)
+
+
+class PositiveIfBrightClassifier(nn.Module):
+    def forward(self, images):
+        scores = images.flatten(start_dim=1).mean(dim=1) * 6.0
         return torch.stack([-scores, scores], dim=1)
 
 
@@ -71,6 +83,68 @@ def test_binary_roc_auc_handles_ties_and_missing_classes() -> None:
         targets=torch.tensor([0, 0]),
     )
     assert torch.isnan(torch.tensor(missing_class_auc))
+
+
+def test_grid_patch_generator_splits_full_image_into_fixed_grid() -> None:
+    patch_boxes = GridPatchGenerator(grid_size=3).generate(
+        image_width=9,
+        image_height=6,
+    )
+
+    assert patch_boxes == (
+        (0, 0, 3, 2),
+        (3, 0, 6, 2),
+        (6, 0, 9, 2),
+        (0, 2, 3, 4),
+        (3, 2, 6, 4),
+        (6, 2, 9, 4),
+        (0, 4, 3, 6),
+        (3, 4, 6, 6),
+        (6, 4, 9, 6),
+    )
+
+
+def test_grid_patch_generator_rejects_invalid_settings() -> None:
+    with pytest.raises(ValueError, match="grid_size"):
+        GridPatchGenerator(grid_size=0)
+
+    with pytest.raises(NotImplementedError, match="non-overlapping"):
+        GridPatchGenerator(grid_size=3, overlap=0.25)
+
+    with pytest.raises(ValueError, match="positive"):
+        GridPatchGenerator(grid_size=3).generate(image_width=0, image_height=6)
+
+
+def test_grid_image_inference_uses_max_patch_score_for_image_prediction(
+    tmp_path,
+) -> None:
+    image_path = tmp_path / "grid.jpg"
+    image = Image.new("RGB", (9, 6), color=(0, 0, 0))
+    for x_position in range(3, 6):
+        for y_position in range(2, 4):
+            image.putpixel((x_position, y_position), (255, 255, 255))
+    image.save(image_path)
+
+    def transform(patch: Image.Image) -> torch.Tensor:
+        value = 1.0 if patch.getextrema()[0][1] > 0 else 0.0
+        return torch.full((3, 4, 4), value)
+
+    runner = GridImageInferenceRunner(
+        model=PositiveIfBrightClassifier(),
+        transform=transform,
+        device="cpu",
+        patch_generator=GridPatchGenerator(grid_size=3),
+        decision_threshold=0.75,
+    )
+
+    prediction = runner.predict_image(image_path)
+
+    assert len(prediction.patch_boxes) == 9
+    assert len(prediction.patch_scores) == 9
+    assert prediction.patch_boxes[4] == (3, 2, 6, 4)
+    assert prediction.patch_scores[4] == pytest.approx(0.9999938, rel=1e-5)
+    assert prediction.image_score == pytest.approx(max(prediction.patch_scores))
+    assert prediction.prediction == 1
 
 
 def test_binary_pothole_evaluator_writes_metrics_and_confusion_matrix(

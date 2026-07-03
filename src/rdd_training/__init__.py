@@ -10,6 +10,9 @@ from src.rdd_training.dataset import (
 )
 from src.rdd_training.evaluation import (
     BinaryPotholeEvaluator,
+    GridImageInferenceRunner,
+    GridImagePrediction,
+    GridPatchGenerator,
     RDDEvaluationConfig,
     RDDEvaluationResult,
 )
@@ -41,6 +44,9 @@ __all__ = [
     "BinaryPotholePatchManifest",
     "BinaryPotholePatchSample",
     "BinaryPotholeSample",
+    "GridImageInferenceRunner",
+    "GridImagePrediction",
+    "GridPatchGenerator",
     "RDDEvaluationConfig",
     "RDDEvaluationResult",
     "BinaryPotholeTrainer",
