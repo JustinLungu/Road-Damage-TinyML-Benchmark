@@ -135,13 +135,10 @@ you change them.
 
 ```python
 RDD_GRID_SIZE = 3
-RDD_GRID_OVERLAP = 0.0
 RDD_PATCH_DECISION_THRESHOLD = 0.5
 ```
 
 `RDD_GRID_SIZE = 3` means every full image is split into `3 x 3 = 9` patches.
-
-`RDD_GRID_OVERLAP` is reserved for later. Currently only `0.0` is implemented.
 
 `RDD_PATCH_DECISION_THRESHOLD` is the fallback threshold. If threshold tuning is
 enabled, the tuned validation threshold is used instead.

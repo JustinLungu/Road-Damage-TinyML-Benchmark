@@ -170,9 +170,6 @@ def test_grid_patch_generator_rejects_invalid_settings() -> None:
     with pytest.raises(ValueError, match="grid_size"):
         GridPatchGenerator(grid_size=0)
 
-    with pytest.raises(NotImplementedError, match="non-overlapping"):
-        GridPatchGenerator(grid_size=3, overlap=0.25)
-
     with pytest.raises(ValueError, match="positive"):
         GridPatchGenerator(grid_size=3).generate(image_width=0, image_height=6)
 

@@ -14,7 +14,7 @@ from src.constants import (
 
 # True regenerates datasets/rdd2022/binary_pothole/*.csv before the rest of main.
 # Use this when split settings changed or the full-image manifests are missing.
-RUN_RDD_FULL_IMAGE_PREPROCESSING = True
+RUN_RDD_FULL_IMAGE_PREPROCESSING = False
 POTHOLE_LABEL = "D40"
 POSITIVE_LABEL = 1
 NEGATIVE_LABEL = 0
@@ -128,35 +128,29 @@ REQUIRED_MANIFEST_COLUMNS = {
 
 # True regenerates datasets/rdd2022/binary_pothole_patches/*.csv before training.
 # Keep False after CSVs exist unless patch/country-split settings changed.
-RUN_RDD_PATCH_PREPROCESSING = True
-RDD_EXPERIMENT_NAME = "annotation_patch_grid3_stratified"
+RUN_RDD_PATCH_PREPROCESSING = False
+RDD_EXPERIMENT_NAME = "stratified_by_country"
 
 # Training modes:
 # "full_image": train on datasets/rdd2022/binary_pothole/*.csv full images.
 # "annotation_patch": train on annotation-centered patch crops from XML boxes.
-RDD_TRAINING_INPUT_MODE = "annotation_patch"
+RDD_TRAINING_INPUT_MODE = "full_image"
 
 # Evaluation modes:
 # "full_image": evaluate each full test image directly.
 # "grid_image": split each full image into RDD_GRID_SIZE x RDD_GRID_SIZE patches,
 # score each patch, and use the max pothole score as the image score.
-RDD_EVALUATION_INPUT_MODE = "grid_image"
+RDD_EVALUATION_INPUT_MODE = "full_image"
 RDD_SUPPORTED_TRAINING_INPUT_MODES = ("full_image", "annotation_patch")
 RDD_SUPPORTED_EVALUATION_INPUT_MODES = ("full_image", "grid_image")
 
 # Patch preprocessing controls for annotation-derived training patches.
 RDD_PATCH_SIZE = 224
 RDD_PATCH_PADDING = 0.15
-RDD_PATCH_INCLUDE_DAMAGE_NEGATIVES = True
-RDD_PATCH_INCLUDE_BACKGROUND_NEGATIVES = True
-RDD_BACKGROUND_NEGATIVES_PER_IMAGE = 1
 RDD_MIN_BOX_AREA = 400
 
-# Grid-image evaluation controls. Overlap is reserved for later; only 0.0 is
-# currently implemented.
+# Grid-image evaluation controls.
 RDD_GRID_SIZE = 3
-RDD_GRID_OVERLAP = 0.0
-RDD_PATCH_AGGREGATION = "max_threshold"
 RDD_PATCH_DECISION_THRESHOLD = 0.5
 
 # If True, validation full images are scored with grid inference and the
@@ -181,7 +175,7 @@ RDD_IMAGE_CLASSIFICATION_MODELS = frozenset(
     }
 )
 
-RDD_MODEL_MODE = "single"  # "all" or "single"
+RDD_MODEL_MODE = "all"  # "all" or "single"
 # Used when RDD_MODEL_MODE is "single" for both adaptation smoke and training.
 RDD_SINGLE_MODEL = "mobilevit_xxs"
 # Used when RDD_MODEL_MODE is "all" for both adaptation smoke and training.
@@ -212,9 +206,9 @@ RDD_MODEL_NAMES = (
 ################
 
 RUN_RDD_TRAINING = True  # skip training loop if False
-RDD_TRAINING_BATCH_SIZE = 16
+RDD_TRAINING_BATCH_SIZE = 32
 RDD_TRAINING_NUM_WORKERS = 2
-RDD_TRAINING_EPOCHS = 1
+RDD_TRAINING_EPOCHS = 10
 RDD_TRAINING_LEARNING_RATE = 1e-4
 RDD_TRAINING_WEIGHT_DECAY = 1e-4
 RDD_TRAINING_BEST_METRIC = "f1"

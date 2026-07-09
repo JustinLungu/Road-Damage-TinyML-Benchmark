@@ -18,7 +18,6 @@ from src.rdd_training.constants import (
     RDD_EVALUATION_PROGRESS_INTERVAL,
     RDD_EVALUATION_SAVE_PLOTS,
     RDD_EXPERIMENT_NAME,
-    RDD_GRID_OVERLAP,
     RDD_GRID_SIZE,
     RDD_PATCH_DECISION_THRESHOLD,
     RDD_SUPPORTED_EVALUATION_INPUT_MODES,
@@ -73,15 +72,11 @@ class GridPatchGenerator:
     def __init__(
         self,
         grid_size: int = RDD_GRID_SIZE,
-        overlap: float = RDD_GRID_OVERLAP,
     ) -> None:
         if grid_size < 1:
             raise ValueError("grid_size must be at least one.")
-        if overlap != 0.0:
-            raise NotImplementedError("Only non-overlapping grid patches are supported.")
 
         self.grid_size = grid_size
-        self.overlap = overlap
 
     def generate(self, image_width: int, image_height: int) -> tuple[PatchBox, ...]:
         if image_width < 1 or image_height < 1:
@@ -278,7 +273,6 @@ class RDDEvaluationConfig:
     progress_interval: int = RDD_EVALUATION_PROGRESS_INTERVAL
     save_plots: bool = RDD_EVALUATION_SAVE_PLOTS
     grid_size: int = RDD_GRID_SIZE
-    grid_overlap: float = RDD_GRID_OVERLAP
     decision_threshold: float = RDD_PATCH_DECISION_THRESHOLD
     tune_threshold: bool = RDD_TUNE_PATCH_THRESHOLD
     threshold_values: tuple[float, ...] = RDD_THRESHOLD_VALUES
@@ -286,8 +280,12 @@ class RDDEvaluationConfig:
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
     @property
+    def experiment_output_dir(self) -> Path:
+        return self.output_dir / self.experiment_name
+
+    @property
     def model_output_dir(self) -> Path:
-        return self.output_dir / self.model_name
+        return self.experiment_output_dir / self.model_name
 
     @property
     def checkpoint_path(self) -> Path:
@@ -432,7 +430,6 @@ class BinaryPotholeEvaluator:
         transform = make_image_transform(self.config.model_name, is_train=False)
         patch_generator = GridPatchGenerator(
             grid_size=self.config.grid_size,
-            overlap=self.config.grid_overlap,
         )
         tuning_runner = GridImageInferenceRunner(
             model=model,

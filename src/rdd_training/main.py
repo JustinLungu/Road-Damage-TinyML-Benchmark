@@ -146,10 +146,7 @@ if __name__ == "__main__":
             print(f"Evaluating {model_name}")
             try:
                 evaluator = BinaryPotholeEvaluator(
-                    RDDEvaluationConfig(
-                        model_name=model_name,
-                        output_dir=experiment_output_dir,
-                    )
+                    RDDEvaluationConfig(model_name=model_name)
                 )
                 result = evaluator.evaluate()
                 evaluation_rows.append(result.comparison_row())
