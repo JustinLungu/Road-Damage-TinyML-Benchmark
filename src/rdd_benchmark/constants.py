@@ -31,6 +31,11 @@ RUN_RDD_PATCH_PREPROCESSING = False
 # Output folder name under results/rdd_trained_models/.
 RDD_EXPERIMENT_NAME = "stratified_by_country"
 
+# Metadata-only selector for the planned reproducible experiments.
+# Valid IDs are "A", "B", "C", "D", and "E". For now this prints the selected
+# experiment plan in main.py; we will wire each behavior in commit-by-commit.
+RDD_ACTIVE_EXPERIMENT_IDS = ("A",)
+
 # Training modes:
 # "full_image": train on datasets/rdd2022/binary_pothole/*.csv full images.
 # "annotation_patch": train on annotation-centered patch crops from XML boxes.

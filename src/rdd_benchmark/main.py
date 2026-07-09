@@ -4,9 +4,10 @@ import traceback
 
 from src.constants import RDD2022_BINARY_POTHOLE_DIR, RDD_TRAINING_RESULTS_DIR
 from src.rdd_benchmark.constants import (
-    RDD_EXPERIMENT_NAME,
+    RDD_ACTIVE_EXPERIMENT_IDS,
     RDD_COMPARISON_RANKING_METRIC,
     RDD_COMPARISON_TOP_K,
+    RDD_EXPERIMENT_NAME,
     RDD_MODEL_MODE,
     RDD_SKIP_FAILED_MODELS,
     RDD_TRAINING_SKIP_EXISTING_CHECKPOINTS,
@@ -22,6 +23,7 @@ from src.rdd_benchmark.data_preprocessing.prepare_binary_pothole import prepare_
 from src.rdd_benchmark.data_preprocessing.prepare_binary_pothole_patches import (
     prepare_binary_pothole_patch_manifests,
 )
+from src.rdd_benchmark.experiments import select_rdd_experiment_configs
 from src.rdd_benchmark.training.trainer import BinaryPotholeTrainer, RDDTrainingConfig
 from src.rdd_benchmark.training.utils import (
     load_evaluation_rows_from_metrics_csv,
@@ -42,7 +44,33 @@ SPLIT_MANIFESTS = {
 
 if __name__ == "__main__":
     selected_model_names = select_rdd_model_names()
+    selected_experiment_configs = select_rdd_experiment_configs(
+        RDD_ACTIVE_EXPERIMENT_IDS
+    )
     experiment_output_dir = RDD_TRAINING_RESULTS_DIR / RDD_EXPERIMENT_NAME
+
+    print("RDD2022 experiment plan")
+    for experiment_config in selected_experiment_configs:
+        print(
+            "  "
+            f"{experiment_config.experiment_id}: "
+            f"{experiment_config.experiment_name}"
+        )
+        print(f"    dataset_strategy: {experiment_config.dataset_strategy}")
+        print(f"    reason: {experiment_config.reason}")
+        print(f"    sampler_strategy: {experiment_config.sampler_strategy}")
+        print(f"    augmentation_strategy: {experiment_config.augmentation_strategy}")
+        print(f"    target_pothole_fraction: {experiment_config.target_pothole_fraction}")
+        print(
+            "    non_potholes_per_pothole: "
+            f"{experiment_config.non_potholes_per_pothole}"
+        )
+        print(
+            "    fallback_non_potholes_per_pothole: "
+            f"{experiment_config.fallback_non_potholes_per_pothole}"
+        )
+        print(f"    synthetic_pothole_ratio: {experiment_config.synthetic_pothole_ratio}")
+    print()
 
     if RUN_RDD_FULL_IMAGE_PREPROCESSING:
         print("RDD2022 binary pothole full-image preprocessing")

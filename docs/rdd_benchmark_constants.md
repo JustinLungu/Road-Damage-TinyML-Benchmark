@@ -1,4 +1,4 @@
-# RDD Training Constants
+# RDD Benchmark Constants
 
 All RDD preprocessing, training, evaluation, and comparison work should be run
 through:
@@ -79,6 +79,35 @@ results/rdd_trained_models/<RDD_EXPERIMENT_NAME>/<model_name>/
 
 Use a new experiment name when changing the pipeline, model group, or important
 hyperparameters.
+
+## Experiment Registry
+
+```python
+RDD_ACTIVE_EXPERIMENT_IDS = ("A",)
+```
+
+This selects metadata from `src/rdd_benchmark/experiments/`. Valid IDs are
+`"A"`, `"B"`, `"C"`, `"D"`, and `"E"`.
+
+Current experiment defaults:
+
+- `"A"`: natural full-image data, no balancing, no sampler, standard
+  augmentation, no synthetic data.
+- `"B"`: weighted sampler with standard augmentation and an explicit 50%
+  pothole target per epoch/batch.
+- `"C"`: weighted sampler with stronger minority/pothole augmentation and an
+  explicit 50% pothole target.
+- `"D"`: moderate majority downsampling, weighted sampler, stronger
+  minority/pothole augmentation, and an explicit 50% pothole target. Moderate
+  downsampling currently means pothole:non-pothole = 1:3, with 1:4 as the
+  fallback ratio.
+- `"E"`: best previous strategy plus small synthetic pothole addition, with
+  synthetic potholes defaulting to 20% of the real pothole count.
+
+For now, this only prints the selected experiment plan when `main.py` starts.
+The actual behavior is still controlled by the concrete constants such as
+`RDD_EXPERIMENT_NAME`, `RDD_TRAINING_INPUT_MODE`, and the training/evaluation
+settings. We will wire each experiment behavior step by step.
 
 ## Training Input Mode
 
