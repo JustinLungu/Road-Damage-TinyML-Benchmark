@@ -3,15 +3,15 @@ from types import SimpleNamespace
 import pytest
 import torch.nn as nn
 
-from src.rdd_training.constants import (
+from src.rdd_benchmark.constants import (
     ID_TO_LABEL,
     LABEL_TO_ID,
     NUM_BINARY_CLASSES,
-    RDD_IMAGE_CLASSIFICATION_MODELS,
 )
-import src.rdd_training.utils as rdd_utils
-from src.rdd_training.model_adapter import BinaryPotholeModelAdapter
-from src.rdd_training.utils import (
+from src.rdd_benchmark.training.constants import RDD_IMAGE_CLASSIFICATION_MODELS
+from src.rdd_benchmark.training.model_adapter import BinaryPotholeModelAdapter
+import src.rdd_benchmark.training.utils as training_utils
+from src.rdd_benchmark.training.utils import (
     adapt_model_for_binary_pothole,
     load_and_adapt_all_binary_pothole_models,
 )
@@ -166,7 +166,7 @@ def test_load_and_adapt_all_models_iterates_in_stable_order(monkeypatch) -> None
         return adapted[model_name]
 
     monkeypatch.setattr(
-        rdd_utils,
+        training_utils,
         "load_and_adapt_model_for_binary_pothole",
         fake_load_and_adapt_model_for_binary_pothole,
     )

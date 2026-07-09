@@ -12,11 +12,11 @@ from src.performance_benchmark.constants import (
     MOBILENET_MODELS,
     RESNET_MODELS,
 )
-from src.rdd_training.constants import (
+from src.rdd_benchmark.constants import (
     NUM_BINARY_CLASSES,
-    RDD_IMAGE_CLASSIFICATION_MODELS,
 )
-from src.rdd_training.utils import (
+from src.rdd_benchmark.training.constants import RDD_IMAGE_CLASSIFICATION_MODELS
+from src.rdd_benchmark.training.utils import (
     make_replacement_linear,
     replace_last_linear,
     replace_linear_attribute,

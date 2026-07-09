@@ -5,10 +5,11 @@ import pytest
 import torch
 from PIL import Image
 
-import src.rdd_training.constants as rdd_constants
-import src.rdd_training.dataset as dataset_module
-import src.rdd_training.utils as rdd_utils
-from src.rdd_training.dataset import (
+import src.rdd_benchmark.constants as rdd_constants
+import src.rdd_benchmark.data_loader.dataset as dataset_module
+import src.rdd_benchmark.data_loader.utils as data_loader_utils
+import src.rdd_benchmark.training.utils as training_utils
+from src.rdd_benchmark.data_loader.dataset import (
     BinaryPotholeDataset,
     BinaryPotholeManifest,
     BinaryPotholePatchDataset,
@@ -16,7 +17,7 @@ from src.rdd_training.dataset import (
     BinaryPotholePatchSample,
     BinaryPotholeSample,
 )
-from src.rdd_training.utils import (
+from src.rdd_benchmark.data_loader.utils import (
     expected_label_name,
     make_rdd_training_dataset,
     make_rdd_validation_dataset,
@@ -398,12 +399,12 @@ def test_rdd_dataset_factories_select_full_image_and_patch_datasets(
     full_manifest_dir = tmp_path / "binary_pothole"
     patch_manifest_dir = tmp_path / "binary_pothole_patches"
     monkeypatch.setattr(
-        rdd_utils,
+        data_loader_utils,
         "RDD2022_BINARY_POTHOLE_DIR",
         full_manifest_dir,
     )
     monkeypatch.setattr(
-        rdd_utils,
+        data_loader_utils,
         "RDD2022_BINARY_POTHOLE_PATCH_DIR",
         patch_manifest_dir,
     )
@@ -534,19 +535,19 @@ def test_rdd_training_main_runs_dataset_and_adapter_smoke(monkeypatch, capsys) -
     monkeypatch.setattr(dataset_module, "BinaryPotholeManifest", FakeManifest)
     monkeypatch.setattr(dataset_module, "BinaryPotholeDataset", FakeDataset)
     monkeypatch.setattr(
-        rdd_utils,
+        training_utils,
         "load_and_adapt_model_for_binary_pothole",
         fake_load_and_adapt_model_for_binary_pothole,
     )
     monkeypatch.setattr(rdd_constants, "RDD_MODEL_MODE", "single")
     monkeypatch.setattr(rdd_constants, "RDD_SINGLE_MODEL", "mobilenet_v3_small")
-    monkeypatch.setattr(rdd_utils, "RDD_MODEL_MODE", "single")
-    monkeypatch.setattr(rdd_utils, "RDD_SINGLE_MODEL", "mobilenet_v3_small")
+    monkeypatch.setattr(training_utils, "RDD_MODEL_MODE", "single")
+    monkeypatch.setattr(training_utils, "RDD_SINGLE_MODEL", "mobilenet_v3_small")
     monkeypatch.setattr(rdd_constants, "RUN_RDD_TRAINING", False)
     monkeypatch.setattr(rdd_constants, "RUN_RDD_EVALUATION", False)
     monkeypatch.setattr(rdd_constants, "RUN_RDD_COMPARISON", False)
 
-    runpy.run_module("src.rdd_training.main", run_name="__main__")
+    runpy.run_module("src.rdd_benchmark.main", run_name="__main__")
     output = capsys.readouterr().out
 
     assert "RDD2022 binary pothole dataset loader" in output

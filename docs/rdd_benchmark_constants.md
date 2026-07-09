@@ -4,10 +4,10 @@ All RDD preprocessing, training, evaluation, and comparison work should be run
 through:
 
 ```bash
-uv run python -m src.rdd_training.main
+uv run python -m src.rdd_benchmark.main
 ```
 
-Change behavior by editing `src/rdd_training/constants.py`.
+Change behavior by editing `src/rdd_benchmark/constants.py`.
 
 ## Preprocessing Switches
 
@@ -251,7 +251,7 @@ RUN_RDD_COMPARISON = True
 Run:
 
 ```bash
-uv run python -m src.rdd_training.main
+uv run python -m src.rdd_benchmark.main
 ```
 
 ### Full-Image Baseline

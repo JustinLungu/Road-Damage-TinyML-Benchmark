@@ -1,20 +1,8 @@
-from src.constants import (
-    EFFICIENTFORMER_MODEL_IDS,
-    EFFICIENTNET_MODEL_CHECKPOINTS,
-    INCEPTION_MODEL_CHECKPOINTS,
-    MOBILENET_MODEL_CHECKPOINTS,
-    MOBILEVIT_MODEL_IDS,
-    RESNET_MODEL_CHECKPOINTS,
-)
-
-
-##########################
-# Binary Pothole Manifests
-##########################
-
 # True regenerates datasets/rdd2022/binary_pothole/*.csv before the rest of main.
 # Use this when split settings changed or the full-image manifests are missing.
 RUN_RDD_FULL_IMAGE_PREPROCESSING = False
+
+# RDD uses D40 for potholes. Other damage labels are treated as non-pothole.
 POTHOLE_LABEL = "D40"
 POSITIVE_LABEL = 1
 NEGATIVE_LABEL = 0
@@ -23,16 +11,6 @@ NUM_BINARY_CLASSES = len(BINARY_CLASS_NAMES)
 ID_TO_LABEL = dict(enumerate(BINARY_CLASS_NAMES))
 LABEL_TO_ID = {label: index for index, label in ID_TO_LABEL.items()}
 
-RDD_AVAILABLE_COUNTRIES = (
-    "China_Drone",
-    "China_MotorBike",
-    "Czech",
-    "India",
-    "Japan",
-    "Norway",
-    "United_States",
-)
-
 # Split modes:
 # "stratified_by_country": every country contributes train/validation/test rows,
 # keeping pothole/non-pothole proportions closer across splits. This is the
@@ -40,86 +18,6 @@ RDD_AVAILABLE_COUNTRIES = (
 # "country_holdout": whole countries are assigned to one split, useful later as
 # a harder cross-country generalization benchmark.
 RDD_SPLIT_MODE = "stratified_by_country"
-RDD_SUPPORTED_SPLIT_MODES = ("stratified_by_country", "country_holdout")
-RDD_SPLIT_FRACTIONS = {
-    "train": 0.70,
-    "validation": 0.15,
-    "test": 0.15,
-}
-RDD_SPLIT_RANDOM_SEED = 42
-
-# Used only when RDD_SPLIT_MODE is "country_holdout".
-SPLIT_COUNTRIES = {
-    "train": ("China_Drone", "China_MotorBike", "Czech", "India"),
-    "validation": ("United_States",),
-    "test": ("Japan", "Norway"),
-}
-
-MANIFEST_COLUMNS = [
-    "image_path",
-    "annotation_path",
-    "country",
-    "split",
-    "label",
-    "label_name",
-    "has_pothole",
-    "num_objects",
-    "num_pothole_objects",
-    "unique_object_labels",
-    "object_labels",
-    "image_width",
-    "image_height",
-]
-
-SUMMARY_COLUMNS = [
-    "split",
-    "country",
-    "images",
-    "pothole_images",
-    "non_pothole_images",
-    "pothole_fraction",
-    "objects",
-    "pothole_objects",
-]
-
-PATCH_MANIFEST_COLUMNS = [
-    "image_path",
-    "annotation_path",
-    "country",
-    "split",
-    "label",
-    "label_name",
-    "source_object_label",
-    "patch_source",
-    "bbox_xmin",
-    "bbox_ymin",
-    "bbox_xmax",
-    "bbox_ymax",
-    "patch_xmin",
-    "patch_ymin",
-    "patch_xmax",
-    "patch_ymax",
-    "image_width",
-    "image_height",
-]
-
-PATCH_SUMMARY_COLUMNS = [
-    "split",
-    "country",
-    "patches",
-    "pothole_patches",
-    "non_pothole_patches",
-    "pothole_fraction",
-]
-
-REQUIRED_MANIFEST_COLUMNS = {
-    "image_path",
-    "annotation_path",
-    "country",
-    "split",
-    "label",
-    "label_name",
-}
 
 
 #################################
@@ -129,6 +27,8 @@ REQUIRED_MANIFEST_COLUMNS = {
 # True regenerates datasets/rdd2022/binary_pothole_patches/*.csv before training.
 # Keep False after CSVs exist unless patch/country-split settings changed.
 RUN_RDD_PATCH_PREPROCESSING = False
+
+# Output folder name under results/rdd_trained_models/.
 RDD_EXPERIMENT_NAME = "stratified_by_country"
 
 # Training modes:
@@ -146,11 +46,11 @@ RDD_SUPPORTED_EVALUATION_INPUT_MODES = ("full_image", "grid_image")
 
 # Patch preprocessing controls for annotation-derived training patches.
 RDD_PATCH_SIZE = 224
-RDD_PATCH_PADDING = 0.15
-RDD_MIN_BOX_AREA = 400
 
-# Grid-image evaluation controls.
+# Number of rows/columns for full-image grid inference. 3 means 9 patches/image.
 RDD_GRID_SIZE = 3
+
+# Fallback image-level decision threshold when threshold tuning is disabled.
 RDD_PATCH_DECISION_THRESHOLD = 0.5
 
 # If True, validation full images are scored with grid inference and the
@@ -160,22 +60,8 @@ RDD_THRESHOLD_METRIC = "f1"
 RDD_THRESHOLD_VALUES = tuple(index / 100 for index in range(5, 96, 5))
 
 
-######################
-# Fine-Tuning Models
-######################
-
-RDD_IMAGE_CLASSIFICATION_MODELS = frozenset(
-    {
-        *MOBILENET_MODEL_CHECKPOINTS,
-        *EFFICIENTNET_MODEL_CHECKPOINTS,
-        *RESNET_MODEL_CHECKPOINTS,
-        *INCEPTION_MODEL_CHECKPOINTS,
-        *MOBILEVIT_MODEL_IDS,
-        *EFFICIENTFORMER_MODEL_IDS,
-    }
-)
-
-RDD_MODEL_MODE = "all"  # "all" or "single"
+# "single" runs RDD_SINGLE_MODEL. "all" runs every model in RDD_MODEL_NAMES.
+RDD_MODEL_MODE = "all"
 # Used when RDD_MODEL_MODE is "single" for both adaptation smoke and training.
 RDD_SINGLE_MODEL = "mobilevit_xxs"
 # Used when RDD_MODEL_MODE is "all" for both adaptation smoke and training.
@@ -211,13 +97,23 @@ RDD_TRAINING_NUM_WORKERS = 2
 RDD_TRAINING_EPOCHS = 10
 RDD_TRAINING_LEARNING_RATE = 1e-4
 RDD_TRAINING_WEIGHT_DECAY = 1e-4
+
+# Best checkpoint is selected using this validation metric.
 RDD_TRAINING_BEST_METRIC = "f1"
+
+# Compensates for pothole/non-pothole imbalance in the training loss.
 RDD_TRAINING_USE_WEIGHTED_LOSS = True
 RDD_TRAINING_PROGRESS_INTERVAL = 50
 RDD_TRAINING_SAVE_PLOTS = True
+
+# Stop when validation metric stops improving for this many epochs.
 RDD_TRAINING_EARLY_STOPPING_PATIENCE = 4
 RDD_TRAINING_EARLY_STOPPING_MIN_DELTA = 1e-4
+
+# Avoids single-image tail batches causing batch-norm issues in some models.
 RDD_TRAINING_DROP_LAST_BATCH = True
+
+# Lets interrupted all-model runs continue without retraining completed models.
 RDD_TRAINING_SKIP_EXISTING_CHECKPOINTS = True
 RDD_SKIP_FAILED_MODELS = True
 
@@ -238,10 +134,7 @@ RDD_EVALUATION_SAVE_PLOTS = True
 ################
 
 RUN_RDD_COMPARISON = True
+
+# Rank model_comparison.csv/top_models.csv by this metric.
 RDD_COMPARISON_RANKING_METRIC = "f1"
 RDD_COMPARISON_TOP_K = 3
-
-DEFAULT_IMAGE_SIZE = 224
-MODEL_IMAGE_SIZES = {
-    "inception_v3": 299,
-}

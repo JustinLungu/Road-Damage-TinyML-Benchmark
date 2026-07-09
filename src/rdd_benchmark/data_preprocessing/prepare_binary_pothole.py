@@ -7,14 +7,16 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from src.constants import PROJECT_ROOT, RDD2022_BINARY_POTHOLE_DIR, RDD2022_DIR
-from src.rdd_training.constants import (
-    MANIFEST_COLUMNS,
+from src.rdd_benchmark.constants import (
     NEGATIVE_LABEL,
     POSITIVE_LABEL,
     POTHOLE_LABEL,
+    RDD_SPLIT_MODE,
+)
+from src.rdd_benchmark.data_loader.constants import MANIFEST_COLUMNS
+from src.rdd_benchmark.data_preprocessing.constants import (
     RDD_AVAILABLE_COUNTRIES,
     RDD_SPLIT_FRACTIONS,
-    RDD_SPLIT_MODE,
     RDD_SPLIT_RANDOM_SEED,
     RDD_SUPPORTED_SPLIT_MODES,
     SPLIT_COUNTRIES,

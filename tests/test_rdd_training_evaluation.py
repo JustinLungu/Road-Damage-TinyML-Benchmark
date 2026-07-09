@@ -6,8 +6,8 @@ from PIL import Image
 from torch import nn
 from torch.utils.data import DataLoader
 
-import src.rdd_training.evaluation as evaluation_module
-from src.rdd_training.evaluation import (
+import src.rdd_benchmark.training.evaluation as evaluation_module
+from src.rdd_benchmark.training.evaluation import (
     BinaryPotholeEvaluator,
     GridImageInferenceRunner,
     GridImagePrediction,
@@ -16,9 +16,9 @@ from src.rdd_training.evaluation import (
     RDDEvaluationConfig,
     load_grid_decision_threshold,
 )
-from src.rdd_training.dataset import BinaryPotholeManifest, BinaryPotholeSample
-from src.rdd_training.utils import (
-    collate_binary_pothole_batch,
+from src.rdd_benchmark.data_loader.dataset import BinaryPotholeManifest, BinaryPotholeSample
+from src.rdd_benchmark.data_loader.utils import collate_binary_pothole_batch
+from src.rdd_benchmark.training.utils import (
     compute_binary_roc_auc,
     load_evaluation_rows_from_metrics_csv,
     rank_evaluation_rows,

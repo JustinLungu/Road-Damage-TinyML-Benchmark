@@ -10,8 +10,9 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 from src.constants import PROJECT_ROOT
-from src.rdd_training.constants import PATCH_MANIFEST_COLUMNS, POSITIVE_LABEL
-from src.rdd_training.utils import (
+from src.rdd_benchmark.constants import POSITIVE_LABEL
+from src.rdd_benchmark.data_loader.constants import PATCH_MANIFEST_COLUMNS
+from src.rdd_benchmark.data_loader.utils import (
     load_rgb_image,
     parse_manifest_int,
     parse_patch_coordinates,

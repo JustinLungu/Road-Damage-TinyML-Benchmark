@@ -10,7 +10,7 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
 from src.constants import RDD_TRAINING_RESULTS_DIR
-from src.rdd_training.constants import (
+from src.rdd_benchmark.constants import (
     RDD_EXPERIMENT_NAME,
     RDD_SUPPORTED_TRAINING_INPUT_MODES,
     RDD_TRAINING_INPUT_MODE,
@@ -27,15 +27,17 @@ from src.rdd_training.constants import (
     RDD_TRAINING_USE_WEIGHTED_LOSS,
     RDD_TRAINING_WEIGHT_DECAY,
 )
-from src.rdd_training.dataset import BinaryPotholeDataset, BinaryPotholeManifest
-from src.rdd_training.utils import (
-    calculate_class_weights,
+from src.rdd_benchmark.data_loader.dataset import BinaryPotholeDataset, BinaryPotholeManifest
+from src.rdd_benchmark.data_loader.utils import (
     collate_binary_pothole_batch,
+    make_rdd_dataset,
+)
+from src.rdd_benchmark.training.utils import (
+    calculate_class_weights,
     compute_binary_classification_metrics,
     extract_logits,
     load_and_adapt_model_for_binary_pothole,
     make_image_transform,
-    make_rdd_dataset,
     write_training_loss_plot,
     write_training_metric_plot,
 )

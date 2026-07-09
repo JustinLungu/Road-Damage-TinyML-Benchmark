@@ -100,14 +100,14 @@ coordinates for its corresponding image.
 For the initial supervisor-requested image-classification task, the repository
 can create binary pothole/non-pothole manifests from the downloaded XML
 annotations. All RDD training actions are controlled from
-`src/rdd_training/constants.py` and run through the single entry point:
+`src/rdd_benchmark/constants.py` and run through the single entry point:
 
 ```bash
-uv run python -m src.rdd_training.main
+uv run python -m src.rdd_benchmark.main
 ```
 
 For a detailed explanation of each RDD pipeline constant, see
-`docs/rdd_training_constants.md`.
+`docs/rdd_benchmark_constants.md`.
 
 The binary target is:
 
@@ -159,7 +159,7 @@ RUN_RDD_PATCH_PREPROCESSING = False
 Then run:
 
 ```bash
-uv run python -m src.rdd_training.main
+uv run python -m src.rdd_benchmark.main
 ```
 
 After the manifests are generated, set the preprocessing flags back to `False`
@@ -194,7 +194,7 @@ RUN_RDD_PATCH_PREPROCESSING = True
 Then run:
 
 ```bash
-uv run python -m src.rdd_training.main
+uv run python -m src.rdd_benchmark.main
 ```
 
 This writes:
@@ -228,7 +228,7 @@ RUN_RDD_COMPARISON = True
 Then run:
 
 ```bash
-uv run python -m src.rdd_training.main
+uv run python -m src.rdd_benchmark.main
 ```
 
 Results are saved under the experiment name:
@@ -259,7 +259,7 @@ Load the generated manifests for training with:
 ```python
 from pathlib import Path
 
-from src.rdd_training import BinaryPotholeDataset
+from src.rdd_benchmark import BinaryPotholeDataset
 
 train_dataset = BinaryPotholeDataset(
     Path("datasets/rdd2022/binary_pothole/train.csv"),
@@ -270,14 +270,14 @@ train_dataset = BinaryPotholeDataset(
 Smoke-test the loader and print split summaries with:
 
 ```bash
-uv run python -m src.rdd_training.main
+uv run python -m src.rdd_benchmark.main
 ```
 
 Adapt a pretrained image-classification model for binary pothole fine-tuning:
 
 ```python
 from src.load_model import load_model
-from src.rdd_training import adapt_model_for_binary_pothole
+from src.rdd_benchmark.training.utils import adapt_model_for_binary_pothole
 
 model_name = "mobilenet_v3_small"
 model = load_model(model_name)
@@ -290,11 +290,11 @@ EfficientFormer. YOLO detectors and SmolVLM vision-language models are
 intentionally excluded.
 
 To change the country split, edit `SPLIT_COUNTRIES` in
-`src/rdd_training/constants.py`, enable the preprocessing flag for the manifests
+`src/rdd_benchmark/constants.py`, enable the preprocessing flag for the manifests
 you want to regenerate, then rerun:
 
 ```bash
-uv run python -m src.rdd_training.main
+uv run python -m src.rdd_benchmark.main
 ```
 
 ## Source And License

@@ -3,7 +3,7 @@ from __future__ import annotations
 import traceback
 
 from src.constants import RDD2022_BINARY_POTHOLE_DIR, RDD_TRAINING_RESULTS_DIR
-from src.rdd_training.constants import (
+from src.rdd_benchmark.constants import (
     RDD_EXPERIMENT_NAME,
     RDD_COMPARISON_RANKING_METRIC,
     RDD_COMPARISON_TOP_K,
@@ -16,14 +16,14 @@ from src.rdd_training.constants import (
     RUN_RDD_EVALUATION,
     RUN_RDD_TRAINING,
 )
-from src.rdd_training.dataset import BinaryPotholeDataset, BinaryPotholeManifest
-from src.rdd_training.evaluation import BinaryPotholeEvaluator, RDDEvaluationConfig
-from src.rdd_training.prepare_binary_pothole import prepare_binary_pothole_manifests
-from src.rdd_training.prepare_binary_pothole_patches import (
+from src.rdd_benchmark.data_loader.dataset import BinaryPotholeDataset, BinaryPotholeManifest
+from src.rdd_benchmark.training.evaluation import BinaryPotholeEvaluator, RDDEvaluationConfig
+from src.rdd_benchmark.data_preprocessing.prepare_binary_pothole import prepare_binary_pothole_manifests
+from src.rdd_benchmark.data_preprocessing.prepare_binary_pothole_patches import (
     prepare_binary_pothole_patch_manifests,
 )
-from src.rdd_training.trainer import BinaryPotholeTrainer, RDDTrainingConfig
-from src.rdd_training.utils import (
+from src.rdd_benchmark.training.trainer import BinaryPotholeTrainer, RDDTrainingConfig
+from src.rdd_benchmark.training.utils import (
     load_evaluation_rows_from_metrics_csv,
     load_and_adapt_all_binary_pothole_models,
     load_and_adapt_model_for_binary_pothole,

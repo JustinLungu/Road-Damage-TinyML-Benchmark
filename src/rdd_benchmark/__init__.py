@@ -1,6 +1,6 @@
 """RDD2022 data preparation, fine-tuning, and evaluation helpers."""
 
-from src.rdd_training.dataset import (
+from src.rdd_benchmark.data_loader.dataset import (
     BinaryPotholeDataset,
     BinaryPotholeManifest,
     BinaryPotholePatchDataset,
@@ -8,7 +8,7 @@ from src.rdd_training.dataset import (
     BinaryPotholePatchSample,
     BinaryPotholeSample,
 )
-from src.rdd_training.evaluation import (
+from src.rdd_benchmark.training.evaluation import (
     BinaryPotholeEvaluator,
     GridImageInferenceRunner,
     GridImagePrediction,
@@ -19,22 +19,13 @@ from src.rdd_training.evaluation import (
     RDDEvaluationResult,
     load_grid_decision_threshold,
 )
-from src.rdd_training.model_adapter import (
+from src.rdd_benchmark.training.model_adapter import (
     BinaryPotholeModelAdapter,
 )
-from src.rdd_training.trainer import (
+from src.rdd_benchmark.training.trainer import (
     BinaryPotholeTrainer,
     RDDTrainingConfig,
     RDDTrainingResult,
-)
-from src.rdd_training.utils import (
-    adapt_model_for_binary_pothole,
-    load_and_adapt_all_binary_pothole_models,
-    load_and_adapt_model_for_binary_pothole,
-    load_rgb_image,
-    make_rdd_training_dataset,
-    make_rdd_validation_dataset,
-    select_rdd_manifest_path,
 )
 
 
@@ -57,12 +48,5 @@ __all__ = [
     "BinaryPotholeTrainer",
     "RDDTrainingConfig",
     "RDDTrainingResult",
-    "adapt_model_for_binary_pothole",
-    "load_and_adapt_all_binary_pothole_models",
-    "load_and_adapt_model_for_binary_pothole",
     "load_grid_decision_threshold",
-    "load_rgb_image",
-    "make_rdd_training_dataset",
-    "make_rdd_validation_dataset",
-    "select_rdd_manifest_path",
 ]

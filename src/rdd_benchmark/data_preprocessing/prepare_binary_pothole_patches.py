@@ -11,21 +11,23 @@ from src.constants import (
     RDD2022_BINARY_POTHOLE_PATCH_DIR,
     RDD2022_DIR,
 )
-from src.rdd_training.constants import (
+from src.rdd_benchmark.constants import (
     NEGATIVE_LABEL,
-    PATCH_MANIFEST_COLUMNS,
-    PATCH_SUMMARY_COLUMNS,
     POSITIVE_LABEL,
     POTHOLE_LABEL,
+    RDD_SPLIT_MODE,
+)
+from src.rdd_benchmark.data_loader.constants import PATCH_MANIFEST_COLUMNS
+from src.rdd_benchmark.data_preprocessing.constants import (
+    PATCH_SUMMARY_COLUMNS,
     RDD_AVAILABLE_COUNTRIES,
     RDD_MIN_BOX_AREA,
     RDD_PATCH_PADDING,
     RDD_SPLIT_FRACTIONS,
-    RDD_SPLIT_MODE,
     RDD_SPLIT_RANDOM_SEED,
     SPLIT_COUNTRIES,
 )
-from src.rdd_training.prepare_binary_pothole import (
+from src.rdd_benchmark.data_preprocessing.prepare_binary_pothole import (
     build_manifest_rows,
     validate_split_countries,
 )

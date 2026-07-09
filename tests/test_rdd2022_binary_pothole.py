@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from src.rdd_training.prepare_binary_pothole import (
+from src.rdd_benchmark.data_preprocessing.prepare_binary_pothole import (
     build_manifest_rows,
     build_summary_rows,
     calculate_split_counts,

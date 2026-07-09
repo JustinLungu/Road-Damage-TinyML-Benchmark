@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from src.rdd_training.prepare_binary_pothole_patches import (
+from src.rdd_benchmark.data_preprocessing.prepare_binary_pothole_patches import (
     BinaryPotholePatchManifestPreprocessor,
     BoundingBox,
     build_patch_summary_rows,

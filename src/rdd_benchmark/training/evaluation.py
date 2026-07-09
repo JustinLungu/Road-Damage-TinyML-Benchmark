@@ -10,7 +10,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from src.constants import RDD2022_BINARY_POTHOLE_DIR, RDD_TRAINING_RESULTS_DIR
-from src.rdd_training.constants import (
+from src.rdd_benchmark.constants import (
     POSITIVE_LABEL,
     RDD_EVALUATION_INPUT_MODE,
     RDD_EVALUATION_BATCH_SIZE,
@@ -26,14 +26,16 @@ from src.rdd_training.constants import (
     RDD_THRESHOLD_VALUES,
     RDD_TUNE_PATCH_THRESHOLD,
 )
-from src.rdd_training.dataset import BinaryPotholeDataset, BinaryPotholeManifest
-from src.rdd_training.utils import (
+from src.rdd_benchmark.data_loader.dataset import BinaryPotholeDataset, BinaryPotholeManifest
+from src.rdd_benchmark.data_loader.utils import (
     collate_binary_pothole_batch,
+    load_rgb_image,
+)
+from src.rdd_benchmark.training.utils import (
     compute_binary_classification_metrics,
     compute_binary_roc_auc,
     compute_binary_roc_curve,
     extract_logits,
-    load_rgb_image,
     load_and_adapt_model_for_binary_pothole,
     make_image_transform,
     write_confusion_matrix_csv,
