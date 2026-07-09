@@ -20,6 +20,14 @@ def test_rdd_experiment_names_are_unique():
     assert len(experiment_names) == len(set(experiment_names))
 
 
+def test_shared_rdd_experiment_defaults_are_consistent():
+    for config in RDD_EXPERIMENT_REGISTRY.values():
+        assert config.training_input_mode == "full_image"
+        assert config.evaluation_input_mode == "full_image"
+        assert config.use_bbox_aware_crops is False
+        assert config.target_metric == "accuracy"
+
+
 def test_get_rdd_experiment_config_returns_metadata_dict():
     config = get_rdd_experiment_config("A")
 

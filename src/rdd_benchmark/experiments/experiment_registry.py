@@ -20,19 +20,19 @@ class RDDExperimentConfig:
     description: str
     dataset_strategy: str
     reason: str
-    split_mode: str
-    training_input_mode: str
-    evaluation_input_mode: str
     balancing_strategy: str
     sampler_strategy: str
+    target_pothole_fraction: float | None
     augmentation_strategy: str
     synthetic_strategy: str
-    target_pothole_fraction: float | None
+    synthetic_pothole_ratio: float
     non_potholes_per_pothole: int | None
     fallback_non_potholes_per_pothole: int | None
-    synthetic_pothole_ratio: float
-    use_bbox_aware_crops: bool
-    target_metric: str
+    split_mode: str = RDD_SPLIT_MODE
+    training_input_mode: str = "full_image"
+    evaluation_input_mode: str = "full_image"
+    use_bbox_aware_crops: bool = False
+    target_metric: str = "accuracy"
     random_seed: int = 42
 
     def to_dict(self) -> dict[str, Any]:
@@ -46,19 +46,14 @@ RDD_EXPERIMENT_REGISTRY = {
         description="Natural data with standard augmentation.",
         dataset_strategy="Natural data + standard augmentation",
         reason="Baseline",
-        split_mode=RDD_SPLIT_MODE,
-        training_input_mode="full_image",
-        evaluation_input_mode="full_image",
         balancing_strategy="none",
         sampler_strategy="none",
+        target_pothole_fraction=None,
         augmentation_strategy="standard",
         synthetic_strategy="none",
-        target_pothole_fraction=None,
+        synthetic_pothole_ratio=0.0,
         non_potholes_per_pothole=None,
         fallback_non_potholes_per_pothole=None,
-        synthetic_pothole_ratio=0.0,
-        use_bbox_aware_crops=False,
-        target_metric="accuracy",
     ),
     RDD_EXPERIMENT_B: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_B,
@@ -66,19 +61,14 @@ RDD_EXPERIMENT_REGISTRY = {
         description="Weighted sampler or balanced batches with standard augmentation.",
         dataset_strategy="Weighted sampler / balanced batches + standard augmentation",
         reason="Tests upsampling effect",
-        split_mode=RDD_SPLIT_MODE,
-        training_input_mode="full_image",
-        evaluation_input_mode="full_image",
         balancing_strategy="none",
         sampler_strategy="weighted_sampler",
+        target_pothole_fraction=0.5,
         augmentation_strategy="standard",
         synthetic_strategy="none",
-        target_pothole_fraction=0.5,
+        synthetic_pothole_ratio=0.0,
         non_potholes_per_pothole=None,
         fallback_non_potholes_per_pothole=None,
-        synthetic_pothole_ratio=0.0,
-        use_bbox_aware_crops=False,
-        target_metric="accuracy",
     ),
     RDD_EXPERIMENT_C: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_C,
@@ -86,19 +76,14 @@ RDD_EXPERIMENT_REGISTRY = {
         description="Weighted sampler with stronger pothole/minority augmentation.",
         dataset_strategy="Weighted sampler + stronger minority augmentation",
         reason="Most likely to help",
-        split_mode=RDD_SPLIT_MODE,
-        training_input_mode="full_image",
-        evaluation_input_mode="full_image",
         balancing_strategy="none",
         sampler_strategy="weighted_sampler",
+        target_pothole_fraction=0.5,
         augmentation_strategy="minority_strong",
         synthetic_strategy="none",
-        target_pothole_fraction=0.5,
+        synthetic_pothole_ratio=0.0,
         non_potholes_per_pothole=None,
         fallback_non_potholes_per_pothole=None,
-        synthetic_pothole_ratio=0.0,
-        use_bbox_aware_crops=False,
-        target_metric="accuracy",
     ),
     RDD_EXPERIMENT_D: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_D,
@@ -109,19 +94,14 @@ RDD_EXPERIMENT_REGISTRY = {
             "minority augmentation"
         ),
         reason="Tests whether reducing majority dominance helps",
-        split_mode=RDD_SPLIT_MODE,
-        training_input_mode="full_image",
-        evaluation_input_mode="full_image",
         balancing_strategy="majority_downsample_moderate",
         sampler_strategy="weighted_sampler",
+        target_pothole_fraction=0.5,
         augmentation_strategy="minority_strong",
         synthetic_strategy="none",
-        target_pothole_fraction=0.5,
+        synthetic_pothole_ratio=0.0,
         non_potholes_per_pothole=3,
         fallback_non_potholes_per_pothole=4,
-        synthetic_pothole_ratio=0.0,
-        use_bbox_aware_crops=False,
-        target_metric="accuracy",
     ),
     RDD_EXPERIMENT_E: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_E,
@@ -129,19 +109,14 @@ RDD_EXPERIMENT_REGISTRY = {
         description="Best of C/D plus a small synthetic pothole addition.",
         dataset_strategy="Best of C/D + small synthetic pothole addition",
         reason="Tests AI generation safely",
-        split_mode=RDD_SPLIT_MODE,
-        training_input_mode="full_image",
-        evaluation_input_mode="full_image",
         balancing_strategy="best_previous",
         sampler_strategy="best_previous",
+        target_pothole_fraction=0.5,
         augmentation_strategy="best_previous",
         synthetic_strategy="small_pothole_addition",
-        target_pothole_fraction=0.5,
+        synthetic_pothole_ratio=0.2,
         non_potholes_per_pothole=None,
         fallback_non_potholes_per_pothole=None,
-        synthetic_pothole_ratio=0.2,
-        use_bbox_aware_crops=False,
-        target_metric="accuracy",
     ),
 }
 
