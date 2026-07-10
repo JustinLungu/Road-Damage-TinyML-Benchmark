@@ -46,3 +46,11 @@ REQUIRED_MANIFEST_COLUMNS = {
     "label",
     "label_name",
 }
+
+# Dataloader sampling strategies used by the experiment registry.
+RDD_SAMPLER_NONE = "none"
+RDD_SAMPLER_WEIGHTED = "weighted_sampler"
+RDD_SUPPORTED_SAMPLER_STRATEGIES = (
+    RDD_SAMPLER_NONE,
+    RDD_SAMPLER_WEIGHTED,
+)

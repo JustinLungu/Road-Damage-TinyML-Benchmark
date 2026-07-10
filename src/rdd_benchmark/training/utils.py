@@ -13,7 +13,6 @@ from src.rdd_benchmark.constants import (
     ID_TO_LABEL,
     LABEL_TO_ID,
     NEGATIVE_LABEL,
-    NUM_BINARY_CLASSES,
     POSITIVE_LABEL,
     RDD_COMPARISON_RANKING_METRIC,
     RDD_COMPARISON_TOP_K,
@@ -132,21 +131,6 @@ def make_image_transform(
         is_train=is_train,
         augmentation_strategy=augmentation_strategy,
     )
-
-
-def calculate_class_weights(class_counts: dict[int, int]) -> torch.Tensor:
-    total_count = sum(class_counts.get(label, 0) for label in range(NUM_BINARY_CLASSES))
-    if total_count == 0:
-        raise ValueError("Cannot calculate class weights for an empty dataset.")
-
-    weights = []
-    for label in range(NUM_BINARY_CLASSES):
-        label_count = class_counts.get(label, 0)
-        if label_count == 0:
-            raise ValueError(f"Cannot calculate class weight for missing label: {label}")
-        weights.append(total_count / (NUM_BINARY_CLASSES * label_count))
-
-    return torch.tensor(weights, dtype=torch.float32)
 
 
 def extract_logits(model_output: Any) -> torch.Tensor:

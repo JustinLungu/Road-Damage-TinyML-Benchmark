@@ -28,12 +28,12 @@ from src.rdd_benchmark.constants import (
     RDD_TRAINING_WEIGHT_DECAY,
 )
 from src.rdd_benchmark.data_loader.dataset import BinaryPotholeDataset, BinaryPotholeManifest
+from src.rdd_benchmark.data_loader.sampling import calculate_class_weights
 from src.rdd_benchmark.data_loader.utils import (
     collate_binary_pothole_batch,
     make_rdd_dataset,
 )
 from src.rdd_benchmark.training.utils import (
-    calculate_class_weights,
     compute_binary_classification_metrics,
     extract_logits,
     load_and_adapt_model_for_binary_pothole,
