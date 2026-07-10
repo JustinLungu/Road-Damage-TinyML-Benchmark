@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 
 import src.rdd_benchmark.training.trainer as trainer_module
 from src.rdd_benchmark.data_loader.sampling import calculate_class_weights
@@ -31,6 +31,10 @@ class TinyClassifier(nn.Module):
 class FakeManifest:
     def __init__(self, split: str) -> None:
         self.split = split
+        self.samples = [
+            type("Sample", (), {"label": label})()
+            for label in (0, 1, 0, 0)
+        ]
 
     def __len__(self):
         return 4
@@ -157,7 +161,8 @@ def test_binary_pothole_trainer_runs_and_saves_best_checkpoint(
     assert "model_state_dict" in checkpoint
     assert (
         "setup: device=cpu, epochs=2, batch_size=2, "
-        "training_input_mode=full_image"
+        "training_input_mode=full_image, sampler_strategy=none, "
+        "augmentation_strategy=standard"
     ) in output
     assert "epoch 1/2: training" in output
     assert "batch 1/2 epoch=1/2" in output
@@ -181,8 +186,8 @@ def test_binary_pothole_trainer_uses_configured_training_input_mode(
         model=TinyClassifier(),
     )
 
-    def fake_make_image_transform(model_name: str, is_train: bool):
-        captured["transform"] = (model_name, is_train)
+    def fake_make_image_transform(model_name, is_train, augmentation_strategy):
+        captured["transform"] = (model_name, is_train, augmentation_strategy)
         return "transform"
 
     def fake_make_rdd_dataset(split, input_mode, transform):
@@ -199,8 +204,78 @@ def test_binary_pothole_trainer_uses_configured_training_input_mode(
     dataset = trainer._make_dataset(split="train", is_train=True)
 
     assert isinstance(dataset, FakeDataset)
-    assert captured["transform"] == ("tiny", True)
+    assert captured["transform"] == ("tiny", True, "standard")
     assert captured["dataset"] == ("train", "annotation_patch", "transform")
+
+
+def test_binary_pothole_trainer_forwards_augmentation_strategy(
+    monkeypatch,
+) -> None:
+    captured = {}
+    trainer = BinaryPotholeTrainer(
+        config=RDDTrainingConfig(
+            model_name="tiny",
+            augmentation_strategy="minority_strong",
+            device="cpu",
+        ),
+        model=TinyClassifier(),
+    )
+
+    def fake_make_image_transform(model_name, is_train, augmentation_strategy):
+        captured["transform"] = (model_name, is_train, augmentation_strategy)
+        return "transform"
+
+    def fake_make_rdd_dataset(split, input_mode, transform):
+        captured["dataset"] = (split, input_mode, transform)
+        return FakeDataset(split)
+
+    monkeypatch.setattr(
+        trainer_module,
+        "make_image_transform",
+        fake_make_image_transform,
+    )
+    monkeypatch.setattr(trainer_module, "make_rdd_dataset", fake_make_rdd_dataset)
+
+    dataset = trainer._make_dataset(split="train", is_train=True)
+
+    assert isinstance(dataset, FakeDataset)
+    assert captured["transform"] == ("tiny", True, "minority_strong")
+
+
+def test_binary_pothole_trainer_uses_weighted_sampler_for_training() -> None:
+    trainer = BinaryPotholeTrainer(
+        config=RDDTrainingConfig(
+            model_name="tiny",
+            batch_size=2,
+            num_workers=0,
+            sampler_strategy="weighted_sampler",
+            target_pothole_fraction=0.5,
+            device="cpu",
+        ),
+        model=TinyClassifier(),
+    )
+
+    data_loader = trainer._make_data_loader(FakeDataset("train"), is_train=True)
+
+    assert isinstance(data_loader.sampler, WeightedRandomSampler)
+
+
+def test_binary_pothole_trainer_disables_sampler_for_validation() -> None:
+    trainer = BinaryPotholeTrainer(
+        config=RDDTrainingConfig(
+            model_name="tiny",
+            batch_size=2,
+            num_workers=0,
+            sampler_strategy="weighted_sampler",
+            target_pothole_fraction=0.5,
+            device="cpu",
+        ),
+        model=TinyClassifier(),
+    )
+
+    data_loader = trainer._make_data_loader(FakeDataset("validation"), is_train=False)
+
+    assert not isinstance(data_loader.sampler, WeightedRandomSampler)
 
 
 def test_binary_pothole_trainer_rejects_invalid_early_stopping_patience() -> None:
@@ -220,4 +295,14 @@ def test_binary_pothole_trainer_rejects_invalid_training_input_mode() -> None:
     )
 
     with pytest.raises(ValueError, match="training_input_mode must be one of"):
+        BinaryPotholeTrainer(config=config, model=TinyClassifier())
+
+
+def test_binary_pothole_trainer_rejects_invalid_sampler_strategy() -> None:
+    config = RDDTrainingConfig(
+        model_name="tiny",
+        sampler_strategy="balanced_magic",
+    )
+
+    with pytest.raises(ValueError, match="sampler_strategy must be one of"):
         BinaryPotholeTrainer(config=config, model=TinyClassifier())

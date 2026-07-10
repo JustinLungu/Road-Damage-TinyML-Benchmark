@@ -123,8 +123,12 @@ The experiment dataset builder chooses manifests as follows:
 - `"D"` writes a new downsampled training manifest and keeps validation/test
   unchanged.
 - `"E"` adds synthetic potholes to an explicitly selected best previous
-  experiment dataset. The best previous experiment must be provided when
-  Experiment E is wired into the runner.
+experiment dataset. The best previous experiment must be provided when
+Experiment E is wired into the runner.
+
+The trainer accepts the selected experiment's concrete manifest paths plus the
+generic training controls: `sampler_strategy`, `target_pothole_fraction`, and
+`augmentation_strategy`. It does not hardcode A/B/C/D/E behavior.
 
 Synthetic pothole experiments expect generated assets under:
 

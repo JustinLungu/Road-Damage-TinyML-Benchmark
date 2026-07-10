@@ -28,11 +28,19 @@ from src.rdd_benchmark.constants import (
     RDD_TRAINING_WEIGHT_DECAY,
 )
 from src.rdd_benchmark.data_loader.dataset import BinaryPotholeDataset, BinaryPotholeManifest
-from src.rdd_benchmark.data_loader.sampling import calculate_class_weights
+from src.rdd_benchmark.data_loader.constants import (
+    RDD_SAMPLER_NONE,
+    RDD_SUPPORTED_SAMPLER_STRATEGIES,
+)
+from src.rdd_benchmark.data_loader.sampling import (
+    calculate_class_weights,
+    make_rdd_sampling_config,
+)
 from src.rdd_benchmark.data_loader.utils import (
     collate_binary_pothole_batch,
     make_rdd_dataset,
 )
+from src.rdd_benchmark.data_preprocessing.constants import RDD_AUGMENTATION_STANDARD
 from src.rdd_benchmark.training.utils import (
     compute_binary_classification_metrics,
     extract_logits,
@@ -50,6 +58,9 @@ class RDDTrainingConfig:
     training_input_mode: str = RDD_TRAINING_INPUT_MODE
     train_manifest_path: Path | None = None
     validation_manifest_path: Path | None = None
+    sampler_strategy: str = RDD_SAMPLER_NONE
+    target_pothole_fraction: float | None = None
+    augmentation_strategy: str = RDD_AUGMENTATION_STANDARD
     output_dir: Path = RDD_TRAINING_RESULTS_DIR
     batch_size: int = RDD_TRAINING_BATCH_SIZE
     num_workers: int = RDD_TRAINING_NUM_WORKERS
@@ -108,6 +119,11 @@ class BinaryPotholeTrainer:
                 "training_input_mode must be one of: "
                 f"{', '.join(RDD_SUPPORTED_TRAINING_INPUT_MODES)}."
             )
+        if config.sampler_strategy not in RDD_SUPPORTED_SAMPLER_STRATEGIES:
+            raise ValueError(
+                "sampler_strategy must be one of: "
+                f"{', '.join(RDD_SUPPORTED_SAMPLER_STRATEGIES)}."
+            )
 
         self.config = config
         self.device = torch.device(config.device)
@@ -127,7 +143,9 @@ class BinaryPotholeTrainer:
             "  setup: "
             f"device={self.device}, epochs={self.config.epochs}, "
             f"batch_size={self.config.batch_size}, "
-            f"training_input_mode={self.config.training_input_mode}"
+            f"training_input_mode={self.config.training_input_mode}, "
+            f"sampler_strategy={self.config.sampler_strategy}, "
+            f"augmentation_strategy={self.config.augmentation_strategy}"
         )
         print(
             "  data: "
@@ -313,7 +331,11 @@ class BinaryPotholeTrainer:
             if split == "train"
             else self.config.validation_manifest_path
         )
-        transform = make_image_transform(self.config.model_name, is_train=is_train)
+        transform = make_image_transform(
+            self.config.model_name,
+            is_train,
+            self.config.augmentation_strategy,
+        )
 
         if manifest_path is not None:
             return BinaryPotholeDataset(
@@ -333,10 +355,17 @@ class BinaryPotholeTrainer:
         dataset: Dataset,
         is_train: bool,
     ) -> DataLoader:
+        sampling_config = make_rdd_sampling_config(
+            dataset,
+            is_train,
+            self.config.sampler_strategy,
+            self.config.target_pothole_fraction,
+        )
         return DataLoader(
             dataset,
             batch_size=self.config.batch_size,
-            shuffle=is_train,
+            shuffle=sampling_config.shuffle,
+            sampler=sampling_config.sampler,
             num_workers=self.config.num_workers,
             collate_fn=collate_binary_pothole_batch,
             drop_last=is_train and self.config.drop_last_train_batch,
