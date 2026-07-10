@@ -6,7 +6,6 @@ import torch
 from PIL import Image
 
 import src.rdd_benchmark.constants as rdd_constants
-import src.rdd_benchmark.data_loader.dataset as dataset_module
 import src.rdd_benchmark.data_loader.utils as data_loader_utils
 import src.rdd_benchmark.training.utils as training_utils
 from src.rdd_benchmark.data_loader.dataset import (
@@ -488,73 +487,34 @@ def test_rdd_training_utils_parse_labels_and_resolve_paths(tmp_path) -> None:
         parse_binary_label("bad", 4)
 
 
-def test_rdd_training_main_runs_dataset_and_adapter_smoke(monkeypatch, capsys) -> None:
-    class FakeManifest:
-        def __init__(self, split: str) -> None:
-            self.split = split
+def test_rdd_training_main_runs_selected_experiment_runner(monkeypatch, capsys) -> None:
+    runner_configs = []
 
-        @classmethod
-        def from_csv(cls, manifest_path, expected_split):
-            assert manifest_path.name == f"{expected_split}.csv"
-            return cls(expected_split)
+    class FakeRunner:
+        def __init__(self, config) -> None:
+            runner_configs.append(config)
 
-        def class_counts(self):
-            return {0: 3, 1: 2}
+        def run(self):
+            return None
 
-        def positive_fraction(self):
-            return 0.4
-
-        def country_counts(self):
-            return {"India": 5}
-
-    class FakeDataset:
-        def __init__(self, manifest) -> None:
-            self.manifest = manifest
-
-        def __len__(self):
-            return 5
-
-        def __getitem__(self, index):
-            assert index == 0
-            return {
-                "image": Image.new("RGB", (2, 2)),
-                "label": 1,
-                "label_name": "pothole",
-                "country": "India",
-            }
-
-    class FakeModel:
-        pass
-
-    adapted_calls = []
-
-    def fake_load_and_adapt_model_for_binary_pothole(model_name):
-        adapted_calls.append(model_name)
-        return FakeModel()
-
-    monkeypatch.setattr(dataset_module, "BinaryPotholeManifest", FakeManifest)
-    monkeypatch.setattr(dataset_module, "BinaryPotholeDataset", FakeDataset)
-    monkeypatch.setattr(
-        training_utils,
-        "load_and_adapt_model_for_binary_pothole",
-        fake_load_and_adapt_model_for_binary_pothole,
-    )
     monkeypatch.setattr(rdd_constants, "RDD_MODEL_MODE", "single")
     monkeypatch.setattr(rdd_constants, "RDD_SINGLE_MODEL", "mobilenet_v3_small")
     monkeypatch.setattr(training_utils, "RDD_MODEL_MODE", "single")
     monkeypatch.setattr(training_utils, "RDD_SINGLE_MODEL", "mobilenet_v3_small")
-    monkeypatch.setattr(rdd_constants, "RUN_RDD_TRAINING", False)
-    monkeypatch.setattr(rdd_constants, "RUN_RDD_EVALUATION", False)
-    monkeypatch.setattr(rdd_constants, "RUN_RDD_COMPARISON", False)
+    monkeypatch.setattr(rdd_constants, "RDD_ACTIVE_EXPERIMENT_IDS", ("C",))
+    monkeypatch.setattr(rdd_constants, "RUN_RDD_FULL_IMAGE_PREPROCESSING", False)
+    monkeypatch.setattr(rdd_constants, "RUN_RDD_PATCH_PREPROCESSING", False)
+    monkeypatch.setattr(
+        "src.rdd_benchmark.experiments.RDDExperimentRunner",
+        FakeRunner,
+    )
 
     runpy.run_module("src.rdd_benchmark.main", run_name="__main__")
     output = capsys.readouterr().out
 
-    assert "RDD2022 binary pothole dataset loader" in output
-    assert "train:" in output
-    assert "validation:" in output
-    assert "test:" in output
-    assert "pothole_fraction: 0.400" in output
-    assert "Model adaptation smoke test" in output
-    assert "adapted_model: mobilenet_v3_small -> FakeModel" in output
-    assert adapted_calls == ["mobilenet_v3_small"]
+    assert "RDD2022 experiment plan" in output
+    assert "models: mobilenet_v3_small" in output
+    assert "C: C_full_image_weighted_sampler_minority_aug" in output
+    assert len(runner_configs) == 1
+    assert runner_configs[0].model_names == ("mobilenet_v3_small",)
+    assert runner_configs[0].experiment_config.experiment_id == "C"

@@ -87,7 +87,15 @@ RDD_ACTIVE_EXPERIMENT_IDS = ("A",)
 ```
 
 This selects metadata from `src/rdd_benchmark/experiments/`. Valid IDs are
-`"A"`, `"B"`, `"C"`, `"D"`, and `"E"`.
+`"A"`, `"B"`, `"C"`, `"D"`, and `"E"`. `main.py` runs each selected
+experiment through `RDDExperimentRunner`.
+
+```python
+RDD_BEST_PREVIOUS_EXPERIMENT_NAME = None
+```
+
+This is only needed for Experiment E. Set it to the experiment folder name that
+E should use as its base, usually the better of C or D.
 
 Current experiment defaults:
 
@@ -102,11 +110,6 @@ Current experiment defaults:
   downsampling currently means pothole:non-pothole = 1:3.
 - `"E"`: best previous strategy plus small synthetic pothole addition, with
   synthetic potholes defaulting to 20% of the real pothole count.
-
-For now, this only prints the selected experiment plan when `main.py` starts.
-The actual behavior is still controlled by the concrete constants such as
-`RDD_EXPERIMENT_NAME`, `RDD_TRAINING_INPUT_MODE`, and the training/evaluation
-settings. We will wire each experiment behavior step by step.
 
 Balanced experiment manifests are written under:
 
@@ -123,8 +126,8 @@ The experiment dataset builder chooses manifests as follows:
 - `"D"` writes a new downsampled training manifest and keeps validation/test
   unchanged.
 - `"E"` adds synthetic potholes to an explicitly selected best previous
-experiment dataset. The best previous experiment must be provided when
-Experiment E is wired into the runner.
+  experiment dataset. `RDD_BEST_PREVIOUS_EXPERIMENT_NAME` must be set before
+  running E.
 
 The trainer accepts the selected experiment's concrete manifest paths plus the
 generic training controls: `sampler_strategy`, `target_pothole_fraction`, and

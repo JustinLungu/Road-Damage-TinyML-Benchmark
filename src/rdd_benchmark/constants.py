@@ -31,10 +31,13 @@ RUN_RDD_PATCH_PREPROCESSING = False
 # Output folder name under results/rdd_trained_models/.
 RDD_EXPERIMENT_NAME = "stratified_by_country"
 
-# Metadata-only selector for the planned reproducible experiments.
-# Valid IDs are "A", "B", "C", "D", and "E". For now this prints the selected
-# experiment plan in main.py; we will wire each behavior in commit-by-commit.
+# Select which experiment IDs main.py should run. Valid IDs: "A", "B", "C",
+# "D", and "E".
 RDD_ACTIVE_EXPERIMENT_IDS = ("A",)
+
+# Required only when running Experiment E. Set this to the experiment folder name
+# that E should use as its base, usually the better of C or D.
+RDD_BEST_PREVIOUS_EXPERIMENT_NAME = None
 
 # Training modes:
 # "full_image": train on datasets/rdd2022/binary_pothole/*.csv full images.
