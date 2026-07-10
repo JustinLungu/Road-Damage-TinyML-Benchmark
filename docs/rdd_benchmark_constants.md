@@ -117,6 +117,15 @@ datasets/rdd2022/binary_pothole_experiments/<experiment_name>/
 For downsampling experiments, only `train.csv` is changed. `validation.csv` and
 `test.csv` are copied from the original full-image manifests unchanged.
 
+The experiment dataset builder chooses manifests as follows:
+
+- `"A"`, `"B"`, and `"C"` use the original full-image manifests.
+- `"D"` writes a new downsampled training manifest and keeps validation/test
+  unchanged.
+- `"E"` adds synthetic potholes to an explicitly selected best previous
+  experiment dataset. The best previous experiment must be provided when
+  Experiment E is wired into the runner.
+
 Synthetic pothole experiments expect generated assets under:
 
 ```text
