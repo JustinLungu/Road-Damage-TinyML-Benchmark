@@ -130,6 +130,14 @@ The trainer accepts the selected experiment's concrete manifest paths plus the
 generic training controls: `sampler_strategy`, `target_pothole_fraction`, and
 `augmentation_strategy`. It does not hardcode A/B/C/D/E behavior.
 
+The experiment runner executes one selected experiment end to end: build
+manifest paths, train selected model(s), evaluate them, and write
+`model_comparison.csv` under:
+
+```text
+results/rdd_trained_models/<experiment_name>/
+```
+
 Synthetic pothole experiments expect generated assets under:
 
 ```text
