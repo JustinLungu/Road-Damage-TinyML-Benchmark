@@ -99,8 +99,7 @@ Current experiment defaults:
   explicit 50% pothole target.
 - `"D"`: moderate majority downsampling, weighted sampler, stronger
   minority/pothole augmentation, and an explicit 50% pothole target. Moderate
-  downsampling currently means pothole:non-pothole = 1:3, with 1:4 as the
-  fallback ratio.
+  downsampling currently means pothole:non-pothole = 1:3.
 - `"E"`: best previous strategy plus small synthetic pothole addition, with
   synthetic potholes defaulting to 20% of the real pothole count.
 
@@ -108,6 +107,15 @@ For now, this only prints the selected experiment plan when `main.py` starts.
 The actual behavior is still controlled by the concrete constants such as
 `RDD_EXPERIMENT_NAME`, `RDD_TRAINING_INPUT_MODE`, and the training/evaluation
 settings. We will wire each experiment behavior step by step.
+
+Balanced experiment manifests are written under:
+
+```text
+datasets/rdd2022/binary_pothole_experiments/<experiment_name>/
+```
+
+For downsampling experiments, only `train.csv` is changed. `validation.csv` and
+`test.csv` are copied from the original full-image manifests unchanged.
 
 ## Training Input Mode
 

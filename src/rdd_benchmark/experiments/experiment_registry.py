@@ -27,12 +27,11 @@ class RDDExperimentConfig:
     synthetic_strategy: str
     synthetic_pothole_ratio: float
     non_potholes_per_pothole: int | None
-    fallback_non_potholes_per_pothole: int | None
     split_mode: str = RDD_SPLIT_MODE
     training_input_mode: str = "full_image"
     evaluation_input_mode: str = "full_image"
     use_bbox_aware_crops: bool = False
-    target_metric: str = "accuracy"
+    target_metric: str = "balanced_accuracy"
     random_seed: int = 42
 
     def to_dict(self) -> dict[str, Any]:
@@ -53,7 +52,6 @@ RDD_EXPERIMENT_REGISTRY = {
         synthetic_strategy="none",
         synthetic_pothole_ratio=0.0,
         non_potholes_per_pothole=None,
-        fallback_non_potholes_per_pothole=None,
     ),
     RDD_EXPERIMENT_B: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_B,
@@ -68,7 +66,6 @@ RDD_EXPERIMENT_REGISTRY = {
         synthetic_strategy="none",
         synthetic_pothole_ratio=0.0,
         non_potholes_per_pothole=None,
-        fallback_non_potholes_per_pothole=None,
     ),
     RDD_EXPERIMENT_C: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_C,
@@ -83,7 +80,6 @@ RDD_EXPERIMENT_REGISTRY = {
         synthetic_strategy="none",
         synthetic_pothole_ratio=0.0,
         non_potholes_per_pothole=None,
-        fallback_non_potholes_per_pothole=None,
     ),
     RDD_EXPERIMENT_D: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_D,
@@ -101,7 +97,6 @@ RDD_EXPERIMENT_REGISTRY = {
         synthetic_strategy="none",
         synthetic_pothole_ratio=0.0,
         non_potholes_per_pothole=3,
-        fallback_non_potholes_per_pothole=4,
     ),
     RDD_EXPERIMENT_E: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_E,
@@ -116,7 +111,6 @@ RDD_EXPERIMENT_REGISTRY = {
         synthetic_strategy="small_pothole_addition",
         synthetic_pothole_ratio=0.2,
         non_potholes_per_pothole=None,
-        fallback_non_potholes_per_pothole=None,
     ),
 }
 

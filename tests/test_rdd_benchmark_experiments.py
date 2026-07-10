@@ -25,7 +25,7 @@ def test_shared_rdd_experiment_defaults_are_consistent():
         assert config.training_input_mode == "full_image"
         assert config.evaluation_input_mode == "full_image"
         assert config.use_bbox_aware_crops is False
-        assert config.target_metric == "accuracy"
+        assert config.target_metric == "balanced_accuracy"
 
 
 def test_get_rdd_experiment_config_returns_metadata_dict():
@@ -49,7 +49,6 @@ def test_rdd_experiment_d_uses_minority_strong_augmentation():
     assert config.sampler_strategy == "weighted_sampler"
     assert config.augmentation_strategy == "minority_strong"
     assert config.non_potholes_per_pothole == 3
-    assert config.fallback_non_potholes_per_pothole == 4
 
 
 def test_rdd_experiment_e_sets_explicit_synthetic_ratio():

@@ -65,10 +65,6 @@ if __name__ == "__main__":
             "    non_potholes_per_pothole: "
             f"{experiment_config.non_potholes_per_pothole}"
         )
-        print(
-            "    fallback_non_potholes_per_pothole: "
-            f"{experiment_config.fallback_non_potholes_per_pothole}"
-        )
         print(f"    synthetic_pothole_ratio: {experiment_config.synthetic_pothole_ratio}")
     print()
 
