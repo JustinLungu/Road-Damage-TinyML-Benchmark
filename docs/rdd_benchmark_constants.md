@@ -117,6 +117,23 @@ datasets/rdd2022/binary_pothole_experiments/<experiment_name>/
 For downsampling experiments, only `train.csv` is changed. `validation.csv` and
 `test.csv` are copied from the original full-image manifests unchanged.
 
+Synthetic pothole experiments expect generated assets under:
+
+```text
+datasets/rdd2022/synthetic_potholes/
+```
+
+The source folder must contain:
+
+```text
+manifest.csv
+```
+
+with the same columns as `datasets/rdd2022/binary_pothole/train.csv`. Synthetic
+rows are added only to the training split and capped by
+`synthetic_pothole_ratio`, for example `0.2` means at most 20% of the real
+pothole training count.
+
 ## Training Input Mode
 
 ```python
