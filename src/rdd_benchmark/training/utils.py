@@ -21,6 +21,7 @@ from src.rdd_benchmark.constants import (
     RDD_MODEL_NAMES,
     RDD_SINGLE_MODEL,
 )
+from src.rdd_benchmark.data_preprocessing.augmentation import make_rdd_image_transform
 from src.rdd_benchmark.training.constants import DEFAULT_IMAGE_SIZE, MODEL_IMAGE_SIZES
 
 
@@ -120,30 +121,16 @@ def select_rdd_model_names(
     raise ValueError("RDD_MODEL_MODE must be 'single' or 'all'.")
 
 
-def make_image_transform(model_name: str, is_train: bool):
-    from torchvision import transforms
-
+def make_image_transform(
+    model_name: str,
+    is_train: bool,
+    augmentation_strategy: str = "standard",
+):
     image_size = MODEL_IMAGE_SIZES.get(model_name, DEFAULT_IMAGE_SIZE)
-    augmentation = (
-        [
-            transforms.RandomResizedCrop(image_size, scale=(0.75, 1.0)),
-            transforms.RandomHorizontalFlip(),
-        ]
-        if is_train
-        else [
-            transforms.Resize((image_size, image_size)),
-        ]
-    )
-
-    return transforms.Compose(
-        [
-            *augmentation,
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=(0.485, 0.456, 0.406),
-                std=(0.229, 0.224, 0.225),
-            ),
-        ]
+    return make_rdd_image_transform(
+        image_size=image_size,
+        is_train=is_train,
+        augmentation_strategy=augmentation_strategy,
     )
 
 
