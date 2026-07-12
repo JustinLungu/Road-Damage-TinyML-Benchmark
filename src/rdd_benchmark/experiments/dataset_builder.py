@@ -9,7 +9,6 @@ from src.constants import (
     RDD2022_SYNTHETIC_POTHOLE_DIR,
 )
 from src.rdd_benchmark.data_preprocessing.balancing import (
-    build_balanced_manifest_output_dir,
     prepare_balanced_binary_pothole_manifests,
 )
 from src.rdd_benchmark.data_preprocessing.synthetic import (
@@ -92,10 +91,7 @@ def build_synthetic_manifest_paths(
             "rows are added to the selected best C/D dataset."
         )
 
-    source_dir = build_balanced_manifest_output_dir(
-        best_previous_experiment_name,
-        output_root=experiment_output_root,
-    )
+    source_dir = experiment_output_root / best_previous_experiment_name
     output_dir = prepare_synthetic_binary_pothole_manifests(
         experiment_name=config.experiment_name,
         synthetic_pothole_ratio=config.synthetic_pothole_ratio,

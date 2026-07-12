@@ -65,21 +65,6 @@ Available split modes:
 Patch manifests inherit the full-image split, so all annotation patches from the
 same original image stay in the same split.
 
-## Experiment Name
-
-```python
-RDD_EXPERIMENT_NAME = "annotation_patch_grid3_smoke"
-```
-
-This controls where results are saved:
-
-```text
-results/rdd_trained_models/<RDD_EXPERIMENT_NAME>/<model_name>/
-```
-
-Use a new experiment name when changing the pipeline, model group, or important
-hyperparameters.
-
 ## Experiment Registry
 
 ```python
@@ -95,7 +80,7 @@ RDD_BEST_PREVIOUS_EXPERIMENT_NAME = None
 ```
 
 This is only needed for Experiment E. Set it to the experiment folder name that
-E should use as its base, usually the better of C or D.
+E should use as its synthetic-data base, usually the better of C or D.
 
 Current experiment defaults:
 
@@ -108,8 +93,9 @@ Current experiment defaults:
 - `"D"`: moderate majority downsampling, weighted sampler, stronger
   minority/pothole augmentation, and an explicit 50% pothole target. Moderate
   downsampling currently means pothole:non-pothole = 1:3.
-- `"E"`: best previous strategy plus small synthetic pothole addition, with
-  synthetic potholes defaulting to 20% of the real pothole count.
+- `"E"`: selected previous dataset plus small synthetic pothole addition, with
+  synthetic potholes defaulting to 20% of the real pothole count. Its training
+  settings are weighted sampler plus stronger minority augmentation.
 
 Balanced experiment manifests are written under:
 
@@ -140,6 +126,11 @@ manifest paths, train selected model(s), evaluate them, and write
 ```text
 results/rdd_trained_models/<experiment_name>/
 ```
+
+`RDD_EXPERIMENT_NAME` still exists in `constants.py`, but it is now only the
+low-level default used when the trainer/evaluator classes are instantiated
+directly. Normal runs through `main.py` use the A-E experiment names from the
+registry.
 
 Synthetic pothole experiments expect generated assets under:
 
@@ -310,17 +301,17 @@ plain accuracy.
 
 ## Common Setups
 
-### Current Smoke Test
+### One-Model Experiment Smoke Test
 
 ```python
-RUN_RDD_PATCH_PREPROCESSING = True
-RDD_EXPERIMENT_NAME = "annotation_patch_grid3_smoke"
+RUN_RDD_FULL_IMAGE_PREPROCESSING = False
+RUN_RDD_PATCH_PREPROCESSING = False
+RDD_ACTIVE_EXPERIMENT_IDS = ("A",)
 RDD_MODEL_MODE = "single"
 RDD_SINGLE_MODEL = "mobilevit_xxs"
-RDD_TRAINING_INPUT_MODE = "annotation_patch"
-RDD_EVALUATION_INPUT_MODE = "grid_image"
-RDD_GRID_SIZE = 3
-RDD_TRAINING_EPOCHS = 1
+RDD_TRAINING_INPUT_MODE = "full_image"
+RDD_EVALUATION_INPUT_MODE = "full_image"
+RDD_TRAINING_EPOCHS = 10
 RUN_RDD_TRAINING = True
 RUN_RDD_EVALUATION = True
 RUN_RDD_COMPARISON = True
@@ -332,25 +323,41 @@ Run:
 uv run python -m src.rdd_benchmark.main
 ```
 
-### Full-Image Baseline
+### Run A-D On One Tester Model
 
 ```python
-RDD_EXPERIMENT_NAME = "full_image_baseline"
+RDD_ACTIVE_EXPERIMENT_IDS = ("A", "B", "C", "D")
+RDD_MODEL_MODE = "single"
+RDD_SINGLE_MODEL = "mobilevit_xxs"
 RDD_TRAINING_INPUT_MODE = "full_image"
 RDD_EVALUATION_INPUT_MODE = "full_image"
+RUN_RDD_FULL_IMAGE_PREPROCESSING = False
 RUN_RDD_PATCH_PREPROCESSING = False
 ```
 
-### Patch-Grid Real Run
+### Run The Best Experiment On All Models
+
+```python
+RDD_ACTIVE_EXPERIMENT_IDS = ("C",)
+RDD_MODEL_MODE = "all"
+RUN_RDD_FULL_IMAGE_PREPROCESSING = False
+RUN_RDD_PATCH_PREPROCESSING = False
+RDD_TRAINING_INPUT_MODE = "full_image"
+RDD_EVALUATION_INPUT_MODE = "full_image"
+RUN_RDD_TRAINING = True
+RUN_RDD_EVALUATION = True
+RUN_RDD_COMPARISON = True
+```
+
+### Optional Patch-Grid Run
 
 ```python
 RUN_RDD_PATCH_PREPROCESSING = False
-RDD_EXPERIMENT_NAME = "annotation_patch_grid3"
+RDD_ACTIVE_EXPERIMENT_IDS = ("A",)
 RDD_MODEL_MODE = "all"
 RDD_TRAINING_INPUT_MODE = "annotation_patch"
 RDD_EVALUATION_INPUT_MODE = "grid_image"
 RDD_GRID_SIZE = 3
-RDD_TRAINING_EPOCHS = 20
 RUN_RDD_TRAINING = True
 RUN_RDD_EVALUATION = True
 RUN_RDD_COMPARISON = True

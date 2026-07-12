@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +33,16 @@ def validate_manifest_columns(
         raise ValueError(
             f"Manifest is missing required columns: {', '.join(sorted(missing_columns))}"
         )
+
+
+def load_manifest_rows(manifest_path: Path) -> list[dict[str, str]]:
+    if not manifest_path.is_file():
+        raise FileNotFoundError(f"Manifest does not exist: {manifest_path}")
+
+    with manifest_path.open(newline="", encoding="utf-8") as manifest_file:
+        reader = csv.DictReader(manifest_file)
+        validate_manifest_columns(reader.fieldnames, manifest_path)
+        return list(reader)
 
 
 def parse_binary_label(raw_label: str, row_number: int) -> int:

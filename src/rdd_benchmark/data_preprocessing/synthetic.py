@@ -10,10 +10,7 @@ from src.constants import (
 )
 from src.rdd_benchmark.constants import POSITIVE_LABEL
 from src.rdd_benchmark.data_loader.constants import MANIFEST_COLUMNS
-from src.rdd_benchmark.data_preprocessing.balancing import (
-    build_balanced_manifest_output_dir,
-    load_manifest_rows,
-)
+from src.rdd_benchmark.data_loader.utils import load_manifest_rows
 from src.rdd_benchmark.data_preprocessing.constants import RDD_SPLIT_RANDOM_SEED
 from src.rdd_benchmark.data_preprocessing.prepare_binary_pothole import write_manifests
 
@@ -132,10 +129,7 @@ def prepare_synthetic_binary_pothole_manifests(
         synthetic_pothole_ratio,
         random_seed=random_seed,
     )
-    output_dir = build_balanced_manifest_output_dir(
-        experiment_name,
-        output_root=output_root,
-    )
+    output_dir = output_root / experiment_name
     write_manifests(
         [*merged_train_rows, *validation_rows, *test_rows],
         output_dir,

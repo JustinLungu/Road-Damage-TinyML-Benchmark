@@ -20,24 +20,30 @@ LABEL_TO_ID = {label: index for index, label in ID_TO_LABEL.items()}
 RDD_SPLIT_MODE = "stratified_by_country"
 
 
-#################################
-# Patch-Grid Experiment Settings
-#################################
+########################
+# Experiment Selection
+########################
 
 # True regenerates datasets/rdd2022/binary_pothole_patches/*.csv before training.
 # Keep False after CSVs exist unless patch/country-split settings changed.
 RUN_RDD_PATCH_PREPROCESSING = False
 
-# Output folder name under results/rdd_trained_models/.
+# Default output folder used only when trainer/evaluator are instantiated
+# directly. The main experiment runner saves under each A-E experiment name.
 RDD_EXPERIMENT_NAME = "stratified_by_country"
 
 # Select which experiment IDs main.py should run. Valid IDs: "A", "B", "C",
 # "D", and "E".
-RDD_ACTIVE_EXPERIMENT_IDS = ("A",)
+RDD_ACTIVE_EXPERIMENT_IDS = ("A", "B", "C", "D",)
 
 # Required only when running Experiment E. Set this to the experiment folder name
-# that E should use as its base, usually the better of C or D.
+# that E should use as its synthetic-data base, usually the better of C or D.
 RDD_BEST_PREVIOUS_EXPERIMENT_NAME = None
+
+
+####################
+# Input/Eval Modes
+####################
 
 # Training modes:
 # "full_image": train on datasets/rdd2022/binary_pothole/*.csv full images.
@@ -51,6 +57,11 @@ RDD_TRAINING_INPUT_MODE = "full_image"
 RDD_EVALUATION_INPUT_MODE = "full_image"
 RDD_SUPPORTED_TRAINING_INPUT_MODES = ("full_image", "annotation_patch")
 RDD_SUPPORTED_EVALUATION_INPUT_MODES = ("full_image", "grid_image")
+
+
+#######################
+# Patch/Grid Settings
+#######################
 
 # Patch preprocessing controls for annotation-derived training patches.
 RDD_PATCH_SIZE = 224
@@ -69,7 +80,7 @@ RDD_THRESHOLD_VALUES = tuple(index / 100 for index in range(5, 96, 5))
 
 
 # "single" runs RDD_SINGLE_MODEL. "all" runs every model in RDD_MODEL_NAMES.
-RDD_MODEL_MODE = "all"
+RDD_MODEL_MODE = "single"
 # Used when RDD_MODEL_MODE is "single" for both adaptation smoke and training.
 RDD_SINGLE_MODEL = "mobilevit_xxs"
 # Used when RDD_MODEL_MODE is "all" for both adaptation smoke and training.

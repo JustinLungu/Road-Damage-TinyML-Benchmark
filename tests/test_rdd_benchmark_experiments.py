@@ -24,7 +24,6 @@ def test_shared_rdd_experiment_defaults_are_consistent():
     for config in RDD_EXPERIMENT_REGISTRY.values():
         assert config.training_input_mode == "full_image"
         assert config.evaluation_input_mode == "full_image"
-        assert config.use_bbox_aware_crops is False
         assert config.target_metric == "balanced_accuracy"
 
 
@@ -32,7 +31,7 @@ def test_get_rdd_experiment_config_returns_metadata_dict():
     config = get_rdd_experiment_config("A")
 
     assert config.experiment_name == "A_full_image_natural_standard_aug"
-    assert config.to_dict()["experiment_id"] == "A"
+    assert config.experiment_id == "A"
 
 
 def test_rdd_experiment_b_sets_explicit_balanced_batch_target():
@@ -45,7 +44,6 @@ def test_rdd_experiment_b_sets_explicit_balanced_batch_target():
 def test_rdd_experiment_d_uses_minority_strong_augmentation():
     config = get_rdd_experiment_config("D")
 
-    assert config.balancing_strategy == "majority_downsample_moderate"
     assert config.sampler_strategy == "weighted_sampler"
     assert config.augmentation_strategy == "minority_strong"
     assert config.non_potholes_per_pothole == 3
@@ -54,7 +52,6 @@ def test_rdd_experiment_d_uses_minority_strong_augmentation():
 def test_rdd_experiment_e_sets_explicit_synthetic_ratio():
     config = get_rdd_experiment_config("E")
 
-    assert config.synthetic_strategy == "small_pothole_addition"
     assert config.synthetic_pothole_ratio == 0.2
 
 

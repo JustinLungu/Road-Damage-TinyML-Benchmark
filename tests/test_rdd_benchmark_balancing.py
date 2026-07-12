@@ -4,10 +4,9 @@ import pytest
 
 from src.rdd_benchmark.constants import NEGATIVE_LABEL, POSITIVE_LABEL
 from src.rdd_benchmark.data_loader.constants import MANIFEST_COLUMNS
+from src.rdd_benchmark.data_loader.utils import load_manifest_rows
 from src.rdd_benchmark.data_preprocessing.balancing import (
-    build_balanced_manifest_output_dir,
     downsample_majority_rows,
-    load_manifest_rows,
     prepare_balanced_binary_pothole_manifests,
     validate_non_potholes_per_pothole,
 )
@@ -46,20 +45,6 @@ def read_manifest(path):
 
 def count_label(rows, label):
     return sum(int(row["label"]) == label for row in rows)
-
-
-def test_build_balanced_manifest_output_dir_uses_experiment_name(tmp_path):
-    output_dir = build_balanced_manifest_output_dir(
-        "experiment_d",
-        output_root=tmp_path,
-    )
-
-    assert output_dir == tmp_path / "experiment_d"
-
-
-def test_build_balanced_manifest_output_dir_rejects_empty_name(tmp_path):
-    with pytest.raises(ValueError, match="experiment_name"):
-        build_balanced_manifest_output_dir("", output_root=tmp_path)
 
 
 def test_load_manifest_rows_validates_required_columns(tmp_path):

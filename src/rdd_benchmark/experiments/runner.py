@@ -99,8 +99,9 @@ class RDDExperimentRunner:
             return []
 
         trained_model_names = []
+        experiment_config = self.config.experiment_config
         print()
-        print(f"RDD2022 binary pothole training: {self.config.experiment_config.experiment_name}")
+        print(f"RDD2022 binary pothole training: {experiment_config.experiment_name}")
 
         for model_name in self.config.model_names:
             print()
@@ -115,23 +116,17 @@ class RDDExperimentRunner:
                 trainer = BinaryPotholeTrainer(
                     RDDTrainingConfig(
                         model_name=model_name,
-                        experiment_name=self.config.experiment_config.experiment_name,
-                        training_input_mode=(
-                            self.config.experiment_config.training_input_mode
-                        ),
+                        experiment_name=experiment_config.experiment_name,
+                        training_input_mode=experiment_config.training_input_mode,
                         train_manifest_path=manifest_paths.train_manifest_path,
                         validation_manifest_path=(
                             manifest_paths.validation_manifest_path
                         ),
-                        sampler_strategy=self.config.experiment_config.sampler_strategy,
-                        target_pothole_fraction=(
-                            self.config.experiment_config.target_pothole_fraction
-                        ),
-                        augmentation_strategy=(
-                            self.config.experiment_config.augmentation_strategy
-                        ),
+                        sampler_strategy=experiment_config.sampler_strategy,
+                        target_pothole_fraction=experiment_config.target_pothole_fraction,
+                        augmentation_strategy=experiment_config.augmentation_strategy,
                         output_dir=self.config.output_dir,
-                        best_metric=self.config.experiment_config.target_metric,
+                        best_metric=experiment_config.target_metric,
                     )
                 )
                 result = trainer.train()
