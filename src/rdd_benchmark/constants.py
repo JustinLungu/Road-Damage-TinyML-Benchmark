@@ -33,8 +33,9 @@ RUN_RDD_PATCH_PREPROCESSING = False
 RDD_EXPERIMENT_NAME = "stratified_by_country"
 
 # Select which experiment IDs main.py should run.
-# A-D are the initial results. F-H are the gentler second-round balancing tests.
-RDD_ACTIVE_EXPERIMENT_IDS = ("F", "G", "H")
+# A is the natural-data baseline. F/H were the strongest second-round settings
+# on mobilevit_xxs, so use them for the next cross-model probe.
+RDD_ACTIVE_EXPERIMENT_IDS = ("A", "F", "H")
 
 # Required only when running Experiment E. Set this to the experiment folder name
 # that E should use as its synthetic-data base, usually the better of C or D.
@@ -80,24 +81,15 @@ RDD_THRESHOLD_VALUES = tuple(index / 100 for index in range(5, 96, 5))
 
 
 # "single" runs RDD_SINGLE_MODEL. "all" runs every model in RDD_MODEL_NAMES.
-RDD_MODEL_MODE = "single"
+RDD_MODEL_MODE = "all"
 # Used when RDD_MODEL_MODE is "single" for both adaptation smoke and training.
 RDD_SINGLE_MODEL = "mobilevit_xxs"
 # Used when RDD_MODEL_MODE is "all" for both adaptation smoke and training.
 # This is the run subset, not necessarily every model that the adapter supports.
 RDD_MODEL_NAMES = (
-    "mobilenet_v2",
-    "mobilenet_v3_small",
-    "mobilenet_v3_large",
-    "efficientnet_b0",
-    "resnet18",
-    "inception_v3",
     "mobilevit_xxs",
-    "mobilevit_xs",
-    "mobilevit_s",
-    "efficientformer_l1",
-    "efficientformer_l3",
-    "efficientformer_l7",
+    "mobilenet_v3_small",
+    "efficientnet_b0",
 )
 # Available image-classification models for this list:
 # "mobilenet_v2", "mobilenet_v3_small", "mobilenet_v3_large",

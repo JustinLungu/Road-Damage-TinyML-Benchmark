@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import random
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,6 +12,7 @@ from torch.utils.data import DataLoader
 
 from src.constants import RDD2022_BINARY_POTHOLE_DIR, RDD_TRAINING_RESULTS_DIR
 from src.rdd_benchmark.constants import (
+    NEGATIVE_LABEL,
     POSITIVE_LABEL,
     RDD_EVALUATION_INPUT_MODE,
     RDD_EVALUATION_BATCH_SIZE,
@@ -279,6 +281,8 @@ class RDDEvaluationConfig:
     tune_threshold: bool = RDD_TUNE_PATCH_THRESHOLD
     threshold_values: tuple[float, ...] = RDD_THRESHOLD_VALUES
     threshold_metric: str = RDD_THRESHOLD_METRIC
+    save_balanced_test_metrics: bool = True
+    balanced_test_random_seed: int = 42
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
     @property
@@ -410,6 +414,13 @@ class BinaryPotholeEvaluator:
             positive_scores=all_positive_scores,
             targets=all_targets,
         )
+        self._write_balanced_test_outputs(
+            manifest=test_manifest,
+            predictions=all_predictions,
+            targets=all_targets,
+            positive_scores=all_positive_scores,
+            threshold=self.config.decision_threshold,
+        )
 
         return self._write_evaluation_outputs(
             metrics=metrics,
@@ -511,6 +522,13 @@ class BinaryPotholeEvaluator:
             self.config.inference_metrics_path,
             inference_metrics,
         )
+        self._write_balanced_test_outputs(
+            manifest=test_manifest,
+            predictions=all_predictions,
+            targets=all_targets,
+            positive_scores=all_positive_scores,
+            threshold=threshold,
+        )
 
         return self._write_evaluation_outputs(
             metrics=metrics,
@@ -577,6 +595,95 @@ class BinaryPotholeEvaluator:
             roc_curve_plot_path=roc_curve_plot_path,
             metric_bar_plot_path=metric_bar_plot_path,
             inference_metrics_path=inference_metrics_path,
+        )
+
+    def _write_balanced_test_outputs(
+        self,
+        manifest: BinaryPotholeManifest,
+        predictions: torch.Tensor,
+        targets: torch.Tensor,
+        positive_scores: torch.Tensor,
+        threshold: float,
+    ) -> None:
+        if not self.config.save_balanced_test_metrics:
+            return
+
+        indices = select_balanced_test_indices(
+            manifest,
+            random_seed=self.config.balanced_test_random_seed,
+        )
+        if not indices:
+            return
+
+        index_tensor = torch.tensor(indices, dtype=torch.long, device=predictions.device)
+        balanced_predictions = predictions.index_select(0, index_tensor)
+        balanced_targets = targets.index_select(0, index_tensor)
+        balanced_scores = positive_scores.index_select(0, index_tensor)
+        metrics = compute_binary_classification_metrics(
+            predictions=balanced_predictions,
+            targets=balanced_targets,
+        )
+        metrics["roc_auc"] = compute_binary_roc_auc(
+            positive_scores=balanced_scores,
+            targets=balanced_targets,
+        )
+        metrics.update(self._make_output_metadata(threshold=threshold))
+        metrics.update(
+            {
+                "test_view": "balanced",
+                "num_images": float(len(indices)),
+                "balanced_positive_count": float(
+                    int((balanced_targets == POSITIVE_LABEL).sum().item())
+                ),
+                "balanced_negative_count": float(
+                    int((balanced_targets == NEGATIVE_LABEL).sum().item())
+                ),
+            }
+        )
+        false_positive_rates, true_positive_rates = compute_binary_roc_curve(
+            positive_scores=balanced_scores,
+            targets=balanced_targets,
+        )
+
+        metrics_json_path = self.config.model_output_dir / "balanced_test_metrics.json"
+        metrics_csv_path = self.config.model_output_dir / "balanced_test_metrics.csv"
+        confusion_matrix_path = (
+            self.config.model_output_dir / "balanced_confusion_matrix.csv"
+        )
+        confusion_matrix_plot_path = (
+            self.config.model_output_dir / "balanced_confusion_matrix.png"
+        )
+        roc_curve_plot_path = self.config.model_output_dir / "balanced_roc_curve.png"
+        metric_bar_plot_path = (
+            self.config.model_output_dir / "balanced_test_metric_bars.png"
+        )
+
+        write_evaluation_metrics_json(metrics_json_path, metrics)
+        write_evaluation_metrics_csv(
+            metrics_csv_path,
+            model_name=self.config.model_name,
+            split="balanced_test",
+            metrics=metrics,
+        )
+        write_confusion_matrix_csv(confusion_matrix_path, metrics)
+        if self.config.save_plots:
+            write_confusion_matrix_plot(confusion_matrix_plot_path, metrics)
+            write_roc_curve_plot(
+                roc_curve_plot_path,
+                false_positive_rates=false_positive_rates,
+                true_positive_rates=true_positive_rates,
+                roc_auc=float(metrics["roc_auc"]),
+            )
+            write_metric_bar_plot(metric_bar_plot_path, metrics)
+
+        print(
+            "  balanced test metrics: "
+            f"accuracy={metrics['accuracy']:.4f}, "
+            f"balanced_accuracy={metrics['balanced_accuracy']:.4f}, "
+            f"precision={metrics['precision']:.4f}, "
+            f"recall={metrics['recall']:.4f}, "
+            f"f1={metrics['f1']:.4f}, "
+            f"roc_auc={metrics['roc_auc']:.4f}"
         )
 
     def _make_output_metadata(self, threshold: float) -> dict[str, float | str]:
@@ -653,3 +760,32 @@ class BinaryPotholeEvaluator:
         if self.config.progress_interval <= 0:
             return False
         return batch_index % self.config.progress_interval == 0
+
+
+def select_balanced_test_indices(
+    manifest: BinaryPotholeManifest,
+    random_seed: int = 42,
+) -> list[int]:
+    positive_indices = [
+        index
+        for index, sample in enumerate(manifest.samples)
+        if sample.label == POSITIVE_LABEL
+    ]
+    negative_indices = [
+        index
+        for index, sample in enumerate(manifest.samples)
+        if sample.label == NEGATIVE_LABEL
+    ]
+    balanced_count = min(len(positive_indices), len(negative_indices))
+    if balanced_count == 0:
+        return []
+
+    rng = random.Random(f"{random_seed}:balanced_test")
+    rng.shuffle(positive_indices)
+    rng.shuffle(negative_indices)
+    selected_indices = [
+        *positive_indices[:balanced_count],
+        *negative_indices[:balanced_count],
+    ]
+    selected_indices.sort()
+    return selected_indices

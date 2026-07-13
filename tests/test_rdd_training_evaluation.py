@@ -15,6 +15,7 @@ from src.rdd_benchmark.training.evaluation import (
     GridThresholdTuner,
     RDDEvaluationConfig,
     load_grid_decision_threshold,
+    select_balanced_test_indices,
 )
 from src.rdd_benchmark.data_loader.dataset import BinaryPotholeManifest, BinaryPotholeSample
 from src.rdd_benchmark.data_loader.utils import collate_binary_pothole_batch
@@ -46,6 +47,17 @@ class FakeManifest:
 
     def __init__(self, split: str) -> None:
         self.split = split
+        self.samples = [
+            BinaryPotholeSample(
+                image_path=Path(f"{split}_{index}.jpg"),
+                annotation_path=Path("annotation.xml"),
+                label=label,
+                label_name="pothole" if label == 1 else "non_pothole",
+                country="Japan",
+                split=split,
+            )
+            for index, label in enumerate([0, 1, 0, 1])
+        ]
 
     def __len__(self):
         return 4
@@ -285,6 +297,30 @@ def test_grid_threshold_tuner_rejects_empty_threshold_values() -> None:
         )
 
 
+def test_select_balanced_test_indices_keeps_equal_class_counts(tmp_path) -> None:
+    manifest = BinaryPotholeManifest(
+        samples=[
+            BinaryPotholeSample(
+                image_path=tmp_path / f"image_{index}.jpg",
+                annotation_path=tmp_path / "annotation.xml",
+                label=label,
+                label_name="pothole" if label == 1 else "non_pothole",
+                country="Japan",
+                split="test",
+            )
+            for index, label in enumerate([0, 0, 0, 1, 1])
+        ],
+        manifest_path=tmp_path / "test.csv",
+    )
+
+    indices = select_balanced_test_indices(manifest, random_seed=7)
+    labels = [manifest.samples[index].label for index in indices]
+
+    assert len(indices) == 4
+    assert labels.count(0) == 2
+    assert labels.count(1) == 2
+
+
 def test_binary_pothole_evaluator_writes_metrics_and_confusion_matrix(
     monkeypatch,
     tmp_path,
@@ -341,7 +377,11 @@ def test_binary_pothole_evaluator_writes_metrics_and_confusion_matrix(
     assert result.roc_curve_plot_path.is_file()
     assert result.metric_bar_plot_path is not None
     assert result.metric_bar_plot_path.is_file()
+    assert (config.model_output_dir / "balanced_test_metrics.json").is_file()
+    assert (config.model_output_dir / "balanced_test_metrics.csv").is_file()
+    assert (config.model_output_dir / "balanced_confusion_matrix.csv").is_file()
     assert "test metrics: accuracy=1.0000" in output
+    assert "balanced test metrics: accuracy=1.0000" in output
 
 
 def test_binary_pothole_evaluator_grid_image_mode_tunes_threshold_and_saves_timing(

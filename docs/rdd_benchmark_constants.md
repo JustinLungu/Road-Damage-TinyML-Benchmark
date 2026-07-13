@@ -291,7 +291,18 @@ confusion_matrix.csv
 confusion_matrix.png
 roc_curve.png
 test_metric_bars.png
+balanced_test_metrics.json
+balanced_test_metrics.csv
+balanced_confusion_matrix.csv
+balanced_confusion_matrix.png
+balanced_roc_curve.png
+balanced_test_metric_bars.png
 ```
+
+The normal `test_metrics.*` files use the realistic imbalanced test set. The
+`balanced_*` files are diagnostic only: they keep all pothole test images and a
+deterministic equal-size sample of non-pothole test images, so plain accuracy is
+easier to interpret.
 
 Comparison writes:
 
@@ -346,6 +357,22 @@ RUN_RDD_PATCH_PREPROCESSING = False
 RDD_ACTIVE_EXPERIMENT_IDS = ("F", "G", "H")
 RDD_MODEL_MODE = "single"
 RDD_SINGLE_MODEL = "mobilevit_xxs"
+RDD_TRAINING_INPUT_MODE = "full_image"
+RDD_EVALUATION_INPUT_MODE = "full_image"
+RUN_RDD_FULL_IMAGE_PREPROCESSING = False
+RUN_RDD_PATCH_PREPROCESSING = False
+```
+
+### Run A/F/H On Two Probe Models
+
+```python
+RDD_ACTIVE_EXPERIMENT_IDS = ("A", "F", "H")
+RDD_MODEL_MODE = "all"
+RDD_MODEL_NAMES = (
+    "mobilevit_xxs",
+    "mobilenet_v3_small",
+    "efficientnet_b0",
+)
 RDD_TRAINING_INPUT_MODE = "full_image"
 RDD_EVALUATION_INPUT_MODE = "full_image"
 RUN_RDD_FULL_IMAGE_PREPROCESSING = False
