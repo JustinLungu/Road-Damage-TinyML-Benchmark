@@ -15,7 +15,6 @@ from src.rdd_benchmark.data_preprocessing.synthetic import (
     prepare_synthetic_binary_pothole_manifests,
 )
 from src.rdd_benchmark.experiments.constants import (
-    RDD_EXPERIMENT_D,
     RDD_EXPERIMENT_E,
 )
 from src.rdd_benchmark.experiments.experiment_registry import RDDExperimentConfig
@@ -112,7 +111,7 @@ def build_experiment_manifest_paths(
     synthetic_source_dir: Path = RDD2022_SYNTHETIC_POTHOLE_DIR,
     best_previous_experiment_name: str | None = None,
 ) -> RDDExperimentManifestPaths:
-    if config.experiment_id == RDD_EXPERIMENT_D:
+    if config.non_potholes_per_pothole is not None:
         return build_downsampled_manifest_paths(
             config,
             source_dir,

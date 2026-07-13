@@ -8,6 +8,9 @@ from src.rdd_benchmark.experiments.constants import (
     RDD_EXPERIMENT_C,
     RDD_EXPERIMENT_D,
     RDD_EXPERIMENT_E,
+    RDD_EXPERIMENT_F,
+    RDD_EXPERIMENT_G,
+    RDD_EXPERIMENT_H,
 )
 
 
@@ -86,6 +89,39 @@ RDD_EXPERIMENT_REGISTRY = {
         augmentation_strategy="minority_strong",
         synthetic_pothole_ratio=0.2,
         non_potholes_per_pothole=None,
+    ),
+    RDD_EXPERIMENT_F: RDDExperimentConfig(
+        experiment_id=RDD_EXPERIMENT_F,
+        experiment_name="F_full_image_weighted_sampler_025_standard_aug",
+        dataset_strategy="Gentler weighted sampler + standard augmentation",
+        reason="Tests whether 25% pothole sampling improves precision vs B",
+        sampler_strategy="weighted_sampler",
+        target_pothole_fraction=0.25,
+        augmentation_strategy="standard",
+        synthetic_pothole_ratio=0.0,
+        non_potholes_per_pothole=None,
+    ),
+    RDD_EXPERIMENT_G: RDDExperimentConfig(
+        experiment_id=RDD_EXPERIMENT_G,
+        experiment_name="G_full_image_downsample_1to5_standard_aug",
+        dataset_strategy="Majority downsampling only + standard augmentation",
+        reason="Tests downsampling without weighted-sampler overcorrection",
+        sampler_strategy="none",
+        target_pothole_fraction=None,
+        augmentation_strategy="standard",
+        synthetic_pothole_ratio=0.0,
+        non_potholes_per_pothole=5,
+    ),
+    RDD_EXPERIMENT_H: RDDExperimentConfig(
+        experiment_id=RDD_EXPERIMENT_H,
+        experiment_name="H_full_image_downsample_1to5_minority_aug",
+        dataset_strategy="Majority downsampling only + minority augmentation",
+        reason="Tests gentler downsampling with stronger pothole augmentation",
+        sampler_strategy="none",
+        target_pothole_fraction=None,
+        augmentation_strategy="minority_strong",
+        synthetic_pothole_ratio=0.0,
+        non_potholes_per_pothole=5,
     ),
 }
 

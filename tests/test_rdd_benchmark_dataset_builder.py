@@ -87,8 +87,8 @@ def test_validate_manifest_paths_rejects_missing_manifest(tmp_path):
         validate_manifest_paths(manifest_paths)
 
 
-@pytest.mark.parametrize("experiment_id", ["A", "B", "C"])
-def test_build_experiment_manifest_paths_uses_original_manifests_for_a_b_c(
+@pytest.mark.parametrize("experiment_id", ["A", "B", "C", "F"])
+def test_build_experiment_manifest_paths_uses_original_manifests_for_non_downsampled(
     tmp_path,
     experiment_id,
 ):
@@ -104,11 +104,19 @@ def test_build_experiment_manifest_paths_uses_original_manifests_for_a_b_c(
     assert manifest_paths.test_manifest_path == source_dir / "test.csv"
 
 
-def test_build_experiment_manifest_paths_creates_downsampled_manifests_for_d(tmp_path):
+@pytest.mark.parametrize(
+    ("experiment_id", "expected_non_potholes"),
+    [("D", 6), ("G", 10), ("H", 10)],
+)
+def test_build_experiment_manifest_paths_creates_downsampled_manifests(
+    tmp_path,
+    experiment_id,
+    expected_non_potholes,
+):
     source_dir = tmp_path / "source"
     output_root = tmp_path / "experiments"
     write_base_manifests(source_dir)
-    config = get_rdd_experiment_config("D")
+    config = get_rdd_experiment_config(experiment_id)
 
     manifest_paths = build_experiment_manifest_paths(
         config,
@@ -120,7 +128,7 @@ def test_build_experiment_manifest_paths_creates_downsampled_manifests_for_d(tmp
 
     assert manifest_paths.dataset_dir == output_root / config.experiment_name
     assert count_label(train_rows, POSITIVE_LABEL) == 2
-    assert count_label(train_rows, NEGATIVE_LABEL) == 6
+    assert count_label(train_rows, NEGATIVE_LABEL) == expected_non_potholes
     assert len(validation_rows) == 2
 
 

@@ -55,6 +55,23 @@ def test_rdd_experiment_e_sets_explicit_synthetic_ratio():
     assert config.synthetic_pothole_ratio == 0.2
 
 
+def test_rdd_experiment_f_uses_gentler_weighted_sampler():
+    config = get_rdd_experiment_config("F")
+
+    assert config.sampler_strategy == "weighted_sampler"
+    assert config.target_pothole_fraction == 0.25
+    assert config.augmentation_strategy == "standard"
+
+
+@pytest.mark.parametrize("experiment_id", ["G", "H"])
+def test_rdd_gentler_downsample_experiments_do_not_use_sampler(experiment_id):
+    config = get_rdd_experiment_config(experiment_id)
+
+    assert config.sampler_strategy == "none"
+    assert config.target_pothole_fraction is None
+    assert config.non_potholes_per_pothole == 5
+
+
 def test_select_rdd_experiment_configs_preserves_requested_order():
     configs = select_rdd_experiment_configs(("C", "A"))
 

@@ -32,9 +32,9 @@ RUN_RDD_PATCH_PREPROCESSING = False
 # directly. The main experiment runner saves under each A-E experiment name.
 RDD_EXPERIMENT_NAME = "stratified_by_country"
 
-# Select which experiment IDs main.py should run. Valid IDs: "A", "B", "C",
-# "D", and "E".
-RDD_ACTIVE_EXPERIMENT_IDS = ("A", "B", "C", "D",)
+# Select which experiment IDs main.py should run.
+# A-D are the initial results. F-H are the gentler second-round balancing tests.
+RDD_ACTIVE_EXPERIMENT_IDS = ("F", "G", "H")
 
 # Required only when running Experiment E. Set this to the experiment folder name
 # that E should use as its synthetic-data base, usually the better of C or D.

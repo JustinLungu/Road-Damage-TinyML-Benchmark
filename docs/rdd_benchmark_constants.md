@@ -72,7 +72,7 @@ RDD_ACTIVE_EXPERIMENT_IDS = ("A",)
 ```
 
 This selects metadata from `src/rdd_benchmark/experiments/`. Valid IDs are
-`"A"`, `"B"`, `"C"`, `"D"`, and `"E"`. `main.py` runs each selected
+`"A"`, `"B"`, `"C"`, `"D"`, `"E"`, `"F"`, `"G"`, and `"H"`. `main.py` runs each selected
 experiment through `RDDExperimentRunner`.
 
 ```python
@@ -96,6 +96,10 @@ Current experiment defaults:
 - `"E"`: selected previous dataset plus small synthetic pothole addition, with
   synthetic potholes defaulting to 20% of the real pothole count. Its training
   settings are weighted sampler plus stronger minority augmentation.
+- `"F"`: gentler weighted sampler with standard augmentation and a 25%
+  pothole target.
+- `"G"`: downsample-only 1:5 train set with standard augmentation.
+- `"H"`: downsample-only 1:5 train set with stronger minority augmentation.
 
 Balanced experiment manifests are written under:
 
@@ -108,16 +112,17 @@ For downsampling experiments, only `train.csv` is changed. `validation.csv` and
 
 The experiment dataset builder chooses manifests as follows:
 
-- `"A"`, `"B"`, and `"C"` use the original full-image manifests.
-- `"D"` writes a new downsampled training manifest and keeps validation/test
-  unchanged.
+- Experiments without `non_potholes_per_pothole` use the original full-image
+  manifests.
+- Experiments with `non_potholes_per_pothole` write a new downsampled training
+  manifest and keep validation/test unchanged.
 - `"E"` adds synthetic potholes to an explicitly selected best previous
   experiment dataset. `RDD_BEST_PREVIOUS_EXPERIMENT_NAME` must be set before
   running E.
 
 The trainer accepts the selected experiment's concrete manifest paths plus the
 generic training controls: `sampler_strategy`, `target_pothole_fraction`, and
-`augmentation_strategy`. It does not hardcode A/B/C/D/E behavior.
+`augmentation_strategy`. It does not hardcode individual experiment behavior.
 
 The experiment runner executes one selected experiment end to end: build
 manifest paths, train selected model(s), evaluate them, and write
@@ -327,6 +332,18 @@ uv run python -m src.rdd_benchmark.main
 
 ```python
 RDD_ACTIVE_EXPERIMENT_IDS = ("A", "B", "C", "D")
+RDD_MODEL_MODE = "single"
+RDD_SINGLE_MODEL = "mobilevit_xxs"
+RDD_TRAINING_INPUT_MODE = "full_image"
+RDD_EVALUATION_INPUT_MODE = "full_image"
+RUN_RDD_FULL_IMAGE_PREPROCESSING = False
+RUN_RDD_PATCH_PREPROCESSING = False
+```
+
+### Run F-H Gentler Balancing Tests
+
+```python
+RDD_ACTIVE_EXPERIMENT_IDS = ("F", "G", "H")
 RDD_MODEL_MODE = "single"
 RDD_SINGLE_MODEL = "mobilevit_xxs"
 RDD_TRAINING_INPUT_MODE = "full_image"
