@@ -514,7 +514,7 @@ def test_rdd_training_main_runs_selected_experiment_runner(monkeypatch, capsys) 
 
     assert "RDD2022 experiment plan" in output
     assert "models: mobilenet_v3_small" in output
-    assert "C: C_full_image_weighted_sampler_minority_aug" in output
+    assert "C: C_clean400_full_image_weighted_sampler_minority_aug" in output
     assert len(runner_configs) == 1
     assert runner_configs[0].model_names == ("mobilenet_v3_small",)
     assert runner_configs[0].experiment_config.experiment_id == "C"

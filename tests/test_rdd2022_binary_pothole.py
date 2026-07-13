@@ -17,6 +17,7 @@ def write_rdd_sample(
     country: str,
     filename: str,
     labels: list[str],
+    box_size: int = 30,
 ) -> Path:
     image_dir = root / country / "train" / "images"
     annotation_dir = root / country / "train" / "annotations" / "xmls"
@@ -31,8 +32,8 @@ def write_rdd_sample(
             <bndbox>
                 <xmin>1</xmin>
                 <ymin>2</ymin>
-                <xmax>11</xmax>
-                <ymax>22</ymax>
+                <xmax>{1 + box_size}</xmax>
+                <ymax>{2 + box_size}</ymax>
             </bndbox>
         </object>
         """
@@ -95,6 +96,30 @@ def test_parse_annotation_assigns_binary_pothole_label(tmp_path) -> None:
     assert negative_row["label"] == 0
     assert negative_row["label_name"] == "non_pothole"
     assert negative_row["has_pothole"] == 0
+
+
+def test_parse_annotation_ignores_tiny_potholes(tmp_path) -> None:
+    annotation_path = write_rdd_sample(
+        tmp_path,
+        "India",
+        "tiny_pothole.jpg",
+        ["D40"],
+        box_size=10,
+    )
+
+    row = parse_annotation(
+        annotation_path,
+        tmp_path / "India" / "train" / "images",
+        "India",
+        "train",
+    )
+
+    assert row["label"] == 0
+    assert row["label_name"] == "non_pothole"
+    assert row["has_pothole"] == 0
+    assert row["num_objects"] == 1
+    assert row["num_pothole_objects"] == 0
+    assert row["object_labels"] == "D40"
 
 
 def test_build_manifest_rows_writes_split_manifests_and_summary(tmp_path) -> None:

@@ -34,7 +34,7 @@ class RDDExperimentConfig:
 RDD_EXPERIMENT_REGISTRY = {
     RDD_EXPERIMENT_A: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_A,
-        experiment_name="A_full_image_natural_standard_aug",
+        experiment_name="A_clean400_full_image_natural_standard_aug",
         dataset_strategy="Natural data + standard augmentation",
         reason="Baseline",
         sampler_strategy="none",
@@ -45,7 +45,7 @@ RDD_EXPERIMENT_REGISTRY = {
     ),
     RDD_EXPERIMENT_B: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_B,
-        experiment_name="B_full_image_weighted_sampler_standard_aug",
+        experiment_name="B_clean400_full_image_weighted_sampler_standard_aug",
         dataset_strategy="Weighted sampler / balanced batches + standard augmentation",
         reason="Tests upsampling effect",
         sampler_strategy="weighted_sampler",
@@ -56,7 +56,7 @@ RDD_EXPERIMENT_REGISTRY = {
     ),
     RDD_EXPERIMENT_C: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_C,
-        experiment_name="C_full_image_weighted_sampler_minority_aug",
+        experiment_name="C_clean400_full_image_weighted_sampler_minority_aug",
         dataset_strategy="Weighted sampler + stronger minority augmentation",
         reason="Most likely to help",
         sampler_strategy="weighted_sampler",
@@ -67,7 +67,7 @@ RDD_EXPERIMENT_REGISTRY = {
     ),
     RDD_EXPERIMENT_D: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_D,
-        experiment_name="D_full_image_downsample_majority_minority_aug",
+        experiment_name="D_clean400_full_image_downsample_majority_minority_aug",
         dataset_strategy=(
             "Moderate majority downsampling + weighted sampler + "
             "minority augmentation"
@@ -81,7 +81,7 @@ RDD_EXPERIMENT_REGISTRY = {
     ),
     RDD_EXPERIMENT_E: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_E,
-        experiment_name="E_full_image_best_plus_synthetic_potholes",
+        experiment_name="E_clean400_full_image_best_plus_synthetic_potholes",
         dataset_strategy="Best of C/D + small synthetic pothole addition",
         reason="Tests AI generation safely",
         sampler_strategy="weighted_sampler",
@@ -92,7 +92,7 @@ RDD_EXPERIMENT_REGISTRY = {
     ),
     RDD_EXPERIMENT_F: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_F,
-        experiment_name="F_full_image_weighted_sampler_025_standard_aug",
+        experiment_name="F_clean400_full_image_weighted_sampler_025_standard_aug",
         dataset_strategy="Gentler weighted sampler + standard augmentation",
         reason="Tests whether 25% pothole sampling improves precision vs B",
         sampler_strategy="weighted_sampler",
@@ -103,7 +103,7 @@ RDD_EXPERIMENT_REGISTRY = {
     ),
     RDD_EXPERIMENT_G: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_G,
-        experiment_name="G_full_image_downsample_1to5_standard_aug",
+        experiment_name="G_clean400_full_image_downsample_1to5_standard_aug",
         dataset_strategy="Majority downsampling only + standard augmentation",
         reason="Tests downsampling without weighted-sampler overcorrection",
         sampler_strategy="none",
@@ -114,7 +114,7 @@ RDD_EXPERIMENT_REGISTRY = {
     ),
     RDD_EXPERIMENT_H: RDDExperimentConfig(
         experiment_id=RDD_EXPERIMENT_H,
-        experiment_name="H_full_image_downsample_1to5_minority_aug",
+        experiment_name="H_clean400_full_image_downsample_1to5_minority_aug",
         dataset_strategy="Majority downsampling only + minority augmentation",
         reason="Tests gentler downsampling with stronger pothole augmentation",
         sampler_strategy="none",

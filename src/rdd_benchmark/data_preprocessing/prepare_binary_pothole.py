@@ -16,6 +16,7 @@ from src.rdd_benchmark.constants import (
 from src.rdd_benchmark.data_loader.constants import MANIFEST_COLUMNS
 from src.rdd_benchmark.data_preprocessing.constants import (
     RDD_AVAILABLE_COUNTRIES,
+    RDD_MIN_BOX_AREA,
     RDD_SPLIT_FRACTIONS,
     RDD_SPLIT_RANDOM_SEED,
     RDD_SUPPORTED_SPLIT_MODES,
@@ -237,16 +238,18 @@ def parse_annotation(
             f"Image referenced by annotation does not exist: {image_path}"
         )
 
-    labels = [
-        label
-        for label in (
-            (obj.findtext("name") or "").strip() for obj in root.findall("object")
-        )
-        if label
-    ]
+    labels = []
+    usable_pothole_count = 0
+    for obj in root.findall("object"):
+        label = (obj.findtext("name") or "").strip()
+        if not label:
+            continue
+        labels.append(label)
+        if label == POTHOLE_LABEL and object_box_area(obj) >= RDD_MIN_BOX_AREA:
+            usable_pothole_count += 1
+
     unique_labels = sorted(set(labels))
-    num_pothole_objects = labels.count(POTHOLE_LABEL)
-    has_pothole = num_pothole_objects > 0
+    has_pothole = usable_pothole_count > 0
 
     size = root.find("size")
     image_width = int(size.findtext("width", 0)) if size is not None else 0
@@ -261,12 +264,24 @@ def parse_annotation(
         "label_name": "pothole" if has_pothole else "non_pothole",
         "has_pothole": int(has_pothole),
         "num_objects": len(labels),
-        "num_pothole_objects": num_pothole_objects,
+        "num_pothole_objects": usable_pothole_count,
         "unique_object_labels": "|".join(unique_labels),
         "object_labels": "|".join(labels),
         "image_width": image_width,
         "image_height": image_height,
     }
+
+
+def object_box_area(obj: ET.Element) -> int:
+    box = obj.find("bndbox")
+    if box is None:
+        return 0
+
+    xmin = int(float(box.findtext("xmin", 0)))
+    ymin = int(float(box.findtext("ymin", 0)))
+    xmax = int(float(box.findtext("xmax", 0)))
+    ymax = int(float(box.findtext("ymax", 0)))
+    return max(0, xmax - xmin) * max(0, ymax - ymin)
 
 
 def write_manifests(rows: list[dict[str, str | int]], output_dir: Path) -> None:

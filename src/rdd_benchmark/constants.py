@@ -1,6 +1,5 @@
 # True regenerates datasets/rdd2022/binary_pothole/*.csv before the rest of main.
-# Use this when split settings changed or the full-image manifests are missing.
-RUN_RDD_FULL_IMAGE_PREPROCESSING = False
+RUN_RDD_FULL_IMAGE_PREPROCESSING = True
 
 # RDD uses D40 for potholes. Other damage labels are treated as non-pothole.
 POTHOLE_LABEL = "D40"
@@ -33,9 +32,8 @@ RUN_RDD_PATCH_PREPROCESSING = False
 RDD_EXPERIMENT_NAME = "stratified_by_country"
 
 # Select which experiment IDs main.py should run.
-# A is the natural-data baseline. F/H were the strongest second-round settings
-# on mobilevit_xxs, so use them for the next cross-model probe.
-RDD_ACTIVE_EXPERIMENT_IDS = ("A", "F", "H")
+#E needs synthetic potholes first.
+RDD_ACTIVE_EXPERIMENT_IDS = ("A", "B", "C", "D", "F", "G", "H")
 
 # Required only when running Experiment E. Set this to the experiment folder name
 # that E should use as its synthetic-data base, usually the better of C or D.
@@ -81,7 +79,7 @@ RDD_THRESHOLD_VALUES = tuple(index / 100 for index in range(5, 96, 5))
 
 
 # "single" runs RDD_SINGLE_MODEL. "all" runs every model in RDD_MODEL_NAMES.
-RDD_MODEL_MODE = "all"
+RDD_MODEL_MODE = "single"
 # Used when RDD_MODEL_MODE is "single" for both adaptation smoke and training.
 RDD_SINGLE_MODEL = "mobilevit_xxs"
 # Used when RDD_MODEL_MODE is "all" for both adaptation smoke and training.

@@ -30,7 +30,7 @@ def test_shared_rdd_experiment_defaults_are_consistent():
 def test_get_rdd_experiment_config_returns_metadata_dict():
     config = get_rdd_experiment_config("A")
 
-    assert config.experiment_name == "A_full_image_natural_standard_aug"
+    assert config.experiment_name == "A_clean400_full_image_natural_standard_aug"
     assert config.experiment_id == "A"
 
 

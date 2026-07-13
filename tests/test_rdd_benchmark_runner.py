@@ -15,7 +15,7 @@ from src.rdd_benchmark.experiments.runner import (
 def make_manifest_paths(tmp_path: Path) -> RDDExperimentManifestPaths:
     dataset_dir = tmp_path / "dataset"
     return RDDExperimentManifestPaths(
-        experiment_name="A_full_image_natural_standard_aug",
+        experiment_name="A_clean400_full_image_natural_standard_aug",
         dataset_dir=dataset_dir,
         train_manifest_path=dataset_dir / "train.csv",
         validation_manifest_path=dataset_dir / "validation.csv",

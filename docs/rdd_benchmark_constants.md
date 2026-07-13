@@ -22,7 +22,8 @@ datasets/rdd2022/binary_pothole/
 ```
 
 Each CSV row is one full road image. The image is labeled `pothole` if its XML
-contains at least one `D40` object.
+contains at least one `D40` object with bounding-box area at least
+`RDD_MIN_BOX_AREA`, currently `400` px.
 
 ```python
 RUN_RDD_PATCH_PREPROCESSING = True
@@ -377,6 +378,22 @@ RDD_TRAINING_INPUT_MODE = "full_image"
 RDD_EVALUATION_INPUT_MODE = "full_image"
 RUN_RDD_FULL_IMAGE_PREPROCESSING = False
 RUN_RDD_PATCH_PREPROCESSING = False
+```
+
+### Run Clean400 Non-Synthetic Experiments On Three Probe Models
+
+```python
+RUN_RDD_FULL_IMAGE_PREPROCESSING = True
+RUN_RDD_PATCH_PREPROCESSING = False
+RDD_ACTIVE_EXPERIMENT_IDS = ("A", "B", "C", "D", "F", "G", "H")
+RDD_MODEL_MODE = "all"
+RDD_MODEL_NAMES = (
+    "mobilevit_xxs",
+    "mobilenet_v3_small",
+    "efficientnet_b0",
+)
+RDD_TRAINING_INPUT_MODE = "full_image"
+RDD_EVALUATION_INPUT_MODE = "full_image"
 ```
 
 ### Run The Best Experiment On All Models
