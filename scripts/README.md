@@ -1,6 +1,7 @@
 # Scripts
 
-This directory contains standalone scripts for training, benchmarking, deployment, inference demos, and data preprocessing.
+This directory contains standalone scripts for dataset downloads, model
+downloads, inference demos, and benchmark automation.
 
 ## Dataset Downloads
 

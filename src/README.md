@@ -1,6 +1,19 @@
 # Source Code
 
-This directory will contain the main implementation for inference, detection, VLM integration, and supporting utilities.
+This directory contains the reusable implementation for model loading,
+benchmarking, and RDD2022 binary pothole fine-tuning.
+
+## Packages
+
+- `rdd_benchmark/` contains the RDD2022 data preprocessing, dataset loading,
+  experiment registry, training, evaluation, and model-comparison pipeline.
+- `detection_benchmark/` contains model-quality benchmarks for object detection
+  and image classification datasets.
+- `performance_benchmark/` contains latency, FPS, memory, utilization, power,
+  and energy sampling utilities.
+- `custom_models.py` defines the tiny/source-defined image classifiers used in
+  the RDD benchmark.
+- `load_model.py` is the shared model registry and loader.
 
 ## Shared Constants
 
