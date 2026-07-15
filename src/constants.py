@@ -10,6 +10,14 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATASETS_DIR = PROJECT_ROOT / "datasets"
 COCO_DIR = DATASETS_DIR / "coco"
 COCO_IMAGES_DIR = COCO_DIR / "images"
+COCO_INSTANCES_VAL_ANNOTATIONS = COCO_DIR / "annotations" / "instances_val2017.json"
+IMAGENETTE_DIR = DATASETS_DIR / "imagenette"
+IMAGENETTE_VALIDATION_LABELS = IMAGENETTE_DIR / "validation_labels.csv"
+RDD2022_DIR = DATASETS_DIR / "rdd2022"
+RDD2022_BINARY_POTHOLE_DIR = RDD2022_DIR / "binary_pothole"
+RDD2022_BINARY_POTHOLE_PATCH_DIR = RDD2022_DIR / "binary_pothole_patches"
+RDD2022_BINARY_POTHOLE_EXPERIMENTS_DIR = RDD2022_DIR / "binary_pothole_experiments"
+RDD2022_SYNTHETIC_POTHOLE_DIR = RDD2022_DIR / "synthetic_potholes"
 
 MODELS_DIR = PROJECT_ROOT / "models"
 CNN_DIR = MODELS_DIR / "cnn"
@@ -22,6 +30,11 @@ SYSTEM_METRICS_RESULTS_DIR = RESULTS_DIR / "system_metrics"
 SYSTEM_PERFORMANCE_RESULTS_CSV = (
     SYSTEM_METRICS_RESULTS_DIR / "system_performance_results.csv"
 )
+DETECTION_METRICS_RESULTS_DIR = RESULTS_DIR / "detection_metrics"
+DETECTION_BENCHMARK_RESULTS_CSV = (
+    DETECTION_METRICS_RESULTS_DIR / "detection_benchmark_results.csv"
+)
+RDD_TRAINING_RESULTS_DIR = RESULTS_DIR / "rdd_trained_models"
 
 
 ######################

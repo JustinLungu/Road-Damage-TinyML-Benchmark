@@ -66,7 +66,15 @@ Download another annotated training subset:
 ./scripts/download_rdd2022_subset.sh united-states
 ```
 
-Norway is available but its official archive is approximately 9.9 GB.
+Download every available country-specific annotated training subset:
+
+```bash
+./scripts/download_rdd2022_subset.sh all
+```
+
+The `all` command skips country folders that already contain a `train/`
+directory. Norway is available but its official archive is approximately
+9.9 GB, so the full download is large.
 
 ## Resulting Layout
 
@@ -86,6 +94,208 @@ datasets/rdd2022/
 
 Each XML file contains the image metadata, damage class, and bounding-box
 coordinates for its corresponding image.
+
+## Binary Pothole Image Classification
+
+For the initial supervisor-requested image-classification task, the repository
+can create binary pothole/non-pothole manifests from the downloaded XML
+annotations. All RDD training actions are controlled from
+`src/rdd_benchmark/constants.py` and run through the single entry point:
+
+```bash
+uv run python -m src.rdd_benchmark.main
+```
+
+For a detailed explanation of each RDD pipeline constant, see
+`docs/rdd_benchmark_constants.md`.
+
+The binary target is:
+
+- `1`, `pothole`: the image contains at least one `D40` object.
+- `0`, `non_pothole`: the image contains no `D40` object.
+
+`non_pothole` therefore includes images with other road-damage classes, repair
+labels, and images with no annotated objects. This keeps the first task aligned
+with the requested question: pothole versus non-pothole.
+
+The default fine-tuning split is now `stratified_by_country`:
+
+- every country contributes to train, validation, and test;
+- pothole and non-pothole images are split separately inside each country;
+- the default ratio is `70%` train, `15%` validation, and `15%` test.
+
+This gives validation enough pothole examples for threshold tuning while keeping
+the test set meaningful. The older country-holdout split is still available for
+a harder cross-country generalization benchmark:
+
+| Split | Countries |
+| --- | --- |
+| `train` | `China_Drone`, `China_MotorBike`, `Czech`, `India` |
+| `validation` | `United_States` |
+| `test` | `Japan`, `Norway` |
+
+The script writes local generated CSV files under:
+
+```text
+datasets/rdd2022/binary_pothole/
+├── all.csv
+├── train.csv
+├── validation.csv
+├── test.csv
+└── summary.csv
+```
+
+These generated manifests are ignored by Git. Each row contains the image path,
+annotation path, country, split, binary label, object-label metadata, and image
+size. Use `summary.csv` to check class balance before training.
+
+To regenerate these full-image manifests, set:
+
+```python
+RUN_RDD_FULL_IMAGE_PREPROCESSING = True
+RUN_RDD_PATCH_PREPROCESSING = False
+```
+
+Then run:
+
+```bash
+uv run python -m src.rdd_benchmark.main
+```
+
+After the manifests are generated, set the preprocessing flags back to `False`
+unless you changed the dataset split or want to overwrite the CSV files.
+
+## Patch-Grid Binary Pothole Pipeline
+
+The patch-grid pipeline is closer to the RDD classification papers while still
+supporting full-image inference without test-time bounding boxes.
+
+Training uses annotation-derived patches:
+
+- `D40` bounding boxes become `pothole` patches.
+- Non-`D40` damage boxes become `non_pothole` patches.
+
+Testing/inference uses full images:
+
+```text
+full image -> 3x3 grid patches -> patch classifier -> max pothole score -> image label
+```
+
+This keeps the trained model as a binary image classifier. It does not train a
+YOLO-style box regression head, and it does not use bounding boxes at test time.
+
+To create the patch manifests, set:
+
+```python
+RUN_RDD_FULL_IMAGE_PREPROCESSING = False
+RUN_RDD_PATCH_PREPROCESSING = True
+```
+
+Then run:
+
+```bash
+uv run python -m src.rdd_benchmark.main
+```
+
+This writes:
+
+```text
+datasets/rdd2022/binary_pothole_patches/
+├── all.csv
+├── train.csv
+├── validation.csv
+├── test.csv
+└── summary.csv
+```
+
+To train on annotation patches and evaluate on full images with 3x3 grid
+inference, use constants like:
+
+```python
+RDD_EXPERIMENT_NAME = "annotation_patch_grid3"
+RDD_TRAINING_INPUT_MODE = "annotation_patch"
+RDD_EVALUATION_INPUT_MODE = "grid_image"
+RDD_GRID_SIZE = 3
+RDD_PATCH_DECISION_THRESHOLD = 0.5
+RDD_TUNE_PATCH_THRESHOLD = True
+
+RUN_RDD_PATCH_PREPROCESSING = False
+RUN_RDD_TRAINING = True
+RUN_RDD_EVALUATION = True
+RUN_RDD_COMPARISON = True
+```
+
+Then run:
+
+```bash
+uv run python -m src.rdd_benchmark.main
+```
+
+Results are saved under the experiment name:
+
+```text
+results/rdd_trained_models/<RDD_EXPERIMENT_NAME>/<model_name>/
+├── best.pt
+├── history.csv
+├── threshold.json
+├── test_metrics.json
+├── test_metrics.csv
+├── inference_metrics.json
+├── confusion_matrix.csv
+├── confusion_matrix.png
+├── roc_curve.png
+└── test_metric_bars.png
+```
+
+The experiment comparison files are saved to:
+
+```text
+results/rdd_trained_models/<RDD_EXPERIMENT_NAME>/model_comparison.csv
+results/rdd_trained_models/<RDD_EXPERIMENT_NAME>/top_models.csv
+```
+
+Load the generated manifests for training with:
+
+```python
+from pathlib import Path
+
+from src.rdd_benchmark import BinaryPotholeDataset
+
+train_dataset = BinaryPotholeDataset(
+    Path("datasets/rdd2022/binary_pothole/train.csv"),
+    expected_split="train",
+)
+```
+
+Smoke-test the loader and print split summaries with:
+
+```bash
+uv run python -m src.rdd_benchmark.main
+```
+
+Adapt a pretrained image-classification model for binary pothole fine-tuning:
+
+```python
+from src.load_model import load_model
+from src.rdd_benchmark.training.utils import adapt_model_for_binary_pothole
+
+model_name = "mobilenet_v3_small"
+model = load_model(model_name)
+model = adapt_model_for_binary_pothole(model_name, model)
+```
+
+Only image-classification models are supported for this RDD fine-tuning path:
+MobileNet, EfficientNet-B0, ResNet18, InceptionV3, MobileViT, and
+EfficientFormer. YOLO detectors and SmolVLM vision-language models are
+intentionally excluded.
+
+To change the country split, edit `SPLIT_COUNTRIES` in
+`src/rdd_benchmark/constants.py`, enable the preprocessing flag for the manifests
+you want to regenerate, then rerun:
+
+```bash
+uv run python -m src.rdd_benchmark.main
+```
 
 ## Source And License
 

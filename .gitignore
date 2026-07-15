@@ -1,5 +1,9 @@
 annotations*
 images*
+datasets/imagenette/validation_labels.csv
+datasets/rdd2022/binary_pothole/
+datasets/rdd2022/binary_pothole_patches/
+datasets/rdd2022/binary_pothole_experiments/
 
 .vscode/
 *.pt
@@ -17,6 +21,10 @@ docs/models/*/outputs/
 # Results
 !results/system_metrics/README.md
 results/system_metrics/*
+results/detection_metrics/*
+!results/detection_metrics/README.md
+results/rdd_trained_models/*
+!results/rdd_trained_models/README.md
 
 
 
