@@ -17,6 +17,7 @@ from src.performance_benchmark.constants import (
     MOBILEVIT_MODELS,
     MOBILENET_MODELS,
     RESNET_MODELS,
+    SHUFFLENET_MODELS,
 )
 from src.performance_benchmark.utils import load_rgb_image, move_inputs_to_device
 
@@ -61,6 +62,11 @@ class ClassificationInferenceAdapter:
             from torchvision.models import ResNet18_Weights
 
             self.transform = ResNet18_Weights.DEFAULT.transforms()
+            return self._predict_transformed_tensor
+        if self.model_name in SHUFFLENET_MODELS:
+            from torchvision.models import ShuffleNet_V2_X0_5_Weights
+
+            self.transform = ShuffleNet_V2_X0_5_Weights.DEFAULT.transforms()
             return self._predict_transformed_tensor
         if self.model_name in INCEPTION_MODELS:
             from torchvision.models import Inception_V3_Weights

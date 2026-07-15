@@ -63,6 +63,7 @@ size estimate from the instantiated architecture.
 | `mobilevit_xxs` | Image classification | 4.91 MiB / 5.15 MB | small | Yes | Smallest current RDD image-classification candidate. |
 | `mobilevit_xs` | Image classification | 8.92 MiB / 9.35 MB | small | Yes | Fits the 1-10 MB small bucket. |
 | `mobilenet_v3_small` | Image classification | 9.83 MiB / 10.31 MB | borderline small | Yes | Under 10 MiB but slightly above 10 decimal MB. |
+| `shufflenet_v2_x0_5` | Image classification | approx. 5.21 MiB / 5.47 MB FP32 | small | Yes | Torchvision ShuffleNetV2 0.5x model. |
 | `mobilenet_v2` | Image classification | 13.60 MiB / 14.26 MB | medium | Yes | Above the requested small bucket. |
 | `efficientnet_b0` | Image classification | 20.45 MiB / 21.44 MB | medium | Yes | Above the requested small bucket. |
 | `mobilenet_v3_large` | Image classification | 21.11 MiB / 22.13 MB | medium | Yes | Above the requested small bucket. |
@@ -82,7 +83,7 @@ Current conclusion for the RDD image-classification path:
   `tiny_cnn`, `resnet8`, `ds_cnn_small`, and `mobilenet_v1_025`, which are
   under 1 MB before any quantization.
 - We **do have small image-classification candidates**: `mobilevit_xxs`,
-  `mobilevit_xs`, and possibly `mobilenet_v3_small` if the 10 MB limit is
-  interpreted as 10 MiB.
+  `mobilevit_xs`, `shufflenet_v2_x0_5`, and possibly `mobilenet_v3_small` if
+  the 10 MB limit is interpreted as 10 MiB.
 - The current pretrained YOLO files are small, but they are object detectors
   and do not satisfy the binary image-classification model requirement.

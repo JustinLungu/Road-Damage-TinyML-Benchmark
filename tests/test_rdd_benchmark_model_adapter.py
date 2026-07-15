@@ -74,6 +74,7 @@ def test_supported_rdd_fine_tuning_model_set_excludes_detection_and_vlm() -> Non
     assert "mobilenet_v2" in RDD_IMAGE_CLASSIFICATION_MODELS
     assert "efficientnet_b0" in RDD_IMAGE_CLASSIFICATION_MODELS
     assert "resnet18" in RDD_IMAGE_CLASSIFICATION_MODELS
+    assert "shufflenet_v2_x0_5" in RDD_IMAGE_CLASSIFICATION_MODELS
     assert "inception_v3" in RDD_IMAGE_CLASSIFICATION_MODELS
     assert "mobilevit_xxs" in RDD_IMAGE_CLASSIFICATION_MODELS
     assert "efficientformer_l1" in RDD_IMAGE_CLASSIFICATION_MODELS
@@ -99,10 +100,11 @@ def test_adapts_classifier_sequence_models(model_name: str) -> None:
     assert_binary_linear(model.classifier[-1], in_features=16)
 
 
-def test_adapts_resnet_fc() -> None:
+@pytest.mark.parametrize("model_name", ["resnet18", "shufflenet_v2_x0_5"])
+def test_adapts_fc_models(model_name: str) -> None:
     model = FakeResNetModel()
 
-    adapt_model_for_binary_pothole("resnet18", model)
+    adapt_model_for_binary_pothole(model_name, model)
 
     assert_binary_linear(model.fc, in_features=32)
 

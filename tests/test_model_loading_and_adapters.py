@@ -15,6 +15,7 @@ from src.constants import (
     MOBILENET_MODEL_CHECKPOINTS,
     MOBILEVIT_MODEL_IDS,
     RESNET_MODEL_CHECKPOINTS,
+    SHUFFLENET_MODEL_CHECKPOINTS,
     SMOLVLM_MODEL_IDS,
     YOLO_MODEL_CHECKPOINTS,
 )
@@ -72,12 +73,18 @@ def install_fake_model_modules(monkeypatch) -> None:
     )
     torchvision_models.EfficientNet_B0_Weights = SimpleNamespace(DEFAULT=FakeWeights())
     torchvision_models.ResNet18_Weights = SimpleNamespace(DEFAULT=FakeWeights())
+    torchvision_models.ShuffleNet_V2_X0_5_Weights = SimpleNamespace(
+        DEFAULT=FakeWeights()
+    )
     torchvision_models.Inception_V3_Weights = SimpleNamespace(DEFAULT=FakeWeights())
     torchvision_models.mobilenet_v2 = lambda weights: FakeModel("v2")
     torchvision_models.mobilenet_v3_small = lambda weights: FakeModel("small")
     torchvision_models.mobilenet_v3_large = lambda weights: FakeModel("large")
     torchvision_models.efficientnet_b0 = lambda weights: FakeModel("efficientnet_b0")
     torchvision_models.resnet18 = lambda weights: FakeModel("resnet18")
+    torchvision_models.shufflenet_v2_x0_5 = lambda weights: FakeModel(
+        "shufflenet_v2_x0_5"
+    )
     torchvision_models.inception_v3 = lambda weights: FakeModel("inception_v3")
     torchvision.models = torchvision_models
     monkeypatch.setitem(sys.modules, "torchvision", torchvision)
@@ -119,6 +126,7 @@ def test_all_registered_models_route_through_load_model(monkeypatch) -> None:
         | set(MOBILENET_MODEL_CHECKPOINTS)
         | set(EFFICIENTNET_MODEL_CHECKPOINTS)
         | set(RESNET_MODEL_CHECKPOINTS)
+        | set(SHUFFLENET_MODEL_CHECKPOINTS)
         | set(INCEPTION_MODEL_CHECKPOINTS)
         | set(MOBILEVIT_MODEL_IDS)
         | set(EFFICIENTFORMER_MODEL_IDS)
@@ -225,6 +233,7 @@ def test_loader_functions_use_external_factories(monkeypatch) -> None:
     assert load_model_module.load_mobilenet_v3_large().eval_called is True
     assert load_model_module.load_efficientnet_b0().eval_called is True
     assert load_model_module.load_resnet18().eval_called is True
+    assert load_model_module.load_shufflenet_v2_x0_5().eval_called is True
     assert load_model_module.load_inception_v3().eval_called is True
     assert isinstance(load_model_module.load_tiny_cnn(), torch.nn.Module)
     assert isinstance(load_model_module.load_resnet8(), torch.nn.Module)

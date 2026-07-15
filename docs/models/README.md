@@ -24,6 +24,7 @@ Each model-family README should explain:
 - [MobileNet classifiers](mobilenet/README.md): Torchvision MobileNetV2 and MobileNetV3 Small/Large classifiers loaded from `models/cnn/hub/checkpoints/`.
 - [MobileViT classifiers](mobilevit/README.md): Hugging Face MobileViT XXS, XS, and Small image classifiers loaded from `models/vit/`.
 - [ResNet classifiers](resnet/README.md): Torchvision ResNet18 plus custom local ResNet8 residual classifier.
+- [ShuffleNet classifiers](shufflenet/README.md): Torchvision ShuffleNetV2 0.5x image classifier loaded from `models/cnn/hub/checkpoints/`.
 
 ## Vision-Language
 

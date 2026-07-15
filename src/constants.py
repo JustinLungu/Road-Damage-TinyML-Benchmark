@@ -64,6 +64,11 @@ RESNET_MODEL_CHECKPOINTS = {
     "resnet18": "resnet18-f37072fd.pth",
 }
 
+# Torchvision downloads ShuffleNet weights under models/cnn/hub/checkpoints/.
+SHUFFLENET_MODEL_CHECKPOINTS = {
+    "shufflenet_v2_x0_5": "shufflenetv2_x0.5-f707e7126e.pth",
+}
+
 # Torchvision downloads Inception weights under models/cnn/hub/checkpoints/.
 INCEPTION_MODEL_CHECKPOINTS = {
     "inception_v3": "inception_v3_google-0cc3c7bd.pth",
@@ -122,6 +127,10 @@ MODEL_CHECKPOINT_PATHS: dict[str, Path] = {
     **{
         model_name: CNN_DIR / "hub" / "checkpoints" / checkpoint_name
         for model_name, checkpoint_name in RESNET_MODEL_CHECKPOINTS.items()
+    },
+    **{
+        model_name: CNN_DIR / "hub" / "checkpoints" / checkpoint_name
+        for model_name, checkpoint_name in SHUFFLENET_MODEL_CHECKPOINTS.items()
     },
     **{
         model_name: CNN_DIR / "hub" / "checkpoints" / checkpoint_name

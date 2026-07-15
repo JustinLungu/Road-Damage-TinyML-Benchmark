@@ -11,6 +11,7 @@ from src.constants import (
     MODEL_CACHE_DIRS,
     MODEL_CHECKPOINT_PATHS,
     MODEL_STORAGE_DIRS,
+    SHUFFLENET_MODEL_CHECKPOINTS,
     SMOLVLM_MODEL_IDS,
     VIT_DIR,
     VLM_DIR,
@@ -73,6 +74,15 @@ def load_resnet18() -> Any:
     from torchvision.models import ResNet18_Weights, resnet18
 
     return resnet18(weights=ResNet18_Weights.DEFAULT).eval()
+
+
+def load_shufflenet_v2_x0_5() -> Any:
+    # Torchvision reads TORCH_HOME when deciding where pretrained weights live.
+    os.environ["TORCH_HOME"] = str(CNN_DIR)
+
+    from torchvision.models import ShuffleNet_V2_X0_5_Weights, shufflenet_v2_x0_5
+
+    return shufflenet_v2_x0_5(weights=ShuffleNet_V2_X0_5_Weights.DEFAULT).eval()
 
 
 def load_inception_v3() -> Any:
@@ -167,6 +177,7 @@ MODEL_LOADERS: dict[str, Callable[[], Any]] = {
     "mobilenet_v3_large": load_mobilenet_v3_large,
     "efficientnet_b0": load_efficientnet_b0,
     "resnet18": load_resnet18,
+    "shufflenet_v2_x0_5": load_shufflenet_v2_x0_5,
     "inception_v3": load_inception_v3,
     # Local custom image classification
     "ds_cnn_small": load_ds_cnn_small,

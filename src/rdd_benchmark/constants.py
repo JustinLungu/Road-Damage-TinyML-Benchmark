@@ -99,6 +99,7 @@ RDD_MODEL_NAMES = (
     "mobilenet_v3_large",
     "efficientnet_b0",
     "resnet18",
+    "shufflenet_v2_x0_5",
     "inception_v3",
     "efficientformer_l1",
     "efficientformer_l3",
@@ -106,7 +107,7 @@ RDD_MODEL_NAMES = (
 )
 # Available image-classification models for this list:
 # "mobilenet_v2", "mobilenet_v3_small", "mobilenet_v3_large",
-# "efficientnet_b0", "resnet18", "inception_v3",
+# "efficientnet_b0", "resnet18", "shufflenet_v2_x0_5", "inception_v3",
 # "mobilevit_xxs", "mobilevit_xs", "mobilevit_s",
 # "efficientformer_l1", "efficientformer_l3", "efficientformer_l7",
 # "tiny_cnn", "resnet8", "ds_cnn_small", "mobilenet_v1_025".

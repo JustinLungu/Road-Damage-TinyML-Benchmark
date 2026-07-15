@@ -12,6 +12,7 @@ from src.performance_benchmark.constants import (
     MOBILEVIT_MODELS,
     MOBILENET_MODELS,
     RESNET_MODELS,
+    SHUFFLENET_MODELS,
     SMOLVLM_MODELS,
     SMOLVLM_PROMPT,
     YOLO_MODELS,
@@ -47,6 +48,8 @@ class ModelInferenceAdapter:
             return self._prepare_efficientnet()
         if self.model_name in RESNET_MODELS:
             return self._prepare_resnet()
+        if self.model_name in SHUFFLENET_MODELS:
+            return self._prepare_shufflenet()
         if self.model_name in INCEPTION_MODELS:
             return self._prepare_inception()
         if self.model_name in MOBILEVIT_MODELS:
@@ -97,6 +100,13 @@ class ModelInferenceAdapter:
         from torchvision.models import ResNet18_Weights
 
         self.transform = ResNet18_Weights.DEFAULT.transforms()
+        self.model.to(self.device).eval()
+        return self._infer_transformed_tensor
+
+    def _prepare_shufflenet(self) -> InferenceFunction:
+        from torchvision.models import ShuffleNet_V2_X0_5_Weights
+
+        self.transform = ShuffleNet_V2_X0_5_Weights.DEFAULT.transforms()
         self.model.to(self.device).eval()
         return self._infer_transformed_tensor
 

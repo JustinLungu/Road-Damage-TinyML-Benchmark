@@ -12,6 +12,7 @@ from src.performance_benchmark.constants import (
     MOBILEVIT_MODELS,
     MOBILENET_MODELS,
     RESNET_MODELS,
+    SHUFFLENET_MODELS,
 )
 from src.rdd_benchmark.constants import (
     NUM_BINARY_CLASSES,
@@ -47,6 +48,8 @@ class BinaryPotholeModelAdapter:
         if self.model_name in MOBILENET_MODELS | EFFICIENTNET_MODELS:
             return self._adapt_classifier_sequence(model)
         if self.model_name in RESNET_MODELS:
+            return self._adapt_linear_attribute(model, "fc")
+        if self.model_name in SHUFFLENET_MODELS:
             return self._adapt_linear_attribute(model, "fc")
         if self.model_name in INCEPTION_MODELS:
             return self._adapt_inception(model)
