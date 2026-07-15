@@ -459,7 +459,7 @@ def test_rdd_dataset_factories_reject_invalid_modes_and_splits() -> None:
         select_rdd_manifest_path("holdout", "full_image")
 
 
-def test_rdd_training_utils_parse_labels_and_resolve_paths(tmp_path) -> None:
+def test_rdd_benchmark_utils_parse_labels_and_resolve_paths(tmp_path) -> None:
     manifest_path = tmp_path / "manifests" / "train.csv"
     manifest_path.parent.mkdir()
     project_root = tmp_path / "repo"
@@ -487,7 +487,7 @@ def test_rdd_training_utils_parse_labels_and_resolve_paths(tmp_path) -> None:
         parse_binary_label("bad", 4)
 
 
-def test_rdd_training_main_runs_selected_experiment_runner(monkeypatch, capsys) -> None:
+def test_rdd_benchmark_main_runs_selected_experiment_runner(monkeypatch, capsys) -> None:
     runner_configs = []
 
     class FakeRunner:
