@@ -1,29 +1,45 @@
-# ResNet18 Classifier
+# ResNet Classifiers
 
-This folder documents the Torchvision ResNet18 classifier used in the
-repository:
+This folder documents the ResNet-family classifiers used in the repository:
 
-| Repo name | Checkpoint location | Parameters | FLOPs | ImageNet-1K acc@1 / acc@5 |
-| --- | --- | --- | --- | --- |
-| `resnet18` | `models/cnn/hub/checkpoints/resnet18-f37072fd.pth` | 11.69M | 1.814B | 69.758 / 89.078 |
+| Repo name | Checkpoint location | Family | Parameters | FLOPs | ImageNet-1K acc@1 / acc@5 | Size bucket |
+| --- | --- | --- | ---: | ---: | --- | --- |
+| `resnet18` | `models/cnn/hub/checkpoints/resnet18-f37072fd.pth` | Torchvision ResNet18 | 11.69M | 1.814B | 69.758 / 89.078 | medium |
+| `resnet8` | none; source-defined model | custom residual CNN | 111,928 | not measured | not pretrained | tiny |
 
 ResNet18 is an ImageNet-1K pretrained classifier with 1000 output classes. It
 is included as a conventional CNN baseline against which the lighter
 MobileNetV2 and EfficientNet-B0 models can be compared.
 
-The parameter count, FLOPs, accuracy, preprocessing transform, and class labels
-come from Torchvision's default `ResNet18_Weights`.
+ResNet8 is a custom local residual CNN. It has no pretrained checkpoint and is
+instantiated directly from `src/custom_models.py`. It exists as a true tiny
+model candidate for RDD binary pothole classification.
+
+The ResNet18 parameter count, FLOPs, accuracy, preprocessing transform, and
+class labels come from Torchvision's default `ResNet18_Weights`. The ResNet8
+parameter count is computed from the local architecture.
 
 For definitions of residual learning, skip connection, BasicBlock, identity
 mapping, downsampling, logits, softmax, top-k, parameters, and FLOPs, see
 [definitions.md](definitions.md).
 
-The checkpoint path is registered in `src/constants.py`:
+The ResNet18 checkpoint path is registered in `src/constants.py`:
 
 ```python
 RESNET_MODEL_CHECKPOINTS = {
     "resnet18": "resnet18-f37072fd.pth",
 }
+```
+
+The custom ResNet8 model is registered in:
+
+```python
+CUSTOM_IMAGE_CLASSIFICATION_MODELS = frozenset(
+    {
+        "resnet8",
+        "tiny_cnn",
+    }
+)
 ```
 
 ## Why ResNet18 Is A Useful Baseline
@@ -41,9 +57,31 @@ reference architecture without mobile-specific operators.
 ResNet18 is not an object detector. It returns one 1000-class score vector for
 the whole image and does not return bounding boxes.
 
+## Why ResNet8 Is Included
+
+ResNet8 provides a tiny residual alternative to `tiny_cnn`. It is below 1 MB
+before quantization and therefore satisfies the tiny-model bucket. Unlike
+ResNet18, it is not pretrained. Its useful test is whether a very small
+residual model can learn from the cleaned and balanced RDD2022 binary pothole
+dataset.
+
+The ResNet8 flow is:
+
+```text
+image tensor
+  -> convolutional stem
+  -> residual block at 16 channels
+  -> downsample to 32 channels
+  -> residual block at 32 channels
+  -> downsample to 64 channels
+  -> adaptive average pooling
+  -> fully connected classifier
+  -> logits
+```
+
 ## Internal Flow
 
-The inference path is:
+The ResNet18 inference path is:
 
 ```text
 image file
@@ -123,13 +161,17 @@ scores, class_ids = probabilities.topk(TOP_K)
 
 ## How This Repo Loads It
 
-`src/load_model.py` returns the pretrained Torchvision model:
+`src/load_model.py` returns either the pretrained Torchvision model or the
+source-defined custom model:
 
 ```python
 from src.load_model import load_model
 
 model = load_model("resnet18")
 print(type(model))
+
+tiny_model = load_model("resnet8")
+print(type(tiny_model))
 ```
 
 The loader sets `TORCH_HOME` to `models/cnn`, so Torchvision stores the
@@ -138,6 +180,10 @@ checkpoint under:
 ```text
 models/cnn/hub/checkpoints/
 ```
+
+ResNet8 does not create a file under `models/`; it is created from source code.
+After RDD training, its learned checkpoint is saved under
+`results/rdd_trained_models/<experiment_name>/resnet8/best.pt`.
 
 The benchmark path is:
 
@@ -182,12 +228,16 @@ for score, class_id in zip(scores, class_ids):
 
 ## Reading The Output
 
-ResNet18 returns logits shaped `batch_size x 1000`. For one image, the shape is
+Both ResNet demos return logits shaped `batch_size x 1000`. For one image, the shape is
 `1 x 1000`.
 
-The demo prints rank, ImageNet label, softmax probability, and class ID. COCO
-images may contain several objects, so the top label should be interpreted as
-whole-image classification rather than detection.
+For ResNet18, the demo prints rank, ImageNet label, softmax probability, and
+class ID. COCO images may contain several objects, so the top label should be
+interpreted as whole-image classification rather than detection.
+
+For ResNet8, the logits are random until the model is fine-tuned. The demo can
+still run to confirm shape and inference plumbing, but the printed labels should
+not be interpreted as meaningful predictions.
 
 ## Quick Demo
 
@@ -216,6 +266,14 @@ TOP_K = 5
 SAVE_RESULTS_JSON = True
 SAVE_INPUT_IMAGE = True
 OUTPUT_DIR = MODEL_DOCS_DIR / "outputs"
+```
+
+Available demo options:
+
+```python
+MODEL_NAMES = ["resnet18"]            # pretrained Torchvision ResNet18
+MODEL_NAMES = ["resnet8"]             # custom tiny ResNet8, untrained
+MODEL_NAMES = ["resnet18", "resnet8"] # run both
 ```
 
 Generated images and JSON files are written under

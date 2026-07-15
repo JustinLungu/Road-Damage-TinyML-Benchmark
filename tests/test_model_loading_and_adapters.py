@@ -227,6 +227,7 @@ def test_loader_functions_use_external_factories(monkeypatch) -> None:
     assert load_model_module.load_resnet18().eval_called is True
     assert load_model_module.load_inception_v3().eval_called is True
     assert isinstance(load_model_module.load_tiny_cnn(), torch.nn.Module)
+    assert isinstance(load_model_module.load_resnet8(), torch.nn.Module)
     assert (
         load_model_module.load_mobilevit("apple/mobilevit-small", "mobilevit_s").name
         == "mobilevit"

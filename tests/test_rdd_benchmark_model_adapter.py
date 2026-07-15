@@ -68,6 +68,7 @@ def assert_binary_linear(layer: nn.Linear, in_features: int) -> None:
 
 def test_supported_rdd_fine_tuning_model_set_excludes_detection_and_vlm() -> None:
     assert "tiny_cnn" in RDD_IMAGE_CLASSIFICATION_MODELS
+    assert "resnet8" in RDD_IMAGE_CLASSIFICATION_MODELS
     assert "mobilenet_v2" in RDD_IMAGE_CLASSIFICATION_MODELS
     assert "efficientnet_b0" in RDD_IMAGE_CLASSIFICATION_MODELS
     assert "resnet18" in RDD_IMAGE_CLASSIFICATION_MODELS
@@ -131,6 +132,14 @@ def test_adapts_tiny_cnn_classifier() -> None:
     adapt_model_for_binary_pothole("tiny_cnn", model)
 
     assert_binary_linear(model.classifier, in_features=40)
+
+
+def test_adapts_resnet8_fc() -> None:
+    model = FakeResNetModel()
+
+    adapt_model_for_binary_pothole("resnet8", model)
+
+    assert_binary_linear(model.fc, in_features=32)
 
 
 def test_adapts_efficientformer_with_reset_classifier() -> None:

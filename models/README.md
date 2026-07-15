@@ -55,6 +55,7 @@ size estimate from the instantiated architecture.
 | Model | Type | Local/pretrained size | Size bucket | Used for RDD binary image classification? | Notes |
 | --- | --- | ---: | --- | --- | --- |
 | `tiny_cnn` | Image classification | approx. 0.34 MiB / 0.35 MB FP32 | tiny | Yes | Custom local model with no pretrained checkpoint. |
+| `resnet8` | Image classification | approx. 0.43 MiB / 0.45 MB FP32 | tiny | Yes | Custom local residual model with no pretrained checkpoint. |
 | `yolov5nu` | Object detection | 5.31 MiB / 5.56 MB | small | No | YOLO detector, not image classification. |
 | `yolov8n` | Object detection | 6.25 MiB / 6.55 MB | small | No | YOLO detector, not image classification. |
 | `mobilevit_xxs` | Image classification | 4.91 MiB / 5.15 MB | small | Yes | Smallest current RDD image-classification candidate. |
@@ -75,8 +76,8 @@ size estimate from the instantiated architecture.
 
 Current conclusion for the RDD image-classification path:
 
-- We now have a **true tiny custom image-classification model**:
-  `tiny_cnn`, which is under 1 MB before any quantization.
+- We now have **true tiny custom image-classification models**:
+  `tiny_cnn` and `resnet8`, which are under 1 MB before any quantization.
 - We **do have small image-classification candidates**: `mobilevit_xxs`,
   `mobilevit_xs`, and possibly `mobilenet_v3_small` if the 10 MB limit is
   interpreted as 10 MiB.

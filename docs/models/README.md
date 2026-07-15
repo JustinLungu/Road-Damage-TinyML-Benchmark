@@ -22,7 +22,7 @@ Each model-family README should explain:
 - [InceptionV3 classifier](inception/README.md): Torchvision InceptionV3 image classifier loaded from `models/cnn/hub/checkpoints/`.
 - [MobileNet classifiers](mobilenet/README.md): Torchvision MobileNetV2 and MobileNetV3 Small/Large classifiers loaded from `models/cnn/hub/checkpoints/`.
 - [MobileViT classifiers](mobilevit/README.md): Hugging Face MobileViT XXS, XS, and Small image classifiers loaded from `models/vit/`.
-- [ResNet18 classifier](resnet/README.md): Torchvision ResNet18 image classifier loaded from `models/cnn/hub/checkpoints/`.
+- [ResNet classifiers](resnet/README.md): Torchvision ResNet18 plus custom local ResNet8 residual classifier.
 
 ## Vision-Language
 

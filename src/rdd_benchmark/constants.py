@@ -87,6 +87,7 @@ RDD_SINGLE_MODEL = "tiny_cnn"
 # Used when RDD_MODEL_MODE is "all" for both adaptation smoke and training.
 # This is the run subset, not necessarily every model that the adapter supports.
 RDD_MODEL_NAMES = (
+    "resnet8",
     "tiny_cnn",
     "mobilevit_xxs",
     "mobilevit_xs",
@@ -106,7 +107,7 @@ RDD_MODEL_NAMES = (
 # "efficientnet_b0", "resnet18", "inception_v3",
 # "mobilevit_xxs", "mobilevit_xs", "mobilevit_s",
 # "efficientformer_l1", "efficientformer_l3", "efficientformer_l7",
-# "tiny_cnn".
+# "tiny_cnn", "resnet8".
 
 
 ################

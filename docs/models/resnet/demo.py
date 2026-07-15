@@ -16,7 +16,7 @@ MODEL_DOCS_DIR = Path(__file__).resolve().parent
 # Allow imports from src/ when this file is executed directly.
 sys.path.insert(0, str(REPO_ROOT))
 
-from src.constants import RESNET_MODEL_CHECKPOINTS  # noqa: E402
+from src.constants import CUSTOM_IMAGE_CLASSIFICATION_MODELS, RESNET_MODEL_CHECKPOINTS  # noqa: E402
 from src.load_model import load_model  # noqa: E402
 from src.performance_benchmark.utils import load_rgb_image, resolve_device  # noqa: E402
 
@@ -25,7 +25,11 @@ from src.performance_benchmark.utils import load_rgb_image, resolve_device  # no
 # Demo Config
 #############
 
-SUPPORTED_MODEL_NAMES = tuple(RESNET_MODEL_CHECKPOINTS)
+SUPPORTED_MODEL_NAMES = tuple(RESNET_MODEL_CHECKPOINTS) + tuple(
+    model_name
+    for model_name in sorted(CUSTOM_IMAGE_CLASSIFICATION_MODELS)
+    if model_name == "resnet8"
+)
 MODEL_NAMES = ["resnet18"]
 
 # Manual-image mode: used when USE_RANDOM_IMAGE is False.
@@ -149,9 +153,10 @@ def save_results_json(
     output_dir = resolve_repo_path(OUTPUT_DIR)
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"{model_name}_topk.json"
+    checkpoint = RESNET_MODEL_CHECKPOINTS.get(model_name, "source-defined custom model")
     output = {
         "model_name": model_name,
-        "checkpoint": RESNET_MODEL_CHECKPOINTS[model_name],
+        "checkpoint": checkpoint,
         "image_path": str(display_path(image_path)),
         "top_k": TOP_K,
         "input_shape": list(input_shape),
@@ -193,6 +198,8 @@ def run_model(model_name: str, image_path: Path, device: torch.device) -> None:
     print(f"Model: {model_name}")
     print(f"Image: {display_path(image_path)}")
     print(f"Input tensor shape: {input_shape}")
+    if model_name == "resnet8":
+        print("Note: resnet8 is untrained here; top-k labels are not meaningful.")
     print_classification_table(rows)
 
     if SAVE_RESULTS_JSON:
