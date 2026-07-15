@@ -90,4 +90,13 @@ fi
 
 cd "$ROOT_DIR"
 mkdir -p "$UV_CACHE_DIR"
-uv run python "$demo_path"
+
+if command -v uv >/dev/null 2>&1; then
+    python_runner=(uv run python)
+elif [[ -x "$ROOT_DIR/.venv/bin/python" ]]; then
+    python_runner=("$ROOT_DIR/.venv/bin/python")
+else
+    python_runner=(python)
+fi
+
+"${python_runner[@]}" "$demo_path"

@@ -5,6 +5,7 @@ from typing import Any
 import torch.nn as nn
 
 from src.performance_benchmark.constants import (
+    CUSTOM_IMAGE_CLASSIFICATION_MODELS,
     EFFICIENTFORMER_MODELS,
     EFFICIENTNET_MODELS,
     INCEPTION_MODELS,
@@ -53,6 +54,8 @@ class BinaryPotholeModelAdapter:
             return self._adapt_mobilevit(model)
         if self.model_name in EFFICIENTFORMER_MODELS:
             return self._adapt_efficientformer(model)
+        if self.model_name in CUSTOM_IMAGE_CLASSIFICATION_MODELS:
+            return self._adapt_linear_attribute(model, "classifier")
 
         raise ValueError(f"No RDD model adapter is defined for: {self.model_name}")
 

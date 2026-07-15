@@ -83,6 +83,13 @@ EFFICIENTFORMER_MODEL_IDS = {
     "efficientformer_l7": "efficientformer_l7.snap_dist_in1k",
 }
 
+# Local custom image classifiers. These have no pretrained checkpoint to download.
+CUSTOM_IMAGE_CLASSIFICATION_MODELS = frozenset(
+    {
+        "tiny_cnn",
+    }
+)
+
 # Hugging Face model IDs for the VLM benchmark path.
 SMOLVLM_MODEL_IDS = {
     "smolvlm_256m": "HuggingFaceTB/SmolVLM-256M-Instruct",

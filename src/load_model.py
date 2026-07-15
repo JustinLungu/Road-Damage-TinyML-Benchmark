@@ -5,6 +5,7 @@ from typing import Any, Callable
 from src.constants import (
     CHECKPOINT_PATTERNS,
     CNN_DIR,
+    CUSTOM_IMAGE_CLASSIFICATION_MODELS,
     EFFICIENTFORMER_MODEL_IDS,
     MOBILEVIT_MODEL_IDS,
     MODEL_CACHE_DIRS,
@@ -83,6 +84,12 @@ def load_inception_v3() -> Any:
     return inception_v3(weights=Inception_V3_Weights.DEFAULT).eval()
 
 
+def load_tiny_cnn() -> Any:
+    from src.custom_models import tiny_cnn
+
+    return tiny_cnn().eval()
+
+
 def load_mobilevit(model_id: str, local_name: str) -> Any:
     from transformers import AutoModelForImageClassification
 
@@ -143,6 +150,8 @@ MODEL_LOADERS: dict[str, Callable[[], Any]] = {
     "efficientnet_b0": load_efficientnet_b0,
     "resnet18": load_resnet18,
     "inception_v3": load_inception_v3,
+    # Local custom image classification
+    "tiny_cnn": load_tiny_cnn,
     # Lightweight vision transformers
     **{
         model_name: make_mobilevit_loader(model_name, model_id)
@@ -167,6 +176,9 @@ def get_downloaded_model_names() -> list[str]:
 
 
 def is_model_downloaded(model_name: str) -> bool:
+    if model_name in CUSTOM_IMAGE_CLASSIFICATION_MODELS:
+        return True
+
     checkpoint_path = MODEL_CHECKPOINT_PATHS.get(model_name)
     if checkpoint_path is not None:
         return checkpoint_path.is_file()

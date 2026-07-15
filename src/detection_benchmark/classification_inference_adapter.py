@@ -10,6 +10,7 @@ from src.detection_benchmark.constants import (
     IMAGE_CLASSIFICATION_MODELS,
 )
 from src.performance_benchmark.constants import (
+    CUSTOM_IMAGE_CLASSIFICATION_MODELS,
     EFFICIENTFORMER_MODELS,
     EFFICIENTNET_MODELS,
     INCEPTION_MODELS,
@@ -82,6 +83,20 @@ class ClassificationInferenceAdapter:
             self.transform = timm.data.create_transform(
                 **data_config,
                 is_training=False,
+            )
+            return self._predict_transformed_tensor
+        if self.model_name in CUSTOM_IMAGE_CLASSIFICATION_MODELS:
+            from torchvision import transforms
+
+            self.transform = transforms.Compose(
+                [
+                    transforms.Resize((224, 224)),
+                    transforms.ToTensor(),
+                    transforms.Normalize(
+                        mean=(0.485, 0.456, 0.406),
+                        std=(0.229, 0.224, 0.225),
+                    ),
+                ]
             )
             return self._predict_transformed_tensor
 

@@ -5,6 +5,7 @@ import torch
 
 from src.constants import VIT_DIR, VLM_DIR
 from src.performance_benchmark.constants import (
+    CUSTOM_IMAGE_CLASSIFICATION_MODELS,
     EFFICIENTNET_MODELS,
     EFFICIENTFORMER_MODELS,
     INCEPTION_MODELS,
@@ -52,6 +53,8 @@ class ModelInferenceAdapter:
             return self._prepare_mobilevit()
         if self.model_name in EFFICIENTFORMER_MODELS:
             return self._prepare_efficientformer()
+        if self.model_name in CUSTOM_IMAGE_CLASSIFICATION_MODELS:
+            return self._prepare_custom_image_classifier()
         if self.model_name in SMOLVLM_MODELS:
             return self._prepare_smolvlm()
 
@@ -121,6 +124,22 @@ class ModelInferenceAdapter:
 
         data_config = timm.data.resolve_model_data_config(self.model)
         self.transform = timm.data.create_transform(**data_config, is_training=False)
+        self.model.to(self.device).eval()
+        return self._infer_transformed_tensor
+
+    def _prepare_custom_image_classifier(self) -> InferenceFunction:
+        from torchvision import transforms
+
+        self.transform = transforms.Compose(
+            [
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=(0.485, 0.456, 0.406),
+                    std=(0.229, 0.224, 0.225),
+                ),
+            ]
+        )
         self.model.to(self.device).eval()
         return self._infer_transformed_tensor
 

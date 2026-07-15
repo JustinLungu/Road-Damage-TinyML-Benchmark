@@ -67,6 +67,7 @@ def assert_binary_linear(layer: nn.Linear, in_features: int) -> None:
 
 
 def test_supported_rdd_fine_tuning_model_set_excludes_detection_and_vlm() -> None:
+    assert "tiny_cnn" in RDD_IMAGE_CLASSIFICATION_MODELS
     assert "mobilenet_v2" in RDD_IMAGE_CLASSIFICATION_MODELS
     assert "efficientnet_b0" in RDD_IMAGE_CLASSIFICATION_MODELS
     assert "resnet18" in RDD_IMAGE_CLASSIFICATION_MODELS
@@ -122,6 +123,14 @@ def test_adapts_mobilevit_classifier_and_config() -> None:
     assert model.config.num_labels == NUM_BINARY_CLASSES
     assert model.config.id2label == ID_TO_LABEL
     assert model.config.label2id == LABEL_TO_ID
+
+
+def test_adapts_tiny_cnn_classifier() -> None:
+    model = FakeMobileVitModel()
+
+    adapt_model_for_binary_pothole("tiny_cnn", model)
+
+    assert_binary_linear(model.classifier, in_features=40)
 
 
 def test_adapts_efficientformer_with_reset_classifier() -> None:

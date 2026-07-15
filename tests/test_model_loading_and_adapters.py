@@ -8,6 +8,7 @@ from PIL import Image
 
 import src.load_model as load_model_module
 from src.constants import (
+    CUSTOM_IMAGE_CLASSIFICATION_MODELS,
     EFFICIENTNET_MODEL_CHECKPOINTS,
     EFFICIENTFORMER_MODEL_IDS,
     INCEPTION_MODEL_CHECKPOINTS,
@@ -121,6 +122,7 @@ def test_all_registered_models_route_through_load_model(monkeypatch) -> None:
         | set(INCEPTION_MODEL_CHECKPOINTS)
         | set(MOBILEVIT_MODEL_IDS)
         | set(EFFICIENTFORMER_MODEL_IDS)
+        | set(CUSTOM_IMAGE_CLASSIFICATION_MODELS)
         | set(SMOLVLM_MODEL_IDS)
     )
 
@@ -128,7 +130,10 @@ def test_all_registered_models_route_through_load_model(monkeypatch) -> None:
 
     for model_name in sorted(expected_model_names):
         model = load_model_module.load_model(model_name)
-        assert isinstance(model, FakeModel)
+        if model_name in CUSTOM_IMAGE_CLASSIFICATION_MODELS:
+            assert isinstance(model, torch.nn.Module)
+        else:
+            assert isinstance(model, FakeModel)
 
 
 def test_model_registry_cache_detection_and_cli(monkeypatch, tmp_path, capsys) -> None:
@@ -221,6 +226,7 @@ def test_loader_functions_use_external_factories(monkeypatch) -> None:
     assert load_model_module.load_efficientnet_b0().eval_called is True
     assert load_model_module.load_resnet18().eval_called is True
     assert load_model_module.load_inception_v3().eval_called is True
+    assert isinstance(load_model_module.load_tiny_cnn(), torch.nn.Module)
     assert (
         load_model_module.load_mobilevit("apple/mobilevit-small", "mobilevit_s").name
         == "mobilevit"
