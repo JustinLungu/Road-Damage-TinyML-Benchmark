@@ -96,6 +96,12 @@ def load_resnet8() -> Any:
     return resnet8().eval()
 
 
+def load_ds_cnn_small() -> Any:
+    from src.custom_models import ds_cnn_small
+
+    return ds_cnn_small().eval()
+
+
 def load_mobilevit(model_id: str, local_name: str) -> Any:
     from transformers import AutoModelForImageClassification
 
@@ -157,6 +163,7 @@ MODEL_LOADERS: dict[str, Callable[[], Any]] = {
     "resnet18": load_resnet18,
     "inception_v3": load_inception_v3,
     # Local custom image classification
+    "ds_cnn_small": load_ds_cnn_small,
     "resnet8": load_resnet8,
     "tiny_cnn": load_tiny_cnn,
     # Lightweight vision transformers

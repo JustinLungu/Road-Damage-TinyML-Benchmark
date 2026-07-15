@@ -17,6 +17,7 @@ Each model-family README should explain:
 ## Image Classification
 
 - [TinyCNN classifier](tiny_cnn/README.md): custom local tiny CNN loaded from source code with no pretrained checkpoint.
+- [DS-CNN classifiers](ds_cnn/README.md): custom local depthwise-separable CNN loaded from source code with no pretrained checkpoint.
 - [EfficientNet-B0 classifier](efficientnet/README.md): Torchvision EfficientNet-B0 image classifier loaded from `models/cnn/hub/checkpoints/`.
 - [EfficientFormer classifiers](efficientformer/README.md): timm EfficientFormer L1, L3, and L7 image classifiers loaded from `models/vit/`.
 - [InceptionV3 classifier](inception/README.md): Torchvision InceptionV3 image classifier loaded from `models/cnn/hub/checkpoints/`.

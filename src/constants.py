@@ -86,6 +86,7 @@ EFFICIENTFORMER_MODEL_IDS = {
 # Local custom image classifiers. These have no pretrained checkpoint to download.
 CUSTOM_IMAGE_CLASSIFICATION_MODELS = frozenset(
     {
+        "ds_cnn_small",
         "resnet8",
         "tiny_cnn",
     }
