@@ -87,6 +87,7 @@ EFFICIENTFORMER_MODEL_IDS = {
 CUSTOM_IMAGE_CLASSIFICATION_MODELS = frozenset(
     {
         "ds_cnn_small",
+        "mobilenet_v1_025",
         "resnet8",
         "tiny_cnn",
     }

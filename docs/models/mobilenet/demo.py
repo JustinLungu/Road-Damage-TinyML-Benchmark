@@ -16,7 +16,7 @@ MODEL_DOCS_DIR = Path(__file__).resolve().parent
 # Allow imports from src/ when this file is executed directly.
 sys.path.insert(0, str(REPO_ROOT))
 
-from src.constants import MOBILENET_MODEL_CHECKPOINTS  # noqa: E402
+from src.constants import CUSTOM_IMAGE_CLASSIFICATION_MODELS, MOBILENET_MODEL_CHECKPOINTS  # noqa: E402
 from src.load_model import load_model  # noqa: E402
 from src.performance_benchmark.utils import load_rgb_image, resolve_device  # noqa: E402
 
@@ -25,7 +25,11 @@ from src.performance_benchmark.utils import load_rgb_image, resolve_device  # no
 # Demo Config
 #############
 
-SUPPORTED_MODEL_NAMES = tuple(MOBILENET_MODEL_CHECKPOINTS)
+SUPPORTED_MODEL_NAMES = tuple(MOBILENET_MODEL_CHECKPOINTS) + tuple(
+    model_name
+    for model_name in sorted(CUSTOM_IMAGE_CLASSIFICATION_MODELS)
+    if model_name == "mobilenet_v1_025"
+)
 MODEL_NAMES = ["mobilenet_v2", "mobilenet_v3_small", "mobilenet_v3_large"]
 
 # Manual-image mode: used when USE_RANDOM_IMAGE is False.
@@ -107,6 +111,8 @@ def get_weights(model_name: str) -> Any:
         return MobileNet_V3_Small_Weights.DEFAULT
     if model_name == "mobilenet_v3_large":
         return MobileNet_V3_Large_Weights.DEFAULT
+    if model_name == "mobilenet_v1_025":
+        return MobileNet_V2_Weights.DEFAULT
 
     raise ValueError(f"Unsupported MobileNet model: {model_name}")
 
@@ -205,6 +211,11 @@ def run_model(model_name: str, image_path: Path, device: torch.device) -> None:
     print(f"Model: {model_name}")
     print(f"Image: {display_path(image_path)}")
     print(f"Input tensor shape: {tuple(input_tensor.shape)}")
+    if model_name == "mobilenet_v1_025":
+        print(
+            "Note: mobilenet_v1_025 is untrained here; "
+            "top-k labels are not meaningful."
+        )
     print_classification_table(rows)
 
     if SAVE_RESULTS_JSON:

@@ -132,3 +132,33 @@ class DSCNNSmall(nn.Module):
 
 def ds_cnn_small(num_classes: int = 1000) -> DSCNNSmall:
     return DSCNNSmall(num_classes=num_classes)
+
+
+class MobileNetV1Quarter(nn.Module):
+    """MobileNetV1-style 0.25x custom classifier."""
+
+    def __init__(self, num_classes: int = 1000) -> None:
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 8, kernel_size=3, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(8),
+            nn.ReLU(inplace=True),
+            DepthwiseSeparableBlock(8, 16, stride=1),
+            DepthwiseSeparableBlock(16, 32, stride=2),
+            DepthwiseSeparableBlock(32, 32, stride=1),
+            DepthwiseSeparableBlock(32, 64, stride=2),
+            DepthwiseSeparableBlock(64, 64, stride=1),
+            DepthwiseSeparableBlock(64, 128, stride=2),
+            DepthwiseSeparableBlock(128, 128, stride=1),
+            nn.AdaptiveAvgPool2d((1, 1)),
+        )
+        self.classifier = nn.Linear(128, num_classes)
+
+    def forward(self, images: torch.Tensor) -> torch.Tensor:
+        features = self.features(images)
+        features = torch.flatten(features, 1)
+        return self.classifier(features)
+
+
+def mobilenet_v1_025(num_classes: int = 1000) -> MobileNetV1Quarter:
+    return MobileNetV1Quarter(num_classes=num_classes)
