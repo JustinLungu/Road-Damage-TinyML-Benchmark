@@ -31,9 +31,9 @@ RUN_RDD_PATCH_PREPROCESSING = False
 # directly. The main experiment runner saves under each A-E experiment name.
 RDD_EXPERIMENT_NAME = "stratified_by_country"
 
-# Select which experiment IDs main.py should run.
-#E needs synthetic potholes first.
-RDD_ACTIVE_EXPERIMENT_IDS = ("A", "B", "C", "D", "F", "G", "H")
+# Best clean400 candidates for the overnight all-model run.
+# E needs synthetic potholes first.
+RDD_ACTIVE_EXPERIMENT_IDS = ("A", "F", "G", "H")
 
 # Required only when running Experiment E. Set this to the experiment folder name
 # that E should use as its synthetic-data base, usually the better of C or D.
@@ -79,15 +79,24 @@ RDD_THRESHOLD_VALUES = tuple(index / 100 for index in range(5, 96, 5))
 
 
 # "single" runs RDD_SINGLE_MODEL. "all" runs every model in RDD_MODEL_NAMES.
-RDD_MODEL_MODE = "single"
+RDD_MODEL_MODE = "all"
 # Used when RDD_MODEL_MODE is "single" for both adaptation smoke and training.
 RDD_SINGLE_MODEL = "mobilevit_xxs"
 # Used when RDD_MODEL_MODE is "all" for both adaptation smoke and training.
 # This is the run subset, not necessarily every model that the adapter supports.
 RDD_MODEL_NAMES = (
     "mobilevit_xxs",
+    "mobilevit_xs",
+    "mobilevit_s",
+    "mobilenet_v2",
     "mobilenet_v3_small",
+    "mobilenet_v3_large",
     "efficientnet_b0",
+    "resnet18",
+    "inception_v3",
+    "efficientformer_l1",
+    "efficientformer_l3",
+    "efficientformer_l7",
 )
 # Available image-classification models for this list:
 # "mobilenet_v2", "mobilenet_v3_small", "mobilenet_v3_large",
@@ -136,6 +145,9 @@ RDD_EVALUATION_BATCH_SIZE = 32
 RDD_EVALUATION_NUM_WORKERS = 2
 RDD_EVALUATION_PROGRESS_INTERVAL = 50
 RDD_EVALUATION_SAVE_PLOTS = True
+
+# Lets interrupted all-model runs continue without re-evaluating completed models.
+RDD_EVALUATION_SKIP_EXISTING_RESULTS = True
 
 
 ################

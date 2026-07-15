@@ -8,6 +8,7 @@ from src.constants import RDD_TRAINING_RESULTS_DIR
 from src.rdd_benchmark.constants import (
     RDD_COMPARISON_RANKING_METRIC,
     RDD_COMPARISON_TOP_K,
+    RDD_EVALUATION_SKIP_EXISTING_RESULTS,
     RDD_SKIP_FAILED_MODELS,
     RDD_TRAINING_SKIP_EXISTING_CHECKPOINTS,
     RUN_RDD_COMPARISON,
@@ -41,6 +42,7 @@ class RDDExperimentRunConfig:
     run_evaluation: bool = RUN_RDD_EVALUATION
     run_comparison: bool = RUN_RDD_COMPARISON
     skip_existing_checkpoints: bool = RDD_TRAINING_SKIP_EXISTING_CHECKPOINTS
+    skip_existing_evaluations: bool = RDD_EVALUATION_SKIP_EXISTING_RESULTS
     skip_failed_models: bool = RDD_SKIP_FAILED_MODELS
     comparison_ranking_metric: str = RDD_COMPARISON_RANKING_METRIC
     comparison_top_k: int = RDD_COMPARISON_TOP_K
@@ -161,6 +163,17 @@ class RDDExperimentRunner:
         for model_name in evaluation_model_names:
             print()
             print(f"Evaluating {model_name}")
+            metrics_path = self.config.experiment_output_dir / model_name / "test_metrics.csv"
+            if self.config.skip_existing_evaluations and metrics_path.is_file():
+                evaluation_rows.extend(
+                    load_evaluation_rows_from_metrics_csv(
+                        (model_name,),
+                        output_dir=self.config.experiment_output_dir,
+                    )
+                )
+                print(f"  skipping existing evaluation: {metrics_path}")
+                continue
+
             try:
                 evaluator = BinaryPotholeEvaluator(
                     RDDEvaluationConfig(
