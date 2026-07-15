@@ -32,10 +32,10 @@ RUN_RDD_PATCH_PREPROCESSING = False
 # directly. The main experiment runner saves under each A-E experiment name.
 RDD_EXPERIMENT_NAME = "stratified_by_country"
 
-# Safe default: compare/read one strong finished experiment.
-# For a full benchmark run, use ("A", "F", "G", "H").
-# E needs synthetic potholes first.
-RDD_ACTIVE_EXPERIMENT_IDS = ("G",)
+# Tiny/small model benchmark run:
+# A = clean natural baseline, G/H = the best downsampled configs from the
+# previous RDD sweep. E still needs synthetic potholes first.
+RDD_ACTIVE_EXPERIMENT_IDS = ("A", "G", "H")
 
 # Required only when running Experiment E. Set this to the experiment folder name
 # that E should use as its synthetic-data base, usually the better of C or D.
@@ -81,29 +81,18 @@ RDD_THRESHOLD_VALUES = tuple(index / 100 for index in range(5, 96, 5))
 
 
 # "single" runs RDD_SINGLE_MODEL. "all" runs every model in RDD_MODEL_NAMES.
-RDD_MODEL_MODE = "single"
+RDD_MODEL_MODE = "all"
 # Used when RDD_MODEL_MODE is "single" for both adaptation smoke and training.
 RDD_SINGLE_MODEL = "tiny_cnn"
 # Used when RDD_MODEL_MODE is "all" for both adaptation smoke and training.
-# This is the run subset, not necessarily every model that the adapter supports.
+# Tiny/small sweep models: four custom/source-defined models plus Torchvision
+# ShuffleNetV2 0.5x.
 RDD_MODEL_NAMES = (
     "ds_cnn_small",
     "mobilenet_v1_025",
     "resnet8",
     "tiny_cnn",
-    "mobilevit_xxs",
-    "mobilevit_xs",
-    "mobilevit_s",
-    "mobilenet_v2",
-    "mobilenet_v3_small",
-    "mobilenet_v3_large",
-    "efficientnet_b0",
-    "resnet18",
     "shufflenet_v2_x0_5",
-    "inception_v3",
-    "efficientformer_l1",
-    "efficientformer_l3",
-    "efficientformer_l7",
 )
 # Available image-classification models for this list:
 # "mobilenet_v2", "mobilenet_v3_small", "mobilenet_v3_large",
@@ -117,7 +106,7 @@ RDD_MODEL_NAMES = (
 # Training Loop
 ################
 
-RUN_RDD_TRAINING = False  # set True to fine-tune selected models
+RUN_RDD_TRAINING = True  # set True to fine-tune selected models
 RDD_TRAINING_BATCH_SIZE = 32
 RDD_TRAINING_NUM_WORKERS = 2
 RDD_TRAINING_EPOCHS = 10
@@ -148,7 +137,7 @@ RDD_SKIP_FAILED_MODELS = True
 # Evaluation
 ################
 
-RUN_RDD_EVALUATION = False  # set True to evaluate selected checkpoints
+RUN_RDD_EVALUATION = True  # set True to evaluate selected checkpoints
 RDD_EVALUATION_BATCH_SIZE = 32
 RDD_EVALUATION_NUM_WORKERS = 2
 RDD_EVALUATION_PROGRESS_INTERVAL = 50

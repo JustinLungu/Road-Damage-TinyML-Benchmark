@@ -452,6 +452,8 @@ class BinaryPotholeTrainer:
                 "epoch": epoch,
                 "best_metric": self.config.best_metric,
                 "best_metric_value": metric_value,
+                "experiment_name": self.config.experiment_name,
+                "training_input_mode": self.config.training_input_mode,
                 "validation_metrics": validation_metrics,
                 "model_state_dict": model.state_dict(),
             },

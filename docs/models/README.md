@@ -23,6 +23,7 @@ Each model-family README should explain:
 - [InceptionV3 classifier](inception/README.md): Torchvision InceptionV3 image classifier loaded from `models/cnn/hub/checkpoints/`.
 - [MobileNet classifiers](mobilenet/README.md): Torchvision MobileNetV2 and MobileNetV3 Small/Large classifiers loaded from `models/cnn/hub/checkpoints/`.
 - [MobileViT classifiers](mobilevit/README.md): Hugging Face MobileViT XXS, XS, and Small image classifiers loaded from `models/vit/`.
+- [RDD binary pothole checkpoint demo](rdd_binary_pothole/README.md): run inference with fine-tuned RDD checkpoints saved under `results/rdd_trained_models/`.
 - [ResNet classifiers](resnet/README.md): Torchvision ResNet18 plus custom local ResNet8 residual classifier.
 - [ShuffleNet classifiers](shufflenet/README.md): Torchvision ShuffleNetV2 0.5x image classifier loaded from `models/cnn/hub/checkpoints/`.
 
