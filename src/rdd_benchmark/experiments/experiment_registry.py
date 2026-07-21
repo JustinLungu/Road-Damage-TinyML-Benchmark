@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from src.rdd_benchmark.experiments.constants import (
     RDD_EXPERIMENT_A,
+    RDD_EXPERIMENT_A30,
     RDD_EXPERIMENT_B,
     RDD_EXPERIMENT_C,
     RDD_EXPERIMENT_D,
@@ -37,6 +38,17 @@ RDD_EXPERIMENT_REGISTRY = {
         experiment_name="A_clean400_full_image_natural_standard_aug",
         dataset_strategy="Natural data + standard augmentation",
         reason="Baseline",
+        sampler_strategy="none",
+        target_pothole_fraction=None,
+        augmentation_strategy="standard",
+        synthetic_pothole_ratio=0.0,
+        non_potholes_per_pothole=None,
+    ),
+    RDD_EXPERIMENT_A30: RDDExperimentConfig(
+        experiment_id=RDD_EXPERIMENT_A30,
+        experiment_name="A30_clean400_full_image_natural_standard_aug_e30",
+        dataset_strategy="Natural data + standard augmentation",
+        reason="Longer from-scratch tiny/small model training run",
         sampler_strategy="none",
         target_pothole_fraction=None,
         augmentation_strategy="standard",

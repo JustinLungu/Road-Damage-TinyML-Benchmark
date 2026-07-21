@@ -32,10 +32,10 @@ RUN_RDD_PATCH_PREPROCESSING = False
 # directly. The main experiment runner saves under each A-E experiment name.
 RDD_EXPERIMENT_NAME = "stratified_by_country"
 
-# Tiny/small model benchmark run:
-# A = clean natural baseline, G/H = the best downsampled configs from the
-# previous RDD sweep. E still needs synthetic potholes first.
-RDD_ACTIVE_EXPERIMENT_IDS = ("A", "G", "H")
+# 30-epoch tiny/small run. A30 uses the same clean natural full-image setup as
+# A, but saves to a separate results folder so the previous 10-epoch A run stays
+# intact.
+RDD_ACTIVE_EXPERIMENT_IDS = ("A30",)
 
 # Required only when running Experiment E. Set this to the experiment folder name
 # that E should use as its synthetic-data base, usually the better of C or D.
@@ -109,7 +109,7 @@ RDD_MODEL_NAMES = (
 RUN_RDD_TRAINING = True  # set True to fine-tune selected models
 RDD_TRAINING_BATCH_SIZE = 32
 RDD_TRAINING_NUM_WORKERS = 2
-RDD_TRAINING_EPOCHS = 10
+RDD_TRAINING_EPOCHS = 30
 RDD_TRAINING_LEARNING_RATE = 1e-4
 RDD_TRAINING_WEIGHT_DECAY = 1e-4
 
@@ -122,7 +122,7 @@ RDD_TRAINING_PROGRESS_INTERVAL = 50
 RDD_TRAINING_SAVE_PLOTS = True
 
 # Stop when validation metric stops improving for this many epochs.
-RDD_TRAINING_EARLY_STOPPING_PATIENCE = 4
+RDD_TRAINING_EARLY_STOPPING_PATIENCE = 8
 RDD_TRAINING_EARLY_STOPPING_MIN_DELTA = 1e-4
 
 # Avoids single-image tail batches causing batch-norm issues in some models.
