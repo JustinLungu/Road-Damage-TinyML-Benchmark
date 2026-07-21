@@ -54,11 +54,16 @@ size estimate from the instantiated architecture.
 
 | Model | Type | Local/pretrained size | Size bucket | Used for RDD binary image classification? | Notes |
 | --- | --- | ---: | --- | --- | --- |
+| `tiny_cnn` | Image classification | approx. 0.34 MiB / 0.35 MB FP32 | tiny | Yes | Custom local model with no pretrained checkpoint. |
+| `resnet8` | Image classification | approx. 0.43 MiB / 0.45 MB FP32 | tiny | Yes | Custom local residual model with no pretrained checkpoint. |
+| `ds_cnn_small` | Image classification | approx. 0.20 MiB / 0.21 MB FP32 | tiny | Yes | Custom local depthwise-separable CNN with no pretrained checkpoint. |
+| `mobilenet_v1_025` | Image classification | approx. 0.63 MiB / 0.67 MB FP32 | tiny | Yes | Custom local MobileNetV1-style 0.25x model with no pretrained checkpoint. |
 | `yolov5nu` | Object detection | 5.31 MiB / 5.56 MB | small | No | YOLO detector, not image classification. |
 | `yolov8n` | Object detection | 6.25 MiB / 6.55 MB | small | No | YOLO detector, not image classification. |
 | `mobilevit_xxs` | Image classification | 4.91 MiB / 5.15 MB | small | Yes | Smallest current RDD image-classification candidate. |
 | `mobilevit_xs` | Image classification | 8.92 MiB / 9.35 MB | small | Yes | Fits the 1-10 MB small bucket. |
 | `mobilenet_v3_small` | Image classification | 9.83 MiB / 10.31 MB | borderline small | Yes | Under 10 MiB but slightly above 10 decimal MB. |
+| `shufflenet_v2_x0_5` | Image classification | approx. 5.21 MiB / 5.47 MB FP32 | small | Yes | Torchvision ShuffleNetV2 0.5x model. |
 | `mobilenet_v2` | Image classification | 13.60 MiB / 14.26 MB | medium | Yes | Above the requested small bucket. |
 | `efficientnet_b0` | Image classification | 20.45 MiB / 21.44 MB | medium | Yes | Above the requested small bucket. |
 | `mobilenet_v3_large` | Image classification | 21.11 MiB / 22.13 MB | medium | Yes | Above the requested small bucket. |
@@ -74,13 +79,11 @@ size estimate from the instantiated architecture.
 
 Current conclusion for the RDD image-classification path:
 
+- We now have **true tiny custom image-classification models**:
+  `tiny_cnn`, `resnet8`, `ds_cnn_small`, and `mobilenet_v1_025`, which are
+  under 1 MB before any quantization.
 - We **do have small image-classification candidates**: `mobilevit_xxs`,
-  `mobilevit_xs`, and possibly `mobilenet_v3_small` if the 10 MB limit is
-  interpreted as 10 MiB.
-- We **do not currently have a true tiny image-classification model** under
-  1 MB in the supported pretrained model set.
-- To satisfy the tiny/small requirement, we likely need to add or export a
-  genuinely tiny classifier, for example a custom compact CNN, a MicroNet-style
-  model, or a quantized/pruned version of a small classifier. The current
-  pretrained YOLO files are small, but they are object detectors and do not
-  satisfy the binary image-classification model requirement.
+  `mobilevit_xs`, `shufflenet_v2_x0_5`, and possibly `mobilenet_v3_small` if
+  the 10 MB limit is interpreted as 10 MiB.
+- The current pretrained YOLO files are small, but they are object detectors
+  and do not satisfy the binary image-classification model requirement.

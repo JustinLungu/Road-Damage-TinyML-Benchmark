@@ -10,8 +10,16 @@ export UV_CACHE_DIR
 cd "${REPO_ROOT}"
 mkdir -p "${UV_CACHE_DIR}"
 
+if command -v uv >/dev/null 2>&1; then
+    python_runner=(uv run python)
+elif [[ -x "${REPO_ROOT}/.venv/bin/python" ]]; then
+    python_runner=("${REPO_ROOT}/.venv/bin/python")
+else
+    python_runner=(python)
+fi
+
 list_models() {
-    uv run python - <<'PY'
+    "${python_runner[@]}" - <<'PY'
 from src.load_model import MODEL_LOADERS
 
 for model_name in sorted(MODEL_LOADERS):
@@ -74,7 +82,7 @@ for model_name in "${model_names[@]}"; do
 
     echo
     echo "Loading/downloading ${model_name}..."
-    if ! uv run python -m src.load_model --model "${model_name}"; then
+    if ! "${python_runner[@]}" -m src.load_model --model "${model_name}"; then
         failed_models+=("${model_name}")
     fi
 done

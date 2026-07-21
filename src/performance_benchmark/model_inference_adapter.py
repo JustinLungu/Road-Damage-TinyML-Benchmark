@@ -5,12 +5,14 @@ import torch
 
 from src.constants import VIT_DIR, VLM_DIR
 from src.performance_benchmark.constants import (
+    CUSTOM_IMAGE_CLASSIFICATION_MODELS,
     EFFICIENTNET_MODELS,
     EFFICIENTFORMER_MODELS,
     INCEPTION_MODELS,
     MOBILEVIT_MODELS,
     MOBILENET_MODELS,
     RESNET_MODELS,
+    SHUFFLENET_MODELS,
     SMOLVLM_MODELS,
     SMOLVLM_PROMPT,
     YOLO_MODELS,
@@ -46,12 +48,16 @@ class ModelInferenceAdapter:
             return self._prepare_efficientnet()
         if self.model_name in RESNET_MODELS:
             return self._prepare_resnet()
+        if self.model_name in SHUFFLENET_MODELS:
+            return self._prepare_shufflenet()
         if self.model_name in INCEPTION_MODELS:
             return self._prepare_inception()
         if self.model_name in MOBILEVIT_MODELS:
             return self._prepare_mobilevit()
         if self.model_name in EFFICIENTFORMER_MODELS:
             return self._prepare_efficientformer()
+        if self.model_name in CUSTOM_IMAGE_CLASSIFICATION_MODELS:
+            return self._prepare_custom_image_classifier()
         if self.model_name in SMOLVLM_MODELS:
             return self._prepare_smolvlm()
 
@@ -97,6 +103,13 @@ class ModelInferenceAdapter:
         self.model.to(self.device).eval()
         return self._infer_transformed_tensor
 
+    def _prepare_shufflenet(self) -> InferenceFunction:
+        from torchvision.models import ShuffleNet_V2_X0_5_Weights
+
+        self.transform = ShuffleNet_V2_X0_5_Weights.DEFAULT.transforms()
+        self.model.to(self.device).eval()
+        return self._infer_transformed_tensor
+
     def _prepare_inception(self) -> InferenceFunction:
         from torchvision.models import Inception_V3_Weights
 
@@ -121,6 +134,22 @@ class ModelInferenceAdapter:
 
         data_config = timm.data.resolve_model_data_config(self.model)
         self.transform = timm.data.create_transform(**data_config, is_training=False)
+        self.model.to(self.device).eval()
+        return self._infer_transformed_tensor
+
+    def _prepare_custom_image_classifier(self) -> InferenceFunction:
+        from torchvision import transforms
+
+        self.transform = transforms.Compose(
+            [
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=(0.485, 0.456, 0.406),
+                    std=(0.229, 0.224, 0.225),
+                ),
+            ]
+        )
         self.model.to(self.device).eval()
         return self._infer_transformed_tensor
 

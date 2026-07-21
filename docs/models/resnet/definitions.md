@@ -1,17 +1,17 @@
 # ResNet Definitions
 
-This glossary explains the terms used in the ResNet18 model notes.
+This glossary explains the terms used in the ResNet model notes.
 
 ## Image Classification
 
-Image classification assigns a label to a whole image. ResNet18 outputs one
-score for each of 1000 ImageNet classes. It does not return bounding boxes or
-object locations.
+Image classification assigns a label to a whole image. The ResNet demos output
+one score for each of 1000 classes. They do not return bounding boxes or object
+locations.
 
 ## ImageNet-1K
 
 ImageNet-1K is an image-classification dataset with 1000 classes. The local
-ResNet18 checkpoint is pretrained on this dataset.
+ResNet18 checkpoint is pretrained on this dataset. ResNet8 is not pretrained.
 
 ## Residual Learning
 
@@ -55,6 +55,9 @@ second normalization, followed by ReLU.
 Larger ResNets such as ResNet50 use a different three-convolution bottleneck
 block.
 
+ResNet8 uses a smaller custom residual block with the same broad idea: two
+3x3 convolutions are added back to the input feature map.
+
 ## Downsampling
 
 Downsampling reduces spatial resolution. The first block of ResNet18 stages
@@ -89,12 +92,15 @@ It replaces negative values with zero while keeping positive values.
 
 Global average pooling averages each final feature channel over its spatial
 positions. ResNet18 uses it to produce a 512-value vector before its fully
-connected classifier.
+connected classifier. ResNet8 uses adaptive average pooling to produce a
+64-value vector.
 
 ## Fully Connected Layer
 
 A fully connected, or linear, layer maps every input feature to every output.
 ResNet18's final layer maps 512 pooled features to 1000 ImageNet logits.
+ResNet8's final layer maps 64 pooled features to 1000 logits before RDD
+fine-tuning.
 
 ## Logits
 
@@ -116,7 +122,13 @@ the five largest ImageNet probabilities.
 ## Parameters
 
 Parameters are learned model weights. Torchvision reports about 11.69 million
-parameters for ResNet18.
+parameters for ResNet18. The local ResNet8 architecture has 111,928
+parameters.
+
+## Tiny Model
+
+In this project, a tiny model is below 1 MB. ResNet8 is about 0.43 MiB in FP32
+parameter size, so it satisfies the tiny bucket before quantization.
 
 ## FLOPs
 

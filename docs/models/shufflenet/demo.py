@@ -9,40 +9,24 @@ from typing import Any
 import torch
 
 
-# Resolve paths from this file so the demo can be run from the repo root.
 REPO_ROOT = Path(__file__).resolve().parents[3]
 MODEL_DOCS_DIR = Path(__file__).resolve().parent
-
-# Allow imports from src/ when this file is executed directly.
 sys.path.insert(0, str(REPO_ROOT))
 
-from src.constants import CUSTOM_IMAGE_CLASSIFICATION_MODELS, RESNET_MODEL_CHECKPOINTS  # noqa: E402
+from src.constants import SHUFFLENET_MODEL_CHECKPOINTS  # noqa: E402
 from src.load_model import load_model  # noqa: E402
 from src.performance_benchmark.utils import load_rgb_image, resolve_device  # noqa: E402
 
 
-#############
-# Demo Config
-#############
+SUPPORTED_MODEL_NAMES = tuple(SHUFFLENET_MODEL_CHECKPOINTS)
+MODEL_NAMES = ["shufflenet_v2_x0_5"]
 
-SUPPORTED_MODEL_NAMES = tuple(RESNET_MODEL_CHECKPOINTS) + tuple(
-    model_name
-    for model_name in sorted(CUSTOM_IMAGE_CLASSIFICATION_MODELS)
-    if model_name == "resnet8"
-)
-MODEL_NAMES = ["resnet18"]
-
-# Manual-image mode: used when USE_RANDOM_IMAGE is False.
 IMAGE_PATH = REPO_ROOT / "datasets" / "coco" / "images" / "000000047585.jpg"
-
-# Random-image mode: set USE_RANDOM_IMAGE to True to sample from this directory.
 USE_RANDOM_IMAGE = True
 RANDOM_IMAGE_DIR = REPO_ROOT / "datasets" / "coco" / "images"
-
-# Set to an integer for reproducible random image selection.
 RANDOM_SEED: int | None = None
 
-DEVICE_NAME = "cpu"  # or "cuda:0" if CUDA is available
+DEVICE_NAME = "cpu"
 TOP_K = 5
 
 SAVE_RESULTS_JSON = True
@@ -51,12 +35,10 @@ OUTPUT_DIR = MODEL_DOCS_DIR / "outputs"
 
 
 def resolve_repo_path(path: Path) -> Path:
-    """Accept absolute paths or paths relative to the repository root."""
     return path if path.is_absolute() else REPO_ROOT / path
 
 
 def display_path(path: Path) -> Path:
-    """Print short repo-relative paths when possible."""
     try:
         return path.relative_to(REPO_ROOT)
     except ValueError:
@@ -64,7 +46,6 @@ def display_path(path: Path) -> Path:
 
 
 def select_image_path() -> Path:
-    """Choose either the configured image or a random COCO image."""
     if not USE_RANDOM_IMAGE:
         return resolve_repo_path(IMAGE_PATH)
 
@@ -98,7 +79,6 @@ def validate_config() -> None:
 
 
 def topk_rows(logits: torch.Tensor, categories: list[str]) -> list[dict[str, Any]]:
-    """Convert model logits into top-k probability rows."""
     probabilities = logits.softmax(dim=1)[0]
     scores, class_ids = probabilities.topk(TOP_K)
 
@@ -117,7 +97,6 @@ def topk_rows(logits: torch.Tensor, categories: list[str]) -> list[dict[str, Any
 
 
 def print_classification_table(rows: list[dict[str, Any]]) -> None:
-    """Print top-k classification predictions as a fixed-width table."""
     headers = ("rank", "label", "probability", "class_id")
     formatted_rows = [
         (
@@ -132,16 +111,10 @@ def print_classification_table(rows: list[dict[str, Any]]) -> None:
         max(len(headers[column]), *(len(row[column]) for row in formatted_rows))
         for column in range(len(headers))
     ]
-    header_line = "  ".join(
-        header.ljust(widths[column]) for column, header in enumerate(headers)
-    )
-    divider = "  ".join("-" * width for width in widths)
-    print(header_line)
-    print(divider)
+    print("  ".join(header.ljust(widths[index]) for index, header in enumerate(headers)))
+    print("  ".join("-" * width for width in widths))
     for row in formatted_rows:
-        print(
-            "  ".join(value.ljust(widths[column]) for column, value in enumerate(row))
-        )
+        print("  ".join(value.ljust(widths[index]) for index, value in enumerate(row)))
 
 
 def save_results_json(
@@ -153,10 +126,9 @@ def save_results_json(
     output_dir = resolve_repo_path(OUTPUT_DIR)
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"{model_name}_topk.json"
-    checkpoint = RESNET_MODEL_CHECKPOINTS.get(model_name, "source-defined custom model")
     output = {
         "model_name": model_name,
-        "checkpoint": checkpoint,
+        "checkpoint": SHUFFLENET_MODEL_CHECKPOINTS[model_name],
         "image_path": str(display_path(image_path)),
         "top_k": TOP_K,
         "input_shape": list(input_shape),
@@ -167,7 +139,6 @@ def save_results_json(
 
 
 def save_input_image(image_path: Path) -> None:
-    """Save the selected image so the classification input is easy to inspect."""
     output_dir = resolve_repo_path(OUTPUT_DIR)
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / "selected_image.jpg"
@@ -177,16 +148,14 @@ def save_input_image(image_path: Path) -> None:
 
 
 def run_model(model_name: str, image_path: Path, device: torch.device) -> None:
-    from torchvision.models import ResNet18_Weights
+    from torchvision.models import ShuffleNet_V2_X0_5_Weights
 
     print(f"\nLoading {model_name} on {device}...")
-    weights = ResNet18_Weights.DEFAULT
+    weights = ShuffleNet_V2_X0_5_Weights.DEFAULT
     model = load_model(model_name).to(device).eval()
     transform = weights.transforms()
     categories = weights.meta["categories"]
 
-    # Torchvision weights define the exact resize/crop/normalization expected
-    # by the pretrained checkpoint.
     image = load_rgb_image(image_path)
     input_tensor = transform(image).unsqueeze(0).to(device)
 
@@ -198,8 +167,6 @@ def run_model(model_name: str, image_path: Path, device: torch.device) -> None:
     print(f"Model: {model_name}")
     print(f"Image: {display_path(image_path)}")
     print(f"Input tensor shape: {input_shape}")
-    if model_name == "resnet8":
-        print("Note: resnet8 is untrained here; top-k labels are not meaningful.")
     print_classification_table(rows)
 
     if SAVE_RESULTS_JSON:

@@ -1,20 +1,23 @@
 # MobileNet Classifiers
 
-This folder documents the Torchvision MobileNet classifiers used in the
-repository:
+This folder documents the MobileNet classifiers used in the repository:
 
-| Repo name | Checkpoint location | Family | Parameters | FLOPs | ImageNet-1K acc@1 / acc@5 |
-| --- | --- | --- | --- | --- | --- |
-| `mobilenet_v2` | `models/cnn/hub/checkpoints/mobilenet_v2-7ebf99e0.pth` | MobileNetV2 | 3.50M | 0.301B | 72.154 / 90.822 |
-| `mobilenet_v3_small` | `models/cnn/hub/checkpoints/mobilenet_v3_small-047dcff4.pth` | MobileNetV3 Small | 2.54M | 0.057B | 67.668 / 87.402 |
-| `mobilenet_v3_large` | `models/cnn/hub/checkpoints/mobilenet_v3_large-5c1a4163.pth` | MobileNetV3 Large | 5.48M | 0.217B | 75.274 / 92.566 |
+| Repo name | Checkpoint location | Family | Parameters | FLOPs | ImageNet-1K acc@1 / acc@5 | Size bucket |
+| --- | --- | --- | ---: | ---: | --- | --- |
+| `mobilenet_v1_025` | none; source-defined model | custom MobileNetV1 0.25x | 166,328 | not measured | not pretrained | tiny |
+| `mobilenet_v2` | `models/cnn/hub/checkpoints/mobilenet_v2-7ebf99e0.pth` | MobileNetV2 | 3.50M | 0.301B | 72.154 / 90.822 | medium |
+| `mobilenet_v3_small` | `models/cnn/hub/checkpoints/mobilenet_v3_small-047dcff4.pth` | MobileNetV3 Small | 2.54M | 0.057B | 67.668 / 87.402 | borderline small |
+| `mobilenet_v3_large` | `models/cnn/hub/checkpoints/mobilenet_v3_large-5c1a4163.pth` | MobileNetV3 Large | 5.48M | 0.217B | 75.274 / 92.566 | medium |
 
-All three are ImageNet-1K pretrained image classifiers with 1000 output
-classes. In this project they are lightweight CNN baselines for inference
-demos and system-performance benchmarks.
+The Torchvision MobileNetV2/V3 models are ImageNet-1K pretrained image
+classifiers with 1000 output classes. `mobilenet_v1_025` is a custom local
+MobileNetV1-style 0.25x model. It has no pretrained checkpoint and exists as a
+tiny RDD binary pothole candidate.
 
-The parameters, FLOPs, accuracy values, preprocessing transforms, and class
-labels come from the Torchvision metadata attached to each default weight.
+The Torchvision parameter counts, FLOPs, accuracy values, preprocessing
+transforms, and class labels come from the Torchvision metadata attached to each
+default weight. The `mobilenet_v1_025` parameter count is computed from the
+local architecture.
 
 For definitions of terms such as logits, softmax, top-k, depthwise separable
 convolution, inverted residual block, linear bottleneck, ReLU6,
@@ -30,6 +33,16 @@ MOBILENET_MODEL_CHECKPOINTS = {
 }
 ```
 
+The custom MobileNetV1-0.25x model is registered in:
+
+```python
+CUSTOM_IMAGE_CLASSIFICATION_MODELS = frozenset(
+    {
+        "mobilenet_v1_025",
+    }
+)
+```
+
 ## What Makes MobileNet Different
 
 MobileNet models are CNNs designed for efficient inference on mobile and edge
@@ -38,6 +51,9 @@ separable convolutions and compact inverted residual blocks.
 
 The local variants make different accuracy and compute tradeoffs:
 
+- `mobilenet_v1_025` is a custom MobileNetV1-style model with quarter-width
+  channels. It is not pretrained, but it is below 1 MB and useful for testing a
+  tiny edge-oriented classifier.
 - `mobilenet_v2` is the original inverted-residual and linear-bottleneck
   baseline. It is especially relevant to edge deployment because its operators
   are simple and widely supported.
@@ -50,6 +66,9 @@ MobileNetV3 builds on MobileNetV2 by adding architecture choices found through
 hardware-aware search, including squeeze-and-excitation blocks and h-swish
 activations.
 
+MobileNetV1 is simpler than MobileNetV2/V3: it mainly stacks
+depthwise-separable convolution blocks without inverted residual bottlenecks.
+
 Unlike YOLO, MobileNet is not an object detector. It does not return boxes. It
 returns one 1000-class ImageNet score vector for the whole image. The top-k
 output should be read as "which ImageNet labels best describe the full image
@@ -61,7 +80,7 @@ At inference time, all local MobileNet models follow this broad path:
 
 ```text
 image file
-  -> Torchvision preprocessing
+  -> preprocessing
   -> convolutional stem
   -> inverted residual feature blocks
   -> final convolution
@@ -92,7 +111,16 @@ ImageNet statistics. The local default weights use a 224x224 crop:
 The source COCO image can have any size. The model receives a normalized
 batched tensor shaped `1 x 3 x 224 x 224`.
 
-### 2. MobileNetV2 Feature Extractor
+### 2. MobileNetV1-0.25x Feature Extractor
+
+The custom `mobilenet_v1_025` model starts with a standard convolution, then
+uses depthwise-separable blocks. The 0.25x suffix means the channel widths are
+roughly quarter-scale compared with a full-width MobileNetV1-style model.
+
+It is source-defined and randomly initialized, so its raw ImageNet-like top-k
+outputs are not meaningful until it is fine-tuned.
+
+### 3. MobileNetV2 Feature Extractor
 
 MobileNetV2 begins with a standard convolution, then uses inverted residual
 blocks.
@@ -108,7 +136,7 @@ The narrow projection is called a linear bottleneck because it does not apply
 another non-linearity after compressing the features. MobileNetV2 mainly uses
 ReLU6 inside the expanded part of each block.
 
-### 3. MobileNetV3 Feature Extractor
+### 4. MobileNetV3 Feature Extractor
 
 MobileNetV3 keeps the inverted-residual structure but changes the block
 configuration for better hardware-aware efficiency.
@@ -118,7 +146,7 @@ context. The network also mixes ReLU and h-swish activations. Small and Large
 use different channel widths and block layouts to target different resource
 budgets.
 
-### 4. Global Pooling
+### 5. Global Pooling
 
 After the feature extractor, global average pooling collapses the spatial
 dimensions into one feature vector.
@@ -126,7 +154,7 @@ dimensions into one feature vector.
 This removes explicit object-location information. The model answers what best
 describes the whole crop rather than where an object appears.
 
-### 5. Classifier Head
+### 6. Classifier Head
 
 The classifier head maps the pooled feature vector to 1000 logits, one for each
 ImageNet-1K class.
@@ -140,13 +168,17 @@ scores, class_ids = probabilities.topk(TOP_K)
 
 ## How This Repo Loads Them
 
-`src/load_model.py` returns Torchvision MobileNet modules:
+`src/load_model.py` returns Torchvision MobileNet modules or the custom
+source-defined MobileNetV1-0.25x model:
 
 ```python
 from src.load_model import load_model
 
 model = load_model("mobilenet_v2")
 print(type(model))
+
+tiny_model = load_model("mobilenet_v1_025")
+print(type(tiny_model))
 ```
 
 Before loading, the repo sets `TORCH_HOME` to `models/cnn`. Torchvision then
@@ -155,6 +187,10 @@ reads or downloads the weights under:
 ```text
 models/cnn/hub/checkpoints/
 ```
+
+`mobilenet_v1_025` does not create a file under `models/`; it is created from
+source code. After RDD training, its learned checkpoint is saved under
+`results/rdd_trained_models/<experiment_name>/mobilenet_v1_025/best.pt`.
 
 The benchmark path is:
 

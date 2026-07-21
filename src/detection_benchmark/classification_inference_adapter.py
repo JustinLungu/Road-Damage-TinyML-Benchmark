@@ -10,12 +10,14 @@ from src.detection_benchmark.constants import (
     IMAGE_CLASSIFICATION_MODELS,
 )
 from src.performance_benchmark.constants import (
+    CUSTOM_IMAGE_CLASSIFICATION_MODELS,
     EFFICIENTFORMER_MODELS,
     EFFICIENTNET_MODELS,
     INCEPTION_MODELS,
     MOBILEVIT_MODELS,
     MOBILENET_MODELS,
     RESNET_MODELS,
+    SHUFFLENET_MODELS,
 )
 from src.performance_benchmark.utils import load_rgb_image, move_inputs_to_device
 
@@ -61,6 +63,11 @@ class ClassificationInferenceAdapter:
 
             self.transform = ResNet18_Weights.DEFAULT.transforms()
             return self._predict_transformed_tensor
+        if self.model_name in SHUFFLENET_MODELS:
+            from torchvision.models import ShuffleNet_V2_X0_5_Weights
+
+            self.transform = ShuffleNet_V2_X0_5_Weights.DEFAULT.transforms()
+            return self._predict_transformed_tensor
         if self.model_name in INCEPTION_MODELS:
             from torchvision.models import Inception_V3_Weights
 
@@ -82,6 +89,20 @@ class ClassificationInferenceAdapter:
             self.transform = timm.data.create_transform(
                 **data_config,
                 is_training=False,
+            )
+            return self._predict_transformed_tensor
+        if self.model_name in CUSTOM_IMAGE_CLASSIFICATION_MODELS:
+            from torchvision import transforms
+
+            self.transform = transforms.Compose(
+                [
+                    transforms.Resize((224, 224)),
+                    transforms.ToTensor(),
+                    transforms.Normalize(
+                        mean=(0.485, 0.456, 0.406),
+                        std=(0.229, 0.224, 0.225),
+                    ),
+                ]
             )
             return self._predict_transformed_tensor
 

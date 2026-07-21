@@ -1,199 +1,229 @@
-# Cascaded-TinyVLM
+# Road-Damage TinyML Benchmark
 
-Cascaded TinyVLMs for real-time edge AI and object detection on Jetson Nano.
+Benchmarking and fine-tuning pipeline for lightweight road-damage image
+classification, centered on binary pothole detection with RDD2022.
 
-## Features
-- Real-time object detection
-- Lightweight VLM inference
-- Edge AI deployment
-- Hierarchical inference
-- Jetson Nano optimization
-- Uncertainty-aware inference
-- Conformal prediction
+This repository was originally started as a broader edge/VLM prototype. It is
+now scoped as a self-contained benchmark project for:
 
-## Hardware
-- NVIDIA Jetson Nano
+- preparing RDD2022 binary pothole datasets;
+- testing full-image and patch/grid image-classification workflows;
+- running imbalance-aware data experiments;
+- fine-tuning tiny, small, and standard image classifiers;
+- comparing models with accuracy, balanced accuracy, precision, recall, F1,
+  ROC-AUC, confusion matrices, inference speed, and training curves;
+- documenting model loading and demo inference paths.
 
-## Planned Models
-- YOLO
-- MobileNet
-- EfficientNet
-- SmolVLM
-- Qwen2-VL
+## Recommended Repository Name
 
-## Research Goals
-- Reduce latency
-- Reduce energy consumption
-- Improve edge reliability
-- Enable adaptive edge/cloud inference
+Use one of these names on GitHub:
 
+- `road-damage-tinyml-benchmark` recommended
+- `rdd-tinyml-benchmark`
+- `pothole-classification-benchmark`
 
+The first name is broad enough to include RDD2022, tiny models, and future
+road-damage datasets without implying Jetson/VLM/cascaded inference work.
 
-# Repository Structure
+## What Is In The Repo
 
 ```text
-Cascaded-TinyVLM/
-│
-├── docs/
-├── src/
-├── models/
-├── configs/
-├── scripts/
-├── experiments/
-├── jetson/
-├── results/
-└── tests/
+.
+├── datasets/                 # ignored dataset downloads and generated manifests
+├── docs/                     # model notes, RDD constants guide, demos
+├── experiments/              # standalone performance/detection benchmark entry points
+├── models/                   # ignored downloaded model weights, plus model notes
+├── notebooks/                # RDD2022 exploration notebook
+├── results/                  # ignored generated benchmark outputs
+├── scripts/                  # download and demo helper scripts
+├── src/                      # reusable benchmark implementation
+│   ├── detection_benchmark/
+│   ├── performance_benchmark/
+│   └── rdd_benchmark/
+└── tests/                    # unit and behavior tests
 ```
 
-## Folder Overview
+Removed from the old roadmap:
 
-### `docs/`
-Contains documentation, architecture diagrams, research notes, benchmark summaries, and implementation details.
+- `configs/`: no active config files; RDD settings live in
+  `src/rdd_benchmark/constants.py`.
+- `jetson/`: Jetson deployment belongs in the next project, not this benchmark
+  repo.
 
-Examples:
-- system architecture
-- experiment reports
-- paper notes
-- deployment guides
-- figures for presentations
+## RDD2022 Binary Pothole Benchmark
 
----
-
-### `src/`
-Main source code for the project.
-
-Will contain:
-- inference pipelines
-- object detection logic
-- VLM integration
-- uncertainty estimation
-- conformal prediction
-- hierarchical inference logic
-- utilities
-
-Example future structure:
+The main project code lives in:
 
 ```text
-src/
-├── inference/
-├── vlm/
-├── detection/
-├── uncertainty/
-├── conformal/
-├── hierarchy/
-└── utils/
+src/rdd_benchmark/
+├── constants.py              # run switches and experiment/model selection
+├── main.py                   # single entry point for preprocessing/training/eval
+├── data_loader/              # manifest and dataset classes
+├── data_preprocessing/       # splits, patches, balancing, augmentation, synthetic hooks
+├── experiments/              # experiment registry and runner
+└── training/                 # model adaptation, trainer, evaluation, comparison
 ```
 
----
+All RDD behavior is controlled by editing:
 
-### `models/`
-Stores model-related files and wrappers.
+```text
+src/rdd_benchmark/constants.py
+```
 
-Examples:
-- YOLO checkpoints
-- MobileNet/EfficientNet models
-- TinyVLM adapters
-- TensorRT engines
-- ONNX exports
+Then run:
 
-Large files should NOT be committed directly to Git.
+```bash
+.venv/bin/python -m src.rdd_benchmark.main
+```
 
----
+or, if `uv` is available:
 
-### `configs/`
-Configuration files for experiments and deployment.
+```bash
+uv run python -m src.rdd_benchmark.main
+```
 
-Examples:
-- model settings
-- dataset paths
-- inference thresholds
-- Jetson deployment configs
-- uncertainty parameters
-- conformal calibration configs
+See [docs/rdd_benchmark_constants.md](docs/rdd_benchmark_constants.md) for the
+full explanation of the switches.
 
-Recommended format:
-- YAML
-- JSON
+## RDD Experiments
 
----
+The benchmark supports reproducible experiment IDs. The most important final
+experiments are:
 
-### `scripts/`
-Standalone scripts for automation and execution.
+- `A`: natural clean400 full-image baseline with standard augmentation;
+- `F`: weighted sampler with 25 percent target pothole sampling and standard
+  augmentation;
+- `G`: majority downsampling to 1 pothole : 5 non-potholes with standard
+  augmentation;
+- `H`: majority downsampling to 1 pothole : 5 non-potholes with stronger
+  pothole augmentation.
 
-Examples:
-- benchmarking scripts
-- deployment scripts
-- training scripts
-- inference launchers
-- dataset preprocessing
+The tiny/small model sweep currently uses:
 
----
+- `tiny_cnn`
+- `resnet8`
+- `ds_cnn_small`
+- `mobilenet_v1_025`
+- `shufflenet_v2_x0_5`
 
-### `experiments/`
-Experiment tracking and reproducibility folder.
+Larger supported image classifiers include MobileViT, MobileNetV2/V3,
+EfficientNet-B0, ResNet18, InceptionV3, and EfficientFormer.
 
-Examples:
-- latency benchmarks
-- energy measurements
-- uncertainty experiments
-- hierarchical inference evaluations
-- VLM comparisons
+## Outputs
 
-Each experiment should ideally contain:
-- configuration
-- logs
-- metrics
-- notes
+Training and evaluation outputs are written under:
 
----
+```text
+results/rdd_trained_models/<experiment_name>/<model_name>/
+```
 
-### `jetson/`
-Jetson Nano specific code and deployment utilities.
+Typical files include:
 
-Examples:
-- TensorRT optimization
-- CUDA benchmarking
-- FPS profiling
-- power measurements
-- deployment scripts
-- Jetson-specific inference pipelines
+- `best.pt`
+- `history.csv`
+- `loss_curve.png`
+- `f1_curve.png`
+- `accuracy_curve.png`
+- `test_metrics.json`
+- `test_metrics.csv`
+- `balanced_test_metrics.json`
+- `confusion_matrix.csv`
+- `confusion_matrix.png`
+- `roc_curve.png`
+- `inference_metrics.json`
 
----
+Experiment-level comparisons are written as:
 
-### `results/`
-Stores generated outputs and evaluation artifacts.
+```text
+results/rdd_trained_models/<experiment_name>/model_comparison.csv
+results/rdd_trained_models/<experiment_name>/top_models.csv
+```
 
-Examples:
-- plots
-- graphs
-- benchmark tables
-- confusion matrices
-- screenshots
-- evaluation summaries
+## Dataset Downloads
 
-Large outputs should not be tracked directly in Git.
+Download COCO validation data for detector/performance demos:
 
----
+```bash
+./scripts/download_coco_val.sh
+```
 
-### `tests/`
-Unit tests and validation scripts.
+Download Imagenette validation data:
 
-Examples:
-- inference tests
-- pipeline checks
-- model loading tests
-- latency validation
-- regression testing
+```bash
+./scripts/download_imagenette_val.sh
+```
 
----
+Download all available RDD2022 country archives:
+
+```bash
+./scripts/download_rdd2022_subset.sh all
+```
+
+The raw image datasets are intentionally ignored by Git.
+
+## Model Downloads
+
+List supported model names:
+
+```bash
+./scripts/download_models.sh --list
+```
+
+Download selected pretrained models:
+
+```bash
+./scripts/download_models.sh mobilenet_v2 resnet18 shufflenet_v2_x0_5
+```
+
+Download all supported pretrained models:
+
+```bash
+./scripts/download_models.sh --all
+```
+
+Custom tiny classifiers such as `tiny_cnn`, `resnet8`, `ds_cnn_small`, and
+`mobilenet_v1_025` are source-defined and do not download external weights.
+
+## Demos
+
+List available model demos:
+
+```bash
+./scripts/inference_demo.sh --list
+```
+
+Run a model-family demo:
+
+```bash
+./scripts/inference_demo.sh --model shufflenet
+```
+
+Run inference from a fine-tuned RDD checkpoint:
+
+```bash
+.venv/bin/python docs/models/rdd_binary_pothole/demo.py
+```
+
+Edit `CHECKPOINT_PATH` in that demo to point at any
+`results/rdd_trained_models/.../best.pt` checkpoint.
+
+## Tests
+
+Run the fast test suite:
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest
+```
+
+With `uv`:
+
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 uv run pytest
+```
 
 ## Local SonarQube Analysis
 
-This project can be checked locally with SonarQube for code smells,
-duplication, security findings, and imported test coverage.
-
-If SonarQube is already set up, run the full local analysis from the repository
-root with:
+If SonarQube is already set up:
 
 ```bash
 docker start sonarqube
@@ -215,122 +245,15 @@ set +a
 UV_CACHE_DIR=.uv-cache uv run pysonar
 ```
 
-Open the project dashboard after the scanner finishes:
+Open:
 
 ```text
-http://localhost:9000/dashboard?id=cascaded-tinyvlm
+http://localhost:9000/dashboard?id=road-damage-tinyml-benchmark
 ```
 
-If the status endpoint fails immediately after `docker start`, wait for the
-server to finish booting:
+If the status endpoint fails right after startup, wait for SonarQube to finish
+booting:
 
 ```bash
 docker logs -f sonarqube
-```
-
-Start the local SonarQube server with Docker:
-
-```bash
-docker run --name sonarqube -p 9000:9000 sonarqube:community
-```
-
-For later sessions, restart the same container:
-
-```bash
-docker start sonarqube
-```
-
-Wait until SonarQube is ready:
-
-```bash
-docker logs -f sonarqube
-```
-
-You can also check the status endpoint:
-
-```bash
-curl http://localhost:9000/api/system/status
-```
-
-The status should be `UP`.
-
-Open SonarQube in the browser:
-
-```text
-http://localhost:9000
-```
-
-Create the local project with this key:
-
-```text
-cascaded-tinyvlm
-```
-
-Generate a user token in SonarQube, copy the example environment file, and add
-the token to `.env`:
-
-```bash
-cp .env.example .env
-```
-
-```bash
-SONAR_HOST_URL=http://localhost:9000
-SONAR_TOKEN=sqp_your_token_here
-```
-
-Do not commit `.env`. It contains the local SonarQube token.
-
-Install the scanner dependencies with uv:
-
-```bash
-uv sync --group dev
-```
-
-Load the environment variables and run the scanner:
-
-```bash
-set -a
-source .env
-set +a
-
-uv run pysonar
-```
-
-The scanner uses `sonar-project.properties` for the project settings and sends
-the analysis to:
-
-```text
-http://localhost:9000/dashboard?id=cascaded-tinyvlm
-```
-
-SonarQube does not run tests by itself. When tests are available, generate the
-coverage and test reports before running `pysonar`:
-
-```bash
-mkdir -p reports
-
-uv run pytest \
-  -p pytest_cov \
-  --cov=src \
-  --cov=experiments \
-  --cov-report=xml:coverage.xml \
-  --junitxml=reports/pytest.xml
-
-uv run pysonar
-```
-
-The generated `coverage.xml`, `reports/`, and `.sonar/` scanner output are local
-artifacts and should not be committed.
-
-If pytest tries to load unrelated system plugins, such as ROS pytest plugins,
-run the coverage command with plugin autoload disabled while explicitly loading
-`pytest-cov`:
-
-```bash
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 uv run pytest \
-  -p pytest_cov \
-  --cov=src \
-  --cov=experiments \
-  --cov-report=xml:coverage.xml \
-  --junitxml=reports/pytest.xml
 ```

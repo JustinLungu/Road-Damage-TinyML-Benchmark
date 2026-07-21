@@ -5,11 +5,13 @@ from typing import Any, Callable
 from src.constants import (
     CHECKPOINT_PATTERNS,
     CNN_DIR,
+    CUSTOM_IMAGE_CLASSIFICATION_MODELS,
     EFFICIENTFORMER_MODEL_IDS,
     MOBILEVIT_MODEL_IDS,
     MODEL_CACHE_DIRS,
     MODEL_CHECKPOINT_PATHS,
     MODEL_STORAGE_DIRS,
+    SHUFFLENET_MODEL_CHECKPOINTS,
     SMOLVLM_MODEL_IDS,
     VIT_DIR,
     VLM_DIR,
@@ -74,6 +76,15 @@ def load_resnet18() -> Any:
     return resnet18(weights=ResNet18_Weights.DEFAULT).eval()
 
 
+def load_shufflenet_v2_x0_5() -> Any:
+    # Torchvision reads TORCH_HOME when deciding where pretrained weights live.
+    os.environ["TORCH_HOME"] = str(CNN_DIR)
+
+    from torchvision.models import ShuffleNet_V2_X0_5_Weights, shufflenet_v2_x0_5
+
+    return shufflenet_v2_x0_5(weights=ShuffleNet_V2_X0_5_Weights.DEFAULT).eval()
+
+
 def load_inception_v3() -> Any:
     # Torchvision reads TORCH_HOME when deciding where pretrained weights live.
     os.environ["TORCH_HOME"] = str(CNN_DIR)
@@ -81,6 +92,30 @@ def load_inception_v3() -> Any:
     from torchvision.models import Inception_V3_Weights, inception_v3
 
     return inception_v3(weights=Inception_V3_Weights.DEFAULT).eval()
+
+
+def load_tiny_cnn() -> Any:
+    from src.custom_models import tiny_cnn
+
+    return tiny_cnn().eval()
+
+
+def load_resnet8() -> Any:
+    from src.custom_models import resnet8
+
+    return resnet8().eval()
+
+
+def load_ds_cnn_small() -> Any:
+    from src.custom_models import ds_cnn_small
+
+    return ds_cnn_small().eval()
+
+
+def load_mobilenet_v1_025() -> Any:
+    from src.custom_models import mobilenet_v1_025
+
+    return mobilenet_v1_025().eval()
 
 
 def load_mobilevit(model_id: str, local_name: str) -> Any:
@@ -142,7 +177,13 @@ MODEL_LOADERS: dict[str, Callable[[], Any]] = {
     "mobilenet_v3_large": load_mobilenet_v3_large,
     "efficientnet_b0": load_efficientnet_b0,
     "resnet18": load_resnet18,
+    "shufflenet_v2_x0_5": load_shufflenet_v2_x0_5,
     "inception_v3": load_inception_v3,
+    # Local custom image classification
+    "ds_cnn_small": load_ds_cnn_small,
+    "mobilenet_v1_025": load_mobilenet_v1_025,
+    "resnet8": load_resnet8,
+    "tiny_cnn": load_tiny_cnn,
     # Lightweight vision transformers
     **{
         model_name: make_mobilevit_loader(model_name, model_id)
@@ -167,6 +208,9 @@ def get_downloaded_model_names() -> list[str]:
 
 
 def is_model_downloaded(model_name: str) -> bool:
+    if model_name in CUSTOM_IMAGE_CLASSIFICATION_MODELS:
+        return True
+
     checkpoint_path = MODEL_CHECKPOINT_PATHS.get(model_name)
     if checkpoint_path is not None:
         return checkpoint_path.is_file()

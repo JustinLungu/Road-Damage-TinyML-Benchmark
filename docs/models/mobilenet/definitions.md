@@ -15,8 +15,9 @@ This is different from YOLO object detection, which returns object boxes and cla
 ImageNet-1K is a common image-classification benchmark with 1000 object/category classes.
 
 The local MobileNetV2 and MobileNetV3 checkpoints are pretrained on
-ImageNet-1K, so their output vector has 1000 values. Each output position
-corresponds to one ImageNet class.
+ImageNet-1K, so their output vector has 1000 values. The custom
+MobileNetV1-0.25x model is not pretrained, but it also uses 1000 outputs before
+RDD fine-tuning so it follows the same interface.
 
 ## Logits
 
@@ -102,6 +103,12 @@ It splits the operation into two parts:
 
 This greatly reduces computation, which is one reason MobileNet models are efficient.
 
+## Width Multiplier
+
+A width multiplier scales the number of channels in a model. A 0.25x model uses
+roughly one quarter of the channels of a full-width version, reducing
+parameters and computation.
+
 ## Inverted Residual Block
 
 An inverted residual block is a MobileNet block that expands channels, applies an efficient depthwise convolution, then projects channels back down.
@@ -170,3 +177,9 @@ Lower FLOPs usually means faster and more energy-efficient inference, although a
 Torchvision reports MobileNetV3 Small as the cheapest local variant by FLOPs.
 MobileNetV2 uses more operations than both V3 variants with the selected
 pretrained weights, but it remains an important simple edge-oriented baseline.
+
+## Tiny Model
+
+In this project, a tiny model is below 1 MB. The custom `mobilenet_v1_025`
+model is about 0.63 MiB in FP32 parameter size, so it satisfies the tiny bucket
+before quantization.

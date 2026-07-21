@@ -183,7 +183,7 @@ css = [
 ]
 
 [[package]]
-name = "cascaded-tinyvlm"
+name = "road-damage-tinyml-benchmark"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

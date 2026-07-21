@@ -5,12 +5,14 @@ from typing import Any
 import torch.nn as nn
 
 from src.performance_benchmark.constants import (
+    CUSTOM_IMAGE_CLASSIFICATION_MODELS,
     EFFICIENTFORMER_MODELS,
     EFFICIENTNET_MODELS,
     INCEPTION_MODELS,
     MOBILEVIT_MODELS,
     MOBILENET_MODELS,
     RESNET_MODELS,
+    SHUFFLENET_MODELS,
 )
 from src.rdd_benchmark.constants import (
     NUM_BINARY_CLASSES,
@@ -47,12 +49,18 @@ class BinaryPotholeModelAdapter:
             return self._adapt_classifier_sequence(model)
         if self.model_name in RESNET_MODELS:
             return self._adapt_linear_attribute(model, "fc")
+        if self.model_name in SHUFFLENET_MODELS:
+            return self._adapt_linear_attribute(model, "fc")
         if self.model_name in INCEPTION_MODELS:
             return self._adapt_inception(model)
         if self.model_name in MOBILEVIT_MODELS:
             return self._adapt_mobilevit(model)
         if self.model_name in EFFICIENTFORMER_MODELS:
             return self._adapt_efficientformer(model)
+        if self.model_name in CUSTOM_IMAGE_CLASSIFICATION_MODELS:
+            if hasattr(model, "fc"):
+                return self._adapt_linear_attribute(model, "fc")
+            return self._adapt_linear_attribute(model, "classifier")
 
         raise ValueError(f"No RDD model adapter is defined for: {self.model_name}")
 

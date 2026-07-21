@@ -16,12 +16,16 @@ Each model-family README should explain:
 
 ## Image Classification
 
+- [TinyCNN classifier](tiny_cnn/README.md): custom local tiny CNN loaded from source code with no pretrained checkpoint.
+- [DS-CNN classifiers](ds_cnn/README.md): custom local depthwise-separable CNN loaded from source code with no pretrained checkpoint.
 - [EfficientNet-B0 classifier](efficientnet/README.md): Torchvision EfficientNet-B0 image classifier loaded from `models/cnn/hub/checkpoints/`.
 - [EfficientFormer classifiers](efficientformer/README.md): timm EfficientFormer L1, L3, and L7 image classifiers loaded from `models/vit/`.
 - [InceptionV3 classifier](inception/README.md): Torchvision InceptionV3 image classifier loaded from `models/cnn/hub/checkpoints/`.
 - [MobileNet classifiers](mobilenet/README.md): Torchvision MobileNetV2 and MobileNetV3 Small/Large classifiers loaded from `models/cnn/hub/checkpoints/`.
 - [MobileViT classifiers](mobilevit/README.md): Hugging Face MobileViT XXS, XS, and Small image classifiers loaded from `models/vit/`.
-- [ResNet18 classifier](resnet/README.md): Torchvision ResNet18 image classifier loaded from `models/cnn/hub/checkpoints/`.
+- [RDD binary pothole checkpoint demo](rdd_binary_pothole/README.md): run inference with fine-tuned RDD checkpoints saved under `results/rdd_trained_models/`.
+- [ResNet classifiers](resnet/README.md): Torchvision ResNet18 plus custom local ResNet8 residual classifier.
+- [ShuffleNet classifiers](shufflenet/README.md): Torchvision ShuffleNetV2 0.5x image classifier loaded from `models/cnn/hub/checkpoints/`.
 
 ## Vision-Language
 
