@@ -2,9 +2,9 @@
 
 This directory will contain unit tests, validation scripts, pipeline checks, and regression tests.
 
-The suite uses a small number of broader scenario tests instead of many tiny
-tests. The goal is to cover the model-loading, benchmark, plotting, and hardware
-metric paths without downloading real models or requiring CUDA.
+The suite groups tests by subsystem so failures are easy to locate. It covers
+model loading, vision and performance benchmarks, plotting, RDD training, and
+hardware metrics without downloading real models or requiring CUDA.
 
 Run the fast unit test suite:
 

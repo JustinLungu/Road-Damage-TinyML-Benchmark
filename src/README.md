@@ -7,7 +7,7 @@ benchmarking, and RDD2022 binary pothole fine-tuning.
 
 - `rdd_benchmark/` contains the RDD2022 data preprocessing, dataset loading,
   experiment registry, training, evaluation, and model-comparison pipeline.
-- `detection_benchmark/` contains model-quality benchmarks for object detection
+- `vision_benchmark/` contains model-quality benchmarks for object detection
   and image classification datasets.
 - `performance_benchmark/` contains latency, FPS, memory, utilization, power,
   and energy sampling utilities.

@@ -19,15 +19,15 @@ now scoped as a self-contained benchmark project for:
 .
 ├── datasets/                 # ignored dataset downloads and generated manifests
 ├── docs/                     # model notes, RDD constants guide, demos
-├── experiments/              # standalone performance/detection benchmark entry points
+├── experiments/              # standalone performance/vision benchmark entry points
 ├── models/                   # ignored downloaded model weights, plus model notes
 ├── notebooks/                # RDD2022 exploration notebook
 ├── results/                  # ignored generated benchmark outputs
 ├── scripts/                  # download and demo helper scripts
 ├── src/                      # reusable benchmark implementation
-│   ├── detection_benchmark/
 │   ├── performance_benchmark/
-│   └── rdd_benchmark/
+│   ├── rdd_benchmark/
+│   └── vision_benchmark/
 └── tests/                    # unit and behavior tests
 ```
 
