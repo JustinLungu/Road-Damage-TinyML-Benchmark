@@ -10,6 +10,19 @@ classification, centered on binary pothole detection with RDD2022.
   ROC-AUC, confusion matrices, inference speed, and training curves;
 - documenting model loading and demo inference paths.
 
+## Setup
+
+The project requires Python 3.10 or newer and uses the committed `uv.lock` for
+reproducible environments. After installing `uv`, run from the repository root:
+
+```bash
+uv sync
+```
+
+Run commands through `uv run`, or use `.venv/bin/python` directly after the
+environment has been created. Datasets, downloaded model weights, and generated
+results are intentionally not included in the repository.
+
 ## What Is In The Repo
 
 ```text
