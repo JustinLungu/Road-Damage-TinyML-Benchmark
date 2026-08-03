@@ -15,6 +15,7 @@ from src.constants import (  # noqa: E402
 from experiments.performance.constants import (  # noqa: E402
     ALL_LOADED,
     ALL_LOADED_EXCLUDED_MODELS,
+    PERFORMANCE_RESULT_KEYS,
     RESULTS_CSV,
 )
 from src.load_model import (  # noqa: E402
@@ -24,15 +25,15 @@ from src.load_model import (  # noqa: E402
 )
 from src.performance_benchmark import (  # noqa: E402
     PerformanceBenchmark,
-    append_result_csv,
     list_coco_images,
     resolve_device,
 )
+from src.result_csv import save_result_csv  # noqa: E402
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Benchmark one or more pretrained models on COCO validation images."
+        description="Benchmark one or more loaded models on COCO validation images."
     )
     parser.add_argument(
         "--model",
@@ -85,7 +86,7 @@ def resolve_model_names(
         if len(selected_models) != 1:
             parser.error(f"{ALL_LOADED} cannot be combined with explicit model names.")
 
-        # This only selects checkpoints found under models/, not global caches.
+        # Select locally cached checkpoints and source-defined custom models.
         downloaded_models = [
             model_name
             for model_name in get_downloaded_model_names()
@@ -143,9 +144,9 @@ def run_model_benchmark(
     # PerformanceBenchmark returns one row worth of system metrics.
     benchmark = PerformanceBenchmark(model_name, model, image_paths, device)
     result = benchmark.run()
-    append_result_csv(result, RESULTS_CSV)
+    save_result_csv(result, RESULTS_CSV, PERFORMANCE_RESULT_KEYS)
 
-    print(f"Results appended to: {RESULTS_CSV}")
+    print(f"Results saved to: {RESULTS_CSV}")
     for metric_name, metric_value in vars(result).items():
         print(f"{metric_name}: {metric_value}")
 

@@ -14,6 +14,15 @@ from src.performance_benchmark.benchmark_result import BenchmarkResult
 def make_result(model_name: str) -> BenchmarkResult:
     return BenchmarkResult(
         model_name=model_name,
+        task="object_detection",
+        workload="single_image_detection",
+        device="cpu",
+        device_name="CPU",
+        precision="float32",
+        batch_size=1,
+        timing_scope="image_load_preprocess_inference",
+        warmup_runs=5,
+        power_source=None,
         fps=1.0,
         avg_latency_ms=2.0,
         p95_latency_ms=3.0,
@@ -165,7 +174,7 @@ def test_system_performance_runner_flow(monkeypatch, tmp_path) -> None:
         system_performance.run_model_processes(["good", "bad"], "cpu", None)
 
     loaded_model = object()
-    appended = []
+    saved = []
 
     class FakeBenchmark:
         def __init__(self, model_name, model, image_paths, device) -> None:
@@ -183,15 +192,21 @@ def test_system_performance_runner_flow(monkeypatch, tmp_path) -> None:
     monkeypatch.setattr(system_performance, "PerformanceBenchmark", FakeBenchmark)
     monkeypatch.setattr(
         system_performance,
-        "append_result_csv",
-        lambda result, output_path: appended.append((result, output_path)),
+        "save_result_csv",
+        lambda result, output_path, keys: saved.append((result, output_path, keys)),
     )
     system_performance.run_model_benchmark(
         "yolov5nu",
         [tmp_path / "image.jpg"],
         torch.device("cpu"),
     )
-    assert appended == [(make_result("yolov5nu"), system_performance.RESULTS_CSV)]
+    assert saved == [
+        (
+            make_result("yolov5nu"),
+            system_performance.RESULTS_CSV,
+            system_performance.PERFORMANCE_RESULT_KEYS,
+        )
+    ]
 
     output_path = tmp_path / "results.csv"
     output_path.write_text("old", encoding="utf-8")

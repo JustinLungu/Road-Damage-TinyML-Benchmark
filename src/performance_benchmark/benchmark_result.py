@@ -2,9 +2,17 @@ from dataclasses import dataclass
 
 
 @dataclass
-class BenchmarkResult:
-    # Final output format
+class PerformanceBenchmarkResult:
     model_name: str
+    task: str
+    workload: str
+    device: str
+    device_name: str
+    precision: str
+    batch_size: int
+    timing_scope: str
+    warmup_runs: int
+    power_source: str | None
     fps: float
     avg_latency_ms: float
     p95_latency_ms: float
@@ -16,3 +24,7 @@ class BenchmarkResult:
     avg_power_w: float | None
     energy_per_inference_j: float | None
     num_images: int
+
+
+# Backward-compatible name for existing imports and saved checkpoints.
+BenchmarkResult = PerformanceBenchmarkResult

@@ -88,18 +88,26 @@ def test_system_metrics_sampler_selects_and_records_metrics(monkeypatch) -> None
     monkeypatch.setattr(sampler_module, "NvmlMonitor", FakeHardwareMonitor)
     sampler = SystemMetricsSampler(torch.device("cpu"))
     sampler.process = FakeProcess()
-    assert isinstance(sampler.hardware_monitor, FakeHardwareMonitor)
+    assert sampler.hardware_monitor is None
+    assert sampler.power_source is None
 
     sampler._sample()
     assert sampler.samples.cpu_ram_mb == [2.0]
-    assert sampler.samples.gpu_utilization_pct == [25.0]
-    assert sampler.samples.power_w == [6.5]
+    assert sampler.samples.gpu_utilization_pct == []
+    assert sampler.samples.power_w == []
     assert sampler.samples.gpu_ram_mb == []
 
     sampler.start()
     sampler.stop()
-    assert sampler.hardware_monitor.started is True
-    assert sampler.hardware_monitor.stopped is True
+
+    monkeypatch.setattr(torch.cuda, "memory_allocated", lambda device: 0)
+    cuda_sampler = SystemMetricsSampler(torch.device("cuda:0"))
+    cuda_sampler.process = FakeProcess()
+    assert isinstance(cuda_sampler.hardware_monitor, FakeHardwareMonitor)
+    assert cuda_sampler.power_source == "nvml_gpu_board"
+    cuda_sampler._sample()
+    assert cuda_sampler.samples.gpu_utilization_pct == [25.0]
+    assert cuda_sampler.samples.power_w == [6.5]
 
     created_intervals = []
 
@@ -111,7 +119,8 @@ def test_system_metrics_sampler_selects_and_records_metrics(monkeypatch) -> None
     monkeypatch.setattr(sampler_module.shutil, "which", lambda command: "/bin/tool")
     monkeypatch.setattr(sampler_module, "TegrastatsMonitor", FakeTegrastatsMonitor)
 
-    SystemMetricsSampler(torch.device("cpu"), interval_s=0.25)
-    SystemMetricsSampler(torch.device("cpu"), interval_s=0.0001)
+    first_tegra_sampler = SystemMetricsSampler(torch.device("cuda:0"), interval_s=0.25)
+    SystemMetricsSampler(torch.device("cuda:0"), interval_s=0.0001)
 
     assert created_intervals == [250, 1]
+    assert first_tegra_sampler.power_source == "tegrastats_system_input"

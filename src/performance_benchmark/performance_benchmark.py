@@ -5,16 +5,21 @@ from typing import Any
 
 import torch
 
+from src.constants import MODEL_TASK_BY_NAME, MODEL_WORKLOAD_BY_NAME
 from src.performance_benchmark.benchmark_result import BenchmarkResult
 from src.performance_benchmark.constants import (
     BYTES_PER_MB,
     DEFAULT_WARMUP_RUNS,
+    INFERENCE_BATCH_SIZE,
     PROGRESS_INTERVAL_IMAGES,
+    TIMING_SCOPE,
 )
 from src.performance_benchmark.model_inference_adapter import ModelInferenceAdapter
 from src.performance_benchmark.system_metrics_sampler import SystemMetricsSampler
 from src.performance_benchmark.utils import (
     average_or_none,
+    describe_device,
+    model_precision,
     percentile,
     synchronize_device,
 )
@@ -38,6 +43,10 @@ class PerformanceBenchmark:
         self.image_paths = image_paths
         self.device = device
         self.warmup_runs = warmup_runs
+        self.task = MODEL_TASK_BY_NAME.get(model_name, "unknown")
+        self.workload = MODEL_WORKLOAD_BY_NAME.get(model_name, "unknown")
+        self.device_name = describe_device(device)
+        self.precision = model_precision(model)
         self.adapter = ModelInferenceAdapter(model_name, model, device)
 
     def run(self) -> BenchmarkResult:
@@ -113,6 +122,15 @@ class PerformanceBenchmark:
 
         return BenchmarkResult(
             model_name=self.model_name,
+            task=self.task,
+            workload=self.workload,
+            device=str(self.device),
+            device_name=self.device_name,
+            precision=self.precision,
+            batch_size=INFERENCE_BATCH_SIZE,
+            timing_scope=TIMING_SCOPE,
+            warmup_runs=self.warmup_runs,
+            power_source=sampler.power_source,
             fps=len(self.image_paths) / total_inference_time_s,
             avg_latency_ms=avg_latency_s * 1000,
             p95_latency_ms=percentile(latencies_s, 95) * 1000,

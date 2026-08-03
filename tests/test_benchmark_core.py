@@ -11,15 +11,17 @@ from src.performance_benchmark.benchmark_result import BenchmarkResult
 from src.performance_benchmark.metric_samples import MetricSamples
 from src.performance_benchmark.performance_benchmark import PerformanceBenchmark
 from src.performance_benchmark.utils import (
-    append_result_csv,
     average_or_none,
+    describe_device,
     list_coco_images,
     load_rgb_image,
     move_inputs_to_device,
+    model_precision,
     percentile,
     resolve_device,
     synchronize_device,
 )
+from src.result_csv import save_result_csv
 
 
 class FakeAdapter:
@@ -37,6 +39,7 @@ class FakeSampler:
     def __init__(self, device=None) -> None:
         self.started = False
         self.stopped = False
+        self.power_source = "nvml_gpu_board"
         self.samples = MetricSamples(
             cpu_ram_mb=[100.0, 120.0],
             gpu_ram_mb=[10.0, 20.0],
@@ -54,6 +57,15 @@ class FakeSampler:
 def make_result(model_name: str) -> BenchmarkResult:
     return BenchmarkResult(
         model_name=model_name,
+        task="image_classification",
+        workload="single_image_forward",
+        device="cpu",
+        device_name="CPU",
+        precision="float32",
+        batch_size=1,
+        timing_scope="image_load_preprocess_inference",
+        warmup_runs=5,
+        power_source=None,
         fps=10.0,
         avg_latency_ms=100.0,
         p95_latency_ms=120.0,
@@ -93,12 +105,18 @@ def test_utils_cover_files_devices_csv_images_and_statistics(
     output_path = tmp_path / "nested" / "results.csv"
     first_result = make_result("model_a")
     second_result = make_result("model_b")
-    append_result_csv(first_result, output_path)
-    append_result_csv(second_result, output_path)
+    result_keys = ("model_name", "device_name", "num_images")
+    save_result_csv(first_result, output_path, result_keys)
+    save_result_csv(second_result, output_path, result_keys)
+    save_result_csv(first_result, output_path, result_keys)
     with output_path.open(newline="", encoding="utf-8") as output_file:
         rows = list(csv.DictReader(output_file))
-    assert [row["model_name"] for row in rows] == ["model_a", "model_b"]
-    assert list(rows[0]) == list(asdict(first_result))
+    assert [row["model_name"] for row in rows] == ["model_b", "model_a"]
+    assert list(rows[-1]) == list(asdict(first_result))
+
+    assert describe_device(torch.device("cpu"))
+    assert model_precision(object()) == "unknown"
+    assert model_precision(torch.nn.Linear(2, 1)) == "float32"
 
     image_path = tmp_path / "image.png"
     Image.new("L", (2, 2), color=128).save(image_path)
@@ -168,8 +186,13 @@ def test_performance_benchmark_validation_and_cuda_peak(monkeypatch) -> None:
 
     benchmark = PerformanceBenchmark.__new__(PerformanceBenchmark)
     benchmark.model_name = "cuda_model"
+    benchmark.task = "image_classification"
+    benchmark.workload = "single_image_forward"
     benchmark.image_paths = [Path("a.jpg"), Path("b.jpg")]
     benchmark.device = torch.device("cuda:0")
+    benchmark.device_name = "Fake GPU"
+    benchmark.precision = "float32"
+    benchmark.warmup_runs = 5
     monkeypatch.setattr(
         torch.cuda, "max_memory_allocated", lambda device: 2 * 1024 * 1024
     )

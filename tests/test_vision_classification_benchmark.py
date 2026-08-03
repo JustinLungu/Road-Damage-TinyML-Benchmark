@@ -7,7 +7,7 @@ import pytest
 import torch
 
 import src.vision_benchmark.classification_benchmark as classification_module
-import src.vision_benchmark.classification_inference_adapter as adapter_module
+import src.image_classification_inference_adapter as adapter_module
 from src.vision_benchmark.classification_benchmark import (
     ClassificationBenchmark,
     calculate_macro_classification_metrics,
@@ -21,7 +21,7 @@ from src.vision_benchmark.classification_inference_adapter import (
 )
 from src.vision_benchmark.constants import IMAGE_CLASSIFICATION_MODELS
 from src.vision_benchmark.results import ClassificationBenchmarkResult
-from src.vision_benchmark.utils import save_result_csv
+from src.result_csv import save_result_csv
 
 
 class FakeModel:

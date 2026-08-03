@@ -26,8 +26,8 @@ is included only in `all_models/` and reported in the script output.
 ## How to Read the Plots
 
 Each PNG is a bar plot. The x-axis is the model name, and the y-axis is the
-metric value. For repeated runs of the same model, labels are numbered so each
-run stays visible.
+metric value. Matching benchmark configurations replace their previous row.
+Separate rows remain when hardware, precision, workload, or image count differs.
 
 Before measuring, the benchmark runs five warmup passes that are not included
 in the results. During the measured run, each image is timed with
@@ -131,6 +131,9 @@ systems this uses `nvmlDeviceGetUtilizationRates(...).gpu` through NVML.
 
 This field is blank when GPU utilization cannot be read.
 
+CPU runs do not initialize a GPU monitor, so unrelated GPU activity cannot
+appear in their measurements.
+
 ### `avg_power_w_bar.png`
 
 Shows average power draw in watts when power data is available. Lower is better
@@ -142,6 +145,10 @@ On other NVIDIA systems this uses `nvmlDeviceGetPowerUsage`, also converted from
 milliwatts to watts.
 
 This field is blank when power cannot be read.
+
+The `power_source` column identifies whether the value is discrete-GPU board
+power from NVML or Jetson system-input power from tegrastats. These are not the
+same measurement boundary.
 
 ### `energy_per_inference_j_bar.png`
 

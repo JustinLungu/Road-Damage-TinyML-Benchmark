@@ -39,21 +39,30 @@ class SystemMetricsSampler:
         # Background thread that periodically calls _sample() while inference runs.
         self.thread: threading.Thread | None = None
         # Backend used for GPU utilization and power readings.
+        self.power_source: str | None = None
         self.hardware_monitor = self._create_hardware_monitor()
 
-    def _create_hardware_monitor(self) -> NvmlMonitor | TegrastatsMonitor:
+    def _create_hardware_monitor(
+        self,
+    ) -> NvmlMonitor | TegrastatsMonitor | None:
+        if self.device.type != "cuda":
+            return None
+
         # Prefer tegrastats on Jetson; otherwise fall back to NVML if available.
         if shutil.which(TEGRASTATS_COMMAND):
             # tegrastats expects milliseconds, while this class stores seconds.
+            self.power_source = "tegrastats_system_input"
             return TegrastatsMonitor(interval_ms=max(1, int(self.interval_s * 1000)))
 
         # torch.device("cuda") has index None, which means CUDA device 0.
         device_index = self.device.index if self.device.index is not None else 0
+        self.power_source = "nvml_gpu_board"
         return NvmlMonitor(device_index=device_index)
 
     def start(self) -> None:
         # Start the hardware monitor before sampling so utilization/power can be read.
-        self.hardware_monitor.start()
+        if self.hardware_monitor is not None:
+            self.hardware_monitor.start()
         # Capture an initial point before the background sampling thread sleeps.
         self._sample()
         # daemon=True means this helper thread will not keep Python alive by itself.
@@ -76,6 +85,9 @@ class SystemMetricsSampler:
             self.samples.gpu_ram_mb.append(gpu_ram_mb)
 
         # Hardware monitors may return None when a metric is unavailable.
+        if self.hardware_monitor is None:
+            return
+
         gpu_utilization, power_w = self.hardware_monitor.read()
         if gpu_utilization is not None:
             self.samples.gpu_utilization_pct.append(gpu_utilization)
@@ -89,4 +101,5 @@ class SystemMetricsSampler:
             self.thread.join()
         # Capture a final point after the timed loop completes.
         self._sample()
-        self.hardware_monitor.stop()
+        if self.hardware_monitor is not None:
+            self.hardware_monitor.stop()

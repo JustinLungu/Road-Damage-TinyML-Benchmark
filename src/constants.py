@@ -107,6 +107,37 @@ SMOLVLM_MODEL_IDS = {
 }
 
 
+################
+# Model Workloads
+################
+
+IMAGE_CLASSIFICATION_MODELS = frozenset(
+    {
+        *MOBILENET_MODEL_CHECKPOINTS,
+        *EFFICIENTNET_MODEL_CHECKPOINTS,
+        *RESNET_MODEL_CHECKPOINTS,
+        *SHUFFLENET_MODEL_CHECKPOINTS,
+        *INCEPTION_MODEL_CHECKPOINTS,
+        *MOBILEVIT_MODEL_IDS,
+        *EFFICIENTFORMER_MODEL_IDS,
+        *CUSTOM_IMAGE_CLASSIFICATION_MODELS,
+    }
+)
+OBJECT_DETECTION_MODELS = frozenset(YOLO_MODEL_CHECKPOINTS)
+VISION_LANGUAGE_MODELS = frozenset(SMOLVLM_MODEL_IDS)
+
+MODEL_TASK_BY_NAME = {
+    **{name: "image_classification" for name in IMAGE_CLASSIFICATION_MODELS},
+    **{name: "object_detection" for name in OBJECT_DETECTION_MODELS},
+    **{name: "vision_language" for name in VISION_LANGUAGE_MODELS},
+}
+MODEL_WORKLOAD_BY_NAME = {
+    **{name: "single_image_forward" for name in IMAGE_CLASSIFICATION_MODELS},
+    **{name: "single_image_detection" for name in OBJECT_DETECTION_MODELS},
+    **{name: "prompted_forward_no_generation" for name in VISION_LANGUAGE_MODELS},
+}
+
+
 ###########################
 # Download Detection Helpers
 ###########################

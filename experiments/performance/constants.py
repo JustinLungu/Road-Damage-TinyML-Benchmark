@@ -17,7 +17,7 @@ from src.constants import (
 # CLI Keywords
 ###############
 
-# Special --model value that expands to every checkpoint already present locally.
+# Expands to locally cached checkpoints and source-defined custom models.
 ALL_LOADED = "all-loaded"
 
 # Supported explicitly, but skipped by all-loaded because it can exceed local GPU RAM.
@@ -30,6 +30,18 @@ ALL_LOADED_EXCLUDED_MODELS = {"smolvlm_2b"}
 
 RESULTS_CSV: Path = SYSTEM_PERFORMANCE_RESULTS_CSV
 DEFAULT_CSV: Path = RESULTS_CSV
+
+PERFORMANCE_RESULT_KEYS = (
+    "model_name",
+    "workload",
+    "device",
+    "device_name",
+    "precision",
+    "batch_size",
+    "timing_scope",
+    "warmup_runs",
+    "num_images",
+)
 
 
 ################

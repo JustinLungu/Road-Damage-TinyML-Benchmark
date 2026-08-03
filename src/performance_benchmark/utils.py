@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 from dataclasses import asdict
+import platform
 from pathlib import Path
 from statistics import fmean
 from typing import Any
@@ -23,6 +24,24 @@ def resolve_device(device_name: str) -> torch.device:
         )
 
     return device
+
+
+def describe_device(device: torch.device) -> str:
+    if device.type == "cuda":
+        return torch.cuda.get_device_name(device)
+    return platform.processor() or "CPU"
+
+
+def model_precision(model: Any) -> str:
+    module = getattr(model, "model", model)
+    parameters = getattr(module, "parameters", None)
+    if not callable(parameters):
+        return "unknown"
+
+    try:
+        return str(next(parameters()).dtype).removeprefix("torch.")
+    except StopIteration:
+        return "unknown"
 
 
 def list_coco_images(images_dir: Path, num_images: int | None = None) -> list[Path]:

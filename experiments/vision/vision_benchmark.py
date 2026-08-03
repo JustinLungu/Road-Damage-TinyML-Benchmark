@@ -23,6 +23,7 @@ from src.constants import (  # noqa: E402
     COCO_INSTANCES_VAL_ANNOTATIONS,
     IMAGENETTE_VALIDATION_LABELS,
 )
+from src.result_csv import save_result_csv  # noqa: E402
 from src.vision_benchmark.classification_benchmark import (  # noqa: E402
     ClassificationBenchmark,
 )
@@ -39,7 +40,6 @@ from src.vision_benchmark.constants import (  # noqa: E402
 from src.vision_benchmark.object_detection_benchmark import (  # noqa: E402
     ObjectDetectionBenchmark,
 )
-from src.vision_benchmark.utils import save_result_csv  # noqa: E402
 from src.load_model import get_downloaded_model_names, load_model  # noqa: E402
 from src.performance_benchmark import resolve_device  # noqa: E402
 
