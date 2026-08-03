@@ -58,7 +58,6 @@ RDD_TRAINING_WEIGHT_DECAY = 1e-4
 RDD_TRAINING_BEST_METRIC = "balanced_accuracy"
 
 RDD_TRAINING_PROGRESS_INTERVAL = 50
-RDD_TRAINING_SAVE_PLOTS = True
 
 # Stop when validation metric stops improving for this many epochs.
 RDD_TRAINING_EARLY_STOPPING_PATIENCE = 8
@@ -80,7 +79,6 @@ RUN_RDD_EVALUATION = True  # set True to evaluate selected checkpoints
 RDD_EVALUATION_BATCH_SIZE = 32
 RDD_EVALUATION_NUM_WORKERS = 2
 RDD_EVALUATION_PROGRESS_INTERVAL = 50
-RDD_EVALUATION_SAVE_PLOTS = True
 
 # Lets interrupted all-model runs continue without re-evaluating completed models.
 RDD_EVALUATION_SKIP_EXISTING_RESULTS = True
@@ -92,6 +90,5 @@ RDD_EVALUATION_SKIP_EXISTING_RESULTS = True
 
 RUN_RDD_COMPARISON = True
 
-# Rank model_comparison.csv/top_models.csv by this metric.
+# Rank model_comparison.csv by this metric.
 RDD_COMPARISON_RANKING_METRIC = "f1"
-RDD_COMPARISON_TOP_K = 3

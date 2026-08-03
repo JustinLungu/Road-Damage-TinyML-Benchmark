@@ -63,7 +63,6 @@ def test_rdd_experiment_runner_trains_evaluates_and_compares(
         comparison_path,
         evaluation_rows,
         ranking_metric,
-        top_k,
     ):
         comparison_path.parent.mkdir(parents=True, exist_ok=True)
         comparison_path.write_text("model_name\n", encoding="utf-8")
@@ -71,7 +70,6 @@ def test_rdd_experiment_runner_trains_evaluates_and_compares(
             comparison_path,
             tuple(evaluation_rows),
             ranking_metric,
-            top_k,
         )
         return [
             {"rank": 1, "model_name": "tiny", "balanced_accuracy": 0.75, "f1": 0.72}
@@ -184,13 +182,11 @@ def test_rdd_experiment_runner_loads_comparison_rows_when_evaluation_not_run(
         comparison_path,
         evaluation_rows,
         ranking_metric,
-        top_k,
     ):
         captured["comparison"] = (
             comparison_path,
             tuple(evaluation_rows),
             ranking_metric,
-            top_k,
         )
         return [{"rank": 1, "model_name": "tiny", "balanced_accuracy": 0.8, "f1": 0.74}]
 

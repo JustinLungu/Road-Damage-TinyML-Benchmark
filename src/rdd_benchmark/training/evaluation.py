@@ -16,7 +16,6 @@ from src.rdd_benchmark.constants import (
     RDD_EVALUATION_BATCH_SIZE,
     RDD_EVALUATION_NUM_WORKERS,
     RDD_EVALUATION_PROGRESS_INTERVAL,
-    RDD_EVALUATION_SAVE_PLOTS,
 )
 from src.rdd_benchmark.data_loader.dataset import (
     BinaryPotholeDataset,
@@ -33,11 +32,8 @@ from src.rdd_benchmark.training.utils import (
     compute_binary_roc_curve,
     extract_logits,
     make_image_transform,
-    write_confusion_matrix_csv,
     write_confusion_matrix_plot,
     write_evaluation_metrics_csv,
-    write_evaluation_metrics_json,
-    write_metric_bar_plot,
     write_roc_curve_plot,
 )
 
@@ -51,8 +47,6 @@ class RDDEvaluationConfig:
     batch_size: int = RDD_EVALUATION_BATCH_SIZE
     num_workers: int = RDD_EVALUATION_NUM_WORKERS
     progress_interval: int = RDD_EVALUATION_PROGRESS_INTERVAL
-    save_plots: bool = RDD_EVALUATION_SAVE_PLOTS
-    save_balanced_test_metrics: bool = True
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
     @property
@@ -124,8 +118,6 @@ class BinaryPotholeEvaluator:
             {"experiment_name": self.config.experiment_name, **evaluation_timing}
         )
 
-        evaluation_timing_path = self.config.model_output_dir / "evaluation_timing.json"
-        write_evaluation_metrics_json(evaluation_timing_path, evaluation_timing)
         self._write_balanced_test_outputs(
             manifest,
             all_predictions,
@@ -151,38 +143,27 @@ class BinaryPotholeEvaluator:
         targets: torch.Tensor,
     ) -> dict[str, float | str]:
         output_dir = self.config.model_output_dir
-        metrics_json_path = output_dir / "test_metrics.json"
         metrics_csv_path = output_dir / "test_metrics.csv"
-        confusion_matrix_path = output_dir / "confusion_matrix.csv"
         confusion_matrix_plot_path = output_dir / "confusion_matrix.png"
         roc_curve_plot_path = output_dir / "roc_curve.png"
-        metric_bar_plot_path = output_dir / "test_metric_bars.png"
 
-        write_evaluation_metrics_json(metrics_json_path, metrics)
         write_evaluation_metrics_csv(
             metrics_csv_path,
             self.config.model_name,
             "test",
             metrics,
         )
-        write_confusion_matrix_csv(confusion_matrix_path, metrics)
-        if self.config.save_plots:
-            false_positive_rates, true_positive_rates = compute_binary_roc_curve(
-                positive_scores,
-                targets,
-            )
-            write_confusion_matrix_plot(confusion_matrix_plot_path, metrics)
-            write_roc_curve_plot(
-                roc_curve_plot_path,
-                false_positive_rates,
-                true_positive_rates,
-                float(metrics["roc_auc"]),
-            )
-            write_metric_bar_plot(metric_bar_plot_path, metrics)
-        else:
-            confusion_matrix_plot_path = None
-            roc_curve_plot_path = None
-            metric_bar_plot_path = None
+        false_positive_rates, true_positive_rates = compute_binary_roc_curve(
+            positive_scores,
+            targets,
+        )
+        write_confusion_matrix_plot(confusion_matrix_plot_path, metrics)
+        write_roc_curve_plot(
+            roc_curve_plot_path,
+            false_positive_rates,
+            true_positive_rates,
+            float(metrics["roc_auc"]),
+        )
 
         print(
             "  test metrics: "
@@ -203,9 +184,6 @@ class BinaryPotholeEvaluator:
         targets: torch.Tensor,
         positive_scores: torch.Tensor,
     ) -> None:
-        if not self.config.save_balanced_test_metrics:
-            return
-
         indices = select_balanced_test_indices(
             manifest,
             RDD_SPLIT_RANDOM_SEED,
@@ -233,34 +211,16 @@ class BinaryPotholeEvaluator:
         )
 
         output_dir = self.config.model_output_dir
-        write_evaluation_metrics_json(
-            output_dir / "balanced_test_metrics.json", metrics
-        )
         write_evaluation_metrics_csv(
             output_dir / "balanced_test_metrics.csv",
             self.config.model_name,
             "balanced_test",
             metrics,
         )
-        write_confusion_matrix_csv(
-            output_dir / "balanced_confusion_matrix.csv", metrics
+        write_confusion_matrix_plot(
+            output_dir / "balanced_confusion_matrix.png",
+            metrics,
         )
-        if self.config.save_plots:
-            false_positive_rates, true_positive_rates = compute_binary_roc_curve(
-                balanced_scores,
-                balanced_targets,
-            )
-            write_confusion_matrix_plot(
-                output_dir / "balanced_confusion_matrix.png",
-                metrics,
-            )
-            write_roc_curve_plot(
-                output_dir / "balanced_roc_curve.png",
-                false_positive_rates,
-                true_positive_rates,
-                float(metrics["roc_auc"]),
-            )
-            write_metric_bar_plot(output_dir / "balanced_test_metric_bars.png", metrics)
 
         print(
             "  balanced test metrics: "

@@ -20,7 +20,6 @@ from src.rdd_benchmark.constants import (
     RDD_TRAINING_LEARNING_RATE,
     RDD_TRAINING_NUM_WORKERS,
     RDD_TRAINING_PROGRESS_INTERVAL,
-    RDD_TRAINING_SAVE_PLOTS,
     RDD_TRAINING_WEIGHT_DECAY,
 )
 from src.rdd_benchmark.data_loader.dataset import (
@@ -46,8 +45,7 @@ from src.rdd_benchmark.training.utils import (
     compute_binary_classification_metrics,
     extract_logits,
     make_image_transform,
-    write_training_loss_plot,
-    write_training_metric_plot,
+    write_training_curves,
 )
 
 
@@ -70,7 +68,6 @@ class RDDTrainingConfig:
     early_stopping_patience: int = RDD_TRAINING_EARLY_STOPPING_PATIENCE
     early_stopping_min_delta: float = RDD_TRAINING_EARLY_STOPPING_MIN_DELTA
     progress_interval: int = RDD_TRAINING_PROGRESS_INTERVAL
-    save_plots: bool = RDD_TRAINING_SAVE_PLOTS
     drop_last_train_batch: bool = RDD_TRAINING_DROP_LAST_BATCH
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -226,32 +223,9 @@ class BinaryPotholeTrainer:
 
         history_path = model_output_dir / "history.csv"
         self._write_history(history_path, history)
-        loss_curve_path = model_output_dir / "loss_curve.png"
-        f1_curve_path = model_output_dir / "f1_curve.png"
-        accuracy_curve_path = model_output_dir / "accuracy_curve.png"
-        if self.config.save_plots:
-            write_training_loss_plot(loss_curve_path, history)
-            write_training_metric_plot(
-                plot_path=f1_curve_path,
-                history=history,
-                metric_name="f1",
-                y_label="F1-score",
-                title="RDD Binary Pothole Training F1",
-            )
-            write_training_metric_plot(
-                plot_path=accuracy_curve_path,
-                history=history,
-                metric_name="accuracy",
-                y_label="Accuracy",
-                title="RDD Binary Pothole Training Accuracy",
-            )
-            print(f"  loss_curve: {loss_curve_path}")
-            print(f"  f1_curve: {f1_curve_path}")
-            print(f"  accuracy_curve: {accuracy_curve_path}")
-        else:
-            loss_curve_path = None
-            f1_curve_path = None
-            accuracy_curve_path = None
+        training_curves_path = model_output_dir / "training_curves.png"
+        write_training_curves(training_curves_path, history)
+        print(f"  training_curves: {training_curves_path}")
 
         return RDDTrainingResult(
             best_epoch=best_epoch,

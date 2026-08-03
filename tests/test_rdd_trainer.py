@@ -138,9 +138,7 @@ def test_binary_pothole_trainer_runs_and_saves_best_checkpoint(
     assert result.best_epoch in {1, 2}
     assert result.best_checkpoint_path.is_file()
     assert (config.model_output_dir / "history.csv").is_file()
-    assert (config.model_output_dir / "loss_curve.png").is_file()
-    assert (config.model_output_dir / "f1_curve.png").is_file()
-    assert (config.model_output_dir / "accuracy_curve.png").is_file()
+    assert (config.model_output_dir / "training_curves.png").is_file()
     assert result.best_checkpoint_path.parent == (
         tmp_path / "results" / "full_image_baseline" / "tiny"
     )
@@ -156,9 +154,7 @@ def test_binary_pothole_trainer_runs_and_saves_best_checkpoint(
     assert "batch 1/2 epoch=1/2" in output
     assert "epoch 1/2: validating" in output
     assert "saved new best checkpoint" in output
-    assert "loss_curve:" in output
-    assert "f1_curve:" in output
-    assert "accuracy_curve:" in output
+    assert "training_curves:" in output
 
 
 def test_binary_pothole_trainer_forwards_augmentation_strategy(

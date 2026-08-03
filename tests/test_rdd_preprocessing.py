@@ -151,11 +151,13 @@ def test_build_manifest_rows_writes_split_manifests_and_summary(tmp_path) -> Non
 
     summary_rows = build_summary_rows(rows)
     train_total = next(
-        row for row in summary_rows
+        row
+        for row in summary_rows
         if row["split"] == "train" and row["country"] == "__split_total__"
     )
     dataset_total = next(
-        row for row in summary_rows
+        row
+        for row in summary_rows
         if row["split"] == "all" and row["country"] == "__dataset_total__"
     )
 

@@ -7,7 +7,6 @@ from pathlib import Path
 from src.constants import RDD_TRAINING_RESULTS_DIR
 from src.rdd_benchmark.constants import (
     RDD_COMPARISON_RANKING_METRIC,
-    RDD_COMPARISON_TOP_K,
     RDD_EVALUATION_SKIP_EXISTING_RESULTS,
     RDD_SKIP_FAILED_MODELS,
     RDD_TRAINING_SKIP_EXISTING_CHECKPOINTS,
@@ -44,7 +43,6 @@ class RDDExperimentRunConfig:
     skip_existing_evaluations: bool = RDD_EVALUATION_SKIP_EXISTING_RESULTS
     skip_failed_models: bool = RDD_SKIP_FAILED_MODELS
     comparison_ranking_metric: str = RDD_COMPARISON_RANKING_METRIC
-    comparison_top_k: int = RDD_COMPARISON_TOP_K
 
     @property
     def experiment_output_dir(self) -> Path:
@@ -166,11 +164,11 @@ class RDDExperimentRunner:
                     }
                 )
                 print(
-                    f"  metrics_json: {evaluation_config.model_output_dir / 'test_metrics.json'}"
+                    f"  metrics: {evaluation_config.model_output_dir / 'test_metrics.csv'}"
                 )
                 print(
                     "  confusion_matrix: "
-                    f"{evaluation_config.model_output_dir / 'confusion_matrix.csv'}"
+                    f"{evaluation_config.model_output_dir / 'confusion_matrix.png'}"
                 )
             except Exception:
                 self._handle_model_failure(model_name, "evaluation")
@@ -207,15 +205,14 @@ class RDDExperimentRunner:
             comparison_path,
             evaluation_rows=evaluation_rows,
             ranking_metric=self.config.comparison_ranking_metric,
-            top_k=self.config.comparison_top_k,
         )
         print(
             "  model_comparison: "
             f"{comparison_path} "
             f"(ranked by {self.config.comparison_ranking_metric})"
         )
-        print(f"  top {self.config.comparison_top_k}:")
-        for row in ranked_rows[: self.config.comparison_top_k]:
+        print("  top 3:")
+        for row in ranked_rows[:3]:
             print(
                 "    "
                 f"#{row['rank']} {row['model_name']} "

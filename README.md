@@ -113,22 +113,20 @@ Typical files include:
 
 - `best.pt`
 - `history.csv`
-- `loss_curve.png`
-- `f1_curve.png`
-- `accuracy_curve.png`
-- `test_metrics.json`
+- `training_curves.png`
 - `test_metrics.csv`
-- `balanced_test_metrics.json`
-- `confusion_matrix.csv`
+- `balanced_test_metrics.csv`
 - `confusion_matrix.png`
+- `balanced_confusion_matrix.png`
 - `roc_curve.png`
-- `evaluation_timing.json`
+
+The metrics CSV includes evaluation throughput and average image processing
+time alongside the classification metrics.
 
 Experiment-level comparisons are written as:
 
 ```text
 results/rdd_trained_models/<experiment_name>/model_comparison.csv
-results/rdd_trained_models/<experiment_name>/top_models.csv
 ```
 
 ## Dataset Downloads

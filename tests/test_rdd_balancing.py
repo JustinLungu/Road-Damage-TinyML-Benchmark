@@ -137,7 +137,10 @@ def test_prepare_balanced_manifests_only_changes_train_split(tmp_path):
     source_dir = tmp_path / "source"
     output_root = tmp_path / "balanced"
     train_rows = [
-        *[make_row(f"train_pothole_{index}", "train", POSITIVE_LABEL) for index in range(2)],
+        *[
+            make_row(f"train_pothole_{index}", "train", POSITIVE_LABEL)
+            for index in range(2)
+        ],
         *[
             make_row(f"train_non_pothole_{index}", "train", NEGATIVE_LABEL)
             for index in range(10)

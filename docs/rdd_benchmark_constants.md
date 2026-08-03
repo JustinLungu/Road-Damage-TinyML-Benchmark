@@ -137,7 +137,6 @@ It avoids a final one-sample training batch.
 RUN_RDD_EVALUATION = True
 RUN_RDD_COMPARISON = True
 RDD_COMPARISON_RANKING_METRIC = "f1"
-RDD_COMPARISON_TOP_K = 3
 ```
 
 Evaluation reports accuracy, balanced accuracy, precision, recall, F1,
@@ -157,8 +156,10 @@ Results are written to:
 results/rdd_trained_models/<experiment_name>/<model_name>/
 ```
 
-The experiment folder also contains `model_comparison.csv` and
-`top_models.csv`.
+Each model folder contains the best checkpoint, training history and curves,
+realistic and balanced-test metrics, confusion matrices, and the realistic-test
+ROC curve. Evaluation timing is included in `test_metrics.csv`. The experiment
+folder contains the complete ranked `model_comparison.csv`.
 
 ## Run Only One Stage
 

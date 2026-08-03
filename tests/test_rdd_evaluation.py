@@ -58,7 +58,6 @@ def test_evaluator_writes_realistic_and_balanced_test_outputs(tmp_path):
         output_dir=tmp_path / "results",
         batch_size=2,
         num_workers=0,
-        save_plots=False,
         device="cpu",
     )
     config.model_output_dir.mkdir(parents=True)
@@ -69,12 +68,13 @@ def test_evaluator_writes_realistic_and_balanced_test_outputs(tmp_path):
     assert metrics["accuracy"] == 0.5
     assert metrics["recall"] == 1.0
     assert (config.model_output_dir / "test_metrics.csv").is_file()
-    assert (config.model_output_dir / "evaluation_timing.json").is_file()
     assert "total_evaluation_seconds" in metrics
     assert "avg_image_processing_ms" in metrics
     assert "evaluation_images_per_second" in metrics
     assert (config.model_output_dir / "balanced_test_metrics.csv").is_file()
-    assert not (config.model_output_dir / "confusion_matrix.png").exists()
+    assert (config.model_output_dir / "confusion_matrix.png").is_file()
+    assert (config.model_output_dir / "balanced_confusion_matrix.png").is_file()
+    assert (config.model_output_dir / "roc_curve.png").is_file()
 
 
 def test_balanced_test_indices_are_deterministic_and_class_balanced(tmp_path):
