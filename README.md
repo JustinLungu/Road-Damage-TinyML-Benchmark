@@ -7,23 +7,11 @@ This repository was originally started as a broader edge/VLM prototype. It is
 now scoped as a self-contained benchmark project for:
 
 - preparing RDD2022 binary pothole datasets;
-- testing full-image and patch/grid image-classification workflows;
 - running imbalance-aware data experiments;
 - fine-tuning tiny, small, and standard image classifiers;
 - comparing models with accuracy, balanced accuracy, precision, recall, F1,
   ROC-AUC, confusion matrices, inference speed, and training curves;
 - documenting model loading and demo inference paths.
-
-## Recommended Repository Name
-
-Use one of these names on GitHub:
-
-- `road-damage-tinyml-benchmark` recommended
-- `rdd-tinyml-benchmark`
-- `pothole-classification-benchmark`
-
-The first name is broad enough to include RDD2022, tiny models, and future
-road-damage datasets without implying Jetson/VLM/cascaded inference work.
 
 ## What Is In The Repo
 
@@ -59,7 +47,7 @@ src/rdd_benchmark/
 ├── constants.py              # run switches and experiment/model selection
 ├── main.py                   # single entry point for preprocessing/training/eval
 ├── data_loader/              # manifest and dataset classes
-├── data_preprocessing/       # splits, patches, balancing, augmentation, synthetic hooks
+├── data_preprocessing/       # splits, balancing, and augmentation
 ├── experiments/              # experiment registry and runner
 └── training/                 # model adaptation, trainer, evaluation, comparison
 ```
@@ -87,8 +75,7 @@ full explanation of the switches.
 
 ## RDD Experiments
 
-The benchmark supports reproducible experiment IDs. The most important final
-experiments are:
+The benchmark supports reproducible experiment IDs:
 
 - `A`: natural clean400 full-image baseline with standard augmentation;
 - `F`: weighted sampler with 25 percent target pothole sampling and standard
@@ -97,6 +84,9 @@ experiments are:
   augmentation;
 - `H`: majority downsampling to 1 pothole : 5 non-potholes with stronger
   pothole augmentation.
+
+`B`, `C`, and `D` retain the earlier, more aggressive balancing strategies for
+reproducibility. Select one or more IDs with `RDD_ACTIVE_EXPERIMENT_IDS`.
 
 The tiny/small model sweep currently uses:
 

@@ -86,8 +86,7 @@ Run the documentation demo:
 Use it in the RDD benchmark by setting:
 
 ```python
-RDD_MODEL_MODE = "single"
-RDD_SINGLE_MODEL = "shufflenet_v2_x0_5"
+RDD_MODEL_NAMES = ("shufflenet_v2_x0_5",)
 ```
 
 ## Output Interpretation
