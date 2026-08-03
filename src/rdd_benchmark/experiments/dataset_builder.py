@@ -6,16 +6,9 @@ from pathlib import Path
 from src.constants import (
     RDD2022_BINARY_POTHOLE_DIR,
     RDD2022_BINARY_POTHOLE_EXPERIMENTS_DIR,
-    RDD2022_SYNTHETIC_POTHOLE_DIR,
 )
 from src.rdd_benchmark.data_preprocessing.balancing import (
     prepare_balanced_binary_pothole_manifests,
-)
-from src.rdd_benchmark.data_preprocessing.synthetic import (
-    prepare_synthetic_binary_pothole_manifests,
-)
-from src.rdd_benchmark.experiments.constants import (
-    RDD_EXPERIMENT_E,
 )
 from src.rdd_benchmark.experiments.experiment_registry import RDDExperimentConfig
 
@@ -78,50 +71,15 @@ def build_downsampled_manifest_paths(
     return manifest_paths
 
 
-def build_synthetic_manifest_paths(
-    config: RDDExperimentConfig,
-    best_previous_experiment_name: str | None,
-    experiment_output_root: Path = RDD2022_BINARY_POTHOLE_EXPERIMENTS_DIR,
-    synthetic_source_dir: Path = RDD2022_SYNTHETIC_POTHOLE_DIR,
-) -> RDDExperimentManifestPaths:
-    if not best_previous_experiment_name:
-        raise ValueError(
-            "Experiment E requires best_previous_experiment_name so synthetic "
-            "rows are added to the selected best C/D dataset."
-        )
-
-    source_dir = experiment_output_root / best_previous_experiment_name
-    output_dir = prepare_synthetic_binary_pothole_manifests(
-        experiment_name=config.experiment_name,
-        synthetic_pothole_ratio=config.synthetic_pothole_ratio,
-        source_dir=source_dir,
-        synthetic_source_dir=synthetic_source_dir,
-        output_root=experiment_output_root,
-        random_seed=config.random_seed,
-    )
-    manifest_paths = make_manifest_paths(config.experiment_name, output_dir)
-    validate_manifest_paths(manifest_paths)
-    return manifest_paths
-
-
 def build_experiment_manifest_paths(
     config: RDDExperimentConfig,
     source_dir: Path = RDD2022_BINARY_POTHOLE_DIR,
     experiment_output_root: Path = RDD2022_BINARY_POTHOLE_EXPERIMENTS_DIR,
-    synthetic_source_dir: Path = RDD2022_SYNTHETIC_POTHOLE_DIR,
-    best_previous_experiment_name: str | None = None,
 ) -> RDDExperimentManifestPaths:
     if config.non_potholes_per_pothole is not None:
         return build_downsampled_manifest_paths(
             config,
             source_dir,
             experiment_output_root,
-        )
-    if config.experiment_id == RDD_EXPERIMENT_E:
-        return build_synthetic_manifest_paths(
-            config,
-            best_previous_experiment_name,
-            experiment_output_root,
-            synthetic_source_dir,
         )
     return build_original_manifest_paths(config, source_dir)

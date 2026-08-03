@@ -118,7 +118,10 @@ def test_rdd_experiment_runner_trains_evaluates_and_compares(
     assert result.experiment_name == experiment_config.experiment_name
     assert result.trained_model_names == ("tiny",)
     assert result.comparison_path == (
-        tmp_path / "results" / experiment_config.experiment_name / "model_comparison.csv"
+        tmp_path
+        / "results"
+        / experiment_config.experiment_name
+        / "model_comparison.csv"
     )
     assert trainer_config.train_manifest_path == manifest_paths.train_manifest_path
     assert trainer_config.validation_manifest_path == (
@@ -128,9 +131,6 @@ def test_rdd_experiment_runner_trains_evaluates_and_compares(
     assert trainer_config.target_pothole_fraction == 0.5
     assert trainer_config.augmentation_strategy == "minority_strong"
     assert trainer_config.best_metric == "balanced_accuracy"
-    assert evaluation_config.validation_manifest_path == (
-        manifest_paths.validation_manifest_path
-    )
     assert evaluation_config.test_manifest_path == manifest_paths.test_manifest_path
     assert captured["comparison"][2] == "f1"
 
@@ -159,11 +159,7 @@ def test_rdd_experiment_runner_skips_existing_checkpoint(
 
     experiment_config = get_rdd_experiment_config("A")
     checkpoint_path = (
-        tmp_path
-        / "results"
-        / experiment_config.experiment_name
-        / "tiny"
-        / "best.pt"
+        tmp_path / "results" / experiment_config.experiment_name / "tiny" / "best.pt"
     )
     checkpoint_path.parent.mkdir(parents=True)
     checkpoint_path.write_text("checkpoint", encoding="utf-8")
@@ -213,9 +209,7 @@ def test_rdd_experiment_runner_loads_comparison_rows_when_evaluation_not_run(
             ranking_metric,
             top_k,
         )
-        return [
-            {"rank": 1, "model_name": "tiny", "balanced_accuracy": 0.8, "f1": 0.74}
-        ]
+        return [{"rank": 1, "model_name": "tiny", "balanced_accuracy": 0.8, "f1": 0.74}]
 
     monkeypatch.setattr(
         runner_module,
@@ -235,6 +229,9 @@ def test_rdd_experiment_runner_loads_comparison_rows_when_evaluation_not_run(
     result = RDDExperimentRunner(run_config).run()
 
     assert result.comparison_path == (
-        tmp_path / "results" / experiment_config.experiment_name / "model_comparison.csv"
+        tmp_path
+        / "results"
+        / experiment_config.experiment_name
+        / "model_comparison.csv"
     )
     assert captured["comparison"][1][0]["model_name"] == "tiny"

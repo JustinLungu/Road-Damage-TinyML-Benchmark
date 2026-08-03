@@ -1,6 +1,5 @@
-# True regenerates datasets/rdd2022/binary_pothole/*.csv before the rest of main.
-# Keep False for normal runs after the manifests have been prepared.
-RUN_RDD_FULL_IMAGE_PREPROCESSING = False
+# True regenerates the full-image train/validation/test CSVs before a run.
+RUN_RDD_PREPROCESSING = False
 
 # RDD uses D40 for potholes. Other damage labels are treated as non-pothole.
 POTHOLE_LABEL = "D40"
@@ -14,7 +13,7 @@ LABEL_TO_ID = {label: index for index, label in ID_TO_LABEL.items()}
 # Split modes:
 # "stratified_by_country": every country contributes train/validation/test rows,
 # keeping pothole/non-pothole proportions closer across splits. This is the
-# recommended development split for fine-tuning and threshold tuning.
+# recommended development split for training and model selection.
 # "country_holdout": whole countries are assigned to one split, useful later as
 # a harder cross-country generalization benchmark.
 RDD_SPLIT_MODE = "stratified_by_country"
@@ -24,69 +23,11 @@ RDD_SPLIT_MODE = "stratified_by_country"
 # Experiment Selection
 ########################
 
-# True regenerates datasets/rdd2022/binary_pothole_patches/*.csv before training.
-# Keep False after CSVs exist unless patch/country-split settings changed.
-RUN_RDD_PATCH_PREPROCESSING = False
-
-# Default output folder used only when trainer/evaluator are instantiated
-# directly. The main experiment runner saves under each A-E experiment name.
-RDD_EXPERIMENT_NAME = "stratified_by_country"
-
-# 30-epoch tiny/small run. A30 uses the same clean natural full-image setup as
-# A, but saves to a separate results folder so the previous 10-epoch A run stays
-# intact.
-RDD_ACTIVE_EXPERIMENT_IDS = ("A30",)
-
-# Required only when running Experiment E. Set this to the experiment folder name
-# that E should use as its synthetic-data base, usually the better of C or D.
-RDD_BEST_PREVIOUS_EXPERIMENT_NAME = None
+# Experiments differ only in sampling, augmentation, and train-set balancing.
+RDD_ACTIVE_EXPERIMENT_IDS = ("A",)
 
 
-####################
-# Input/Eval Modes
-####################
-
-# Training modes:
-# "full_image": train on datasets/rdd2022/binary_pothole/*.csv full images.
-# "annotation_patch": train on annotation-centered patch crops from XML boxes.
-RDD_TRAINING_INPUT_MODE = "full_image"
-
-# Evaluation modes:
-# "full_image": evaluate each full test image directly.
-# "grid_image": split each full image into RDD_GRID_SIZE x RDD_GRID_SIZE patches,
-# score each patch, and use the max pothole score as the image score.
-RDD_EVALUATION_INPUT_MODE = "full_image"
-RDD_SUPPORTED_TRAINING_INPUT_MODES = ("full_image", "annotation_patch")
-RDD_SUPPORTED_EVALUATION_INPUT_MODES = ("full_image", "grid_image")
-
-
-#######################
-# Patch/Grid Settings
-#######################
-
-# Patch preprocessing controls for annotation-derived training patches.
-RDD_PATCH_SIZE = 224
-
-# Number of rows/columns for full-image grid inference. 3 means 9 patches/image.
-RDD_GRID_SIZE = 3
-
-# Fallback image-level decision threshold when threshold tuning is disabled.
-RDD_PATCH_DECISION_THRESHOLD = 0.5
-
-# If True, validation full images are scored with grid inference and the
-# threshold with best RDD_THRESHOLD_METRIC is saved to threshold.json.
-RDD_TUNE_PATCH_THRESHOLD = True
-RDD_THRESHOLD_METRIC = "f1"
-RDD_THRESHOLD_VALUES = tuple(index / 100 for index in range(5, 96, 5))
-
-
-# "single" runs RDD_SINGLE_MODEL. "all" runs every model in RDD_MODEL_NAMES.
-RDD_MODEL_MODE = "all"
-# Used when RDD_MODEL_MODE is "single" for both adaptation smoke and training.
-RDD_SINGLE_MODEL = "tiny_cnn"
-# Used when RDD_MODEL_MODE is "all" for both adaptation smoke and training.
-# Tiny/small sweep models: four custom/source-defined models plus Torchvision
-# ShuffleNetV2 0.5x.
+# Put one model here for a smoke test or several models for a sweep.
 RDD_MODEL_NAMES = (
     "ds_cnn_small",
     "mobilenet_v1_025",
@@ -114,7 +55,7 @@ RDD_TRAINING_LEARNING_RATE = 1e-4
 RDD_TRAINING_WEIGHT_DECAY = 1e-4
 
 # Best checkpoint is selected using this validation metric.
-RDD_TRAINING_BEST_METRIC = "f1"
+RDD_TRAINING_BEST_METRIC = "balanced_accuracy"
 
 # Compensates for pothole/non-pothole imbalance in the training loss.
 RDD_TRAINING_USE_WEIGHTED_LOSS = True

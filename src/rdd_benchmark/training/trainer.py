@@ -11,9 +11,6 @@ from torch.utils.data import DataLoader, Dataset
 
 from src.constants import RDD_TRAINING_RESULTS_DIR
 from src.rdd_benchmark.constants import (
-    RDD_EXPERIMENT_NAME,
-    RDD_SUPPORTED_TRAINING_INPUT_MODES,
-    RDD_TRAINING_INPUT_MODE,
     RDD_TRAINING_BATCH_SIZE,
     RDD_TRAINING_BEST_METRIC,
     RDD_TRAINING_DROP_LAST_BATCH,
@@ -27,7 +24,10 @@ from src.rdd_benchmark.constants import (
     RDD_TRAINING_USE_WEIGHTED_LOSS,
     RDD_TRAINING_WEIGHT_DECAY,
 )
-from src.rdd_benchmark.data_loader.dataset import BinaryPotholeDataset, BinaryPotholeManifest
+from src.rdd_benchmark.data_loader.dataset import (
+    BinaryPotholeDataset,
+    BinaryPotholeManifest,
+)
 from src.rdd_benchmark.data_loader.constants import (
     RDD_SAMPLER_NONE,
     RDD_SUPPORTED_SAMPLER_STRATEGIES,
@@ -54,8 +54,7 @@ from src.rdd_benchmark.training.utils import (
 @dataclass(frozen=True)
 class RDDTrainingConfig:
     model_name: str
-    experiment_name: str = RDD_EXPERIMENT_NAME
-    training_input_mode: str = RDD_TRAINING_INPUT_MODE
+    experiment_name: str = "default"
     train_manifest_path: Path | None = None
     validation_manifest_path: Path | None = None
     sampler_strategy: str = RDD_SAMPLER_NONE
@@ -89,7 +88,6 @@ class RDDTrainingConfig:
 class RDDTrainingResult:
     model_name: str
     experiment_name: str
-    training_input_mode: str
     best_epoch: int
     best_metric_name: str
     best_metric_value: float
@@ -114,11 +112,6 @@ class BinaryPotholeTrainer:
             raise ValueError("batch_size must be at least one.")
         if config.early_stopping_patience < 0:
             raise ValueError("early_stopping_patience cannot be negative.")
-        if config.training_input_mode not in RDD_SUPPORTED_TRAINING_INPUT_MODES:
-            raise ValueError(
-                "training_input_mode must be one of: "
-                f"{', '.join(RDD_SUPPORTED_TRAINING_INPUT_MODES)}."
-            )
         if config.sampler_strategy not in RDD_SUPPORTED_SAMPLER_STRATEGIES:
             raise ValueError(
                 "sampler_strategy must be one of: "
@@ -143,7 +136,6 @@ class BinaryPotholeTrainer:
             "  setup: "
             f"device={self.device}, epochs={self.config.epochs}, "
             f"batch_size={self.config.batch_size}, "
-            f"training_input_mode={self.config.training_input_mode}, "
             f"sampler_strategy={self.config.sampler_strategy}, "
             f"augmentation_strategy={self.config.augmentation_strategy}"
         )
@@ -186,7 +178,10 @@ class BinaryPotholeTrainer:
             epoch_row = {
                 "epoch": epoch,
                 **{f"train_{key}": value for key, value in train_metrics.items()},
-                **{f"validation_{key}": value for key, value in validation_metrics.items()},
+                **{
+                    f"validation_{key}": value
+                    for key, value in validation_metrics.items()
+                },
             }
             history.append(epoch_row)
 
@@ -273,7 +268,6 @@ class BinaryPotholeTrainer:
         return RDDTrainingResult(
             model_name=self.config.model_name,
             experiment_name=self.config.experiment_name,
-            training_input_mode=self.config.training_input_mode,
             best_epoch=best_epoch,
             best_metric_name=self.config.best_metric,
             best_metric_value=best_metric_value,
@@ -346,7 +340,6 @@ class BinaryPotholeTrainer:
 
         return make_rdd_dataset(
             split=split,
-            input_mode=self.config.training_input_mode,
             transform=transform,
         )
 
@@ -453,7 +446,6 @@ class BinaryPotholeTrainer:
                 "best_metric": self.config.best_metric,
                 "best_metric_value": metric_value,
                 "experiment_name": self.config.experiment_name,
-                "training_input_mode": self.config.training_input_mode,
                 "validation_metrics": validation_metrics,
                 "model_state_dict": model.state_dict(),
             },

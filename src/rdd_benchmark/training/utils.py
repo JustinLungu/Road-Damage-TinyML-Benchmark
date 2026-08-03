@@ -16,9 +16,7 @@ from src.rdd_benchmark.constants import (
     POSITIVE_LABEL,
     RDD_COMPARISON_RANKING_METRIC,
     RDD_COMPARISON_TOP_K,
-    RDD_MODEL_MODE,
     RDD_MODEL_NAMES,
-    RDD_SINGLE_MODEL,
 )
 from src.rdd_benchmark.data_preprocessing.augmentation import make_rdd_image_transform
 from src.rdd_benchmark.training.constants import DEFAULT_IMAGE_SIZE, MODEL_IMAGE_SIZES
@@ -101,23 +99,6 @@ def load_and_adapt_all_binary_pothole_models(
         adapted_models[model_name] = load_and_adapt_model_for_binary_pothole(model_name)
 
     return adapted_models
-
-
-def select_rdd_model_names(
-    mode: str | None = None,
-    model_names: Iterable[str] | None = None,
-    single_model: str | None = None,
-) -> tuple[str, ...]:
-    mode = RDD_MODEL_MODE if mode is None else mode
-    model_names = RDD_MODEL_NAMES if model_names is None else model_names
-    single_model = RDD_SINGLE_MODEL if single_model is None else single_model
-
-    if mode == "single":
-        return (single_model,)
-    if mode == "all":
-        return tuple(model_names)
-
-    raise ValueError("RDD_MODEL_MODE must be 'single' or 'all'.")
 
 
 def make_image_transform(
@@ -214,11 +195,13 @@ def compute_binary_roc_auc(
         current_index = next_index
 
     positive_rank_sum = sum(
-        rank for rank, label in zip(ranks, labels, strict=True) if label == POSITIVE_LABEL
+        rank
+        for rank, label in zip(ranks, labels, strict=True)
+        if label == POSITIVE_LABEL
     )
-    return (
-        positive_rank_sum - positive_count * (positive_count + 1) / 2
-    ) / (positive_count * negative_count)
+    return (positive_rank_sum - positive_count * (positive_count + 1) / 2) / (
+        positive_count * negative_count
+    )
 
 
 def compute_binary_roc_curve(

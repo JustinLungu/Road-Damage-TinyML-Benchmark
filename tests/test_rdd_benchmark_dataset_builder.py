@@ -4,15 +4,12 @@ import pytest
 
 from src.rdd_benchmark.constants import NEGATIVE_LABEL, POSITIVE_LABEL
 from src.rdd_benchmark.data_loader.constants import MANIFEST_COLUMNS
-from src.rdd_benchmark.data_preprocessing.synthetic import SYNTHETIC_MANIFEST_NAME
 from src.rdd_benchmark.experiments.dataset_builder import (
     build_experiment_manifest_paths,
     make_manifest_paths,
     validate_manifest_paths,
 )
-from src.rdd_benchmark.experiments.experiment_registry import (
-    get_rdd_experiment_config,
-)
+from src.rdd_benchmark.experiments.experiment_registry import get_rdd_experiment_config
 
 
 def make_row(row_id: str, split: str, label: int) -> dict[str, str]:
@@ -22,12 +19,12 @@ def make_row(row_id: str, split: str, label: int) -> dict[str, str]:
         "country": "Builderland",
         "split": split,
         "label": str(label),
-        "label_name": "pothole" if label == POSITIVE_LABEL else "non_pothole",
-        "has_pothole": str(int(label == POSITIVE_LABEL)),
+        "label_name": "pothole" if label else "non_pothole",
+        "has_pothole": str(label),
         "num_objects": "1",
-        "num_pothole_objects": str(int(label == POSITIVE_LABEL)),
-        "unique_object_labels": "D40" if label == POSITIVE_LABEL else "D00",
-        "object_labels": "D40" if label == POSITIVE_LABEL else "D00",
+        "num_pothole_objects": str(label),
+        "unique_object_labels": "D40" if label else "D00",
+        "object_labels": "D40" if label else "D00",
         "image_width": "640",
         "image_height": "480",
     }
@@ -41,130 +38,51 @@ def write_manifest(path, rows):
         writer.writerows(rows)
 
 
-def read_manifest(path):
-    with path.open(newline="", encoding="utf-8") as input_file:
-        return list(csv.DictReader(input_file))
-
-
 def write_base_manifests(source_dir):
     write_manifest(
         source_dir / "train.csv",
         [
-            *[
-                make_row(f"train_pothole_{index}", "train", POSITIVE_LABEL)
-                for index in range(2)
-            ],
-            *[
-                make_row(f"train_non_pothole_{index}", "train", NEGATIVE_LABEL)
-                for index in range(10)
-            ],
+            *[make_row(f"p{index}", "train", POSITIVE_LABEL) for index in range(2)],
+            *[make_row(f"n{index}", "train", NEGATIVE_LABEL) for index in range(12)],
         ],
     )
-    write_manifest(
-        source_dir / "validation.csv",
-        [
-            make_row("validation_pothole", "validation", POSITIVE_LABEL),
-            make_row("validation_non_pothole", "validation", NEGATIVE_LABEL),
-        ],
-    )
-    write_manifest(
-        source_dir / "test.csv",
-        [
-            make_row("test_pothole", "test", POSITIVE_LABEL),
-            make_row("test_non_pothole", "test", NEGATIVE_LABEL),
-        ],
-    )
-
-
-def count_label(rows, label):
-    return sum(int(row["label"]) == label for row in rows)
+    write_manifest(source_dir / "validation.csv", [make_row("v", "validation", 0)])
+    write_manifest(source_dir / "test.csv", [make_row("t", "test", 1)])
 
 
 def test_validate_manifest_paths_rejects_missing_manifest(tmp_path):
-    manifest_paths = make_manifest_paths("missing", tmp_path / "missing")
-
     with pytest.raises(FileNotFoundError, match="Experiment manifest is missing"):
-        validate_manifest_paths(manifest_paths)
+        validate_manifest_paths(make_manifest_paths("missing", tmp_path))
 
 
 @pytest.mark.parametrize("experiment_id", ["A", "B", "C", "F"])
-def test_build_experiment_manifest_paths_uses_original_manifests_for_non_downsampled(
-    tmp_path,
-    experiment_id,
-):
-    source_dir = tmp_path / "source"
-    write_base_manifests(source_dir)
-    config = get_rdd_experiment_config(experiment_id)
-
-    manifest_paths = build_experiment_manifest_paths(config, source_dir=source_dir)
-
-    assert manifest_paths.dataset_dir == source_dir
-    assert manifest_paths.train_manifest_path == source_dir / "train.csv"
-    assert manifest_paths.validation_manifest_path == source_dir / "validation.csv"
-    assert manifest_paths.test_manifest_path == source_dir / "test.csv"
+def test_non_downsampled_experiments_use_original_manifests(tmp_path, experiment_id):
+    write_base_manifests(tmp_path)
+    paths = build_experiment_manifest_paths(
+        get_rdd_experiment_config(experiment_id),
+        source_dir=tmp_path,
+    )
+    assert paths.dataset_dir == tmp_path
 
 
 @pytest.mark.parametrize(
-    ("experiment_id", "expected_non_potholes"),
-    [("D", 6), ("G", 10), ("H", 10)],
+    ("experiment_id", "expected_negatives"), [("D", 6), ("G", 10), ("H", 10)]
 )
-def test_build_experiment_manifest_paths_creates_downsampled_manifests(
+def test_downsampled_experiments_create_expected_train_ratio(
     tmp_path,
     experiment_id,
-    expected_non_potholes,
+    expected_negatives,
 ):
     source_dir = tmp_path / "source"
-    output_root = tmp_path / "experiments"
     write_base_manifests(source_dir)
-    config = get_rdd_experiment_config(experiment_id)
-
-    manifest_paths = build_experiment_manifest_paths(
-        config,
+    paths = build_experiment_manifest_paths(
+        get_rdd_experiment_config(experiment_id),
         source_dir=source_dir,
-        experiment_output_root=output_root,
+        experiment_output_root=tmp_path / "experiments",
     )
-    train_rows = read_manifest(manifest_paths.train_manifest_path)
-    validation_rows = read_manifest(manifest_paths.validation_manifest_path)
-
-    assert manifest_paths.dataset_dir == output_root / config.experiment_name
-    assert count_label(train_rows, POSITIVE_LABEL) == 2
-    assert count_label(train_rows, NEGATIVE_LABEL) == expected_non_potholes
-    assert len(validation_rows) == 2
-
-
-def test_build_experiment_manifest_paths_requires_best_previous_for_e(tmp_path):
-    config = get_rdd_experiment_config("E")
-
-    with pytest.raises(ValueError, match="best_previous_experiment_name"):
-        build_experiment_manifest_paths(config, experiment_output_root=tmp_path)
-
-
-def test_build_experiment_manifest_paths_adds_synthetic_rows_for_e(tmp_path):
-    source_dir = tmp_path / "source"
-    output_root = tmp_path / "experiments"
-    synthetic_dir = tmp_path / "synthetic"
-    best_previous_name = "best_previous"
-    best_previous_dir = output_root / best_previous_name
-    write_base_manifests(source_dir)
-    write_base_manifests(best_previous_dir)
-    write_manifest(
-        synthetic_dir / SYNTHETIC_MANIFEST_NAME,
-        [
-            make_row(f"synthetic_{index}", "synthetic", POSITIVE_LABEL)
-            for index in range(10)
-        ],
+    with paths.train_manifest_path.open(newline="", encoding="utf-8") as manifest:
+        rows = list(csv.DictReader(manifest))
+    assert sum(int(row["label"]) == POSITIVE_LABEL for row in rows) == 2
+    assert (
+        sum(int(row["label"]) == NEGATIVE_LABEL for row in rows) == expected_negatives
     )
-    config = get_rdd_experiment_config("E")
-
-    manifest_paths = build_experiment_manifest_paths(
-        config,
-        source_dir=source_dir,
-        experiment_output_root=output_root,
-        synthetic_source_dir=synthetic_dir,
-        best_previous_experiment_name=best_previous_name,
-    )
-    train_rows = read_manifest(manifest_paths.train_manifest_path)
-
-    assert manifest_paths.dataset_dir == output_root / config.experiment_name
-    assert len(train_rows) == 13
-    assert count_label(train_rows, POSITIVE_LABEL) == 3

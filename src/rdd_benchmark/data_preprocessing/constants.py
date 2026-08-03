@@ -40,19 +40,6 @@ SUMMARY_COLUMNS = [
     "pothole_objects",
 ]
 
-# Columns written in binary_pothole_patches/summary.csv.
-PATCH_SUMMARY_COLUMNS = [
-    "split",
-    "country",
-    "patches",
-    "pothole_patches",
-    "non_pothole_patches",
-    "pothole_fraction",
-]
-
-# Expands each annotation box before making a square training patch.
-RDD_PATCH_PADDING = 0.15
-
 # Skips very small annotation boxes that are likely too noisy for training.
 RDD_MIN_BOX_AREA = 400
 

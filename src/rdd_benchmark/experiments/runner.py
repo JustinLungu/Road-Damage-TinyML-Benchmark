@@ -36,7 +36,6 @@ from src.rdd_benchmark.training.utils import (
 class RDDExperimentRunConfig:
     experiment_config: RDDExperimentConfig
     model_names: tuple[str, ...]
-    best_previous_experiment_name: str | None = None
     output_dir: Path = RDD_TRAINING_RESULTS_DIR
     run_training: bool = RUN_RDD_TRAINING
     run_evaluation: bool = RUN_RDD_EVALUATION
@@ -69,10 +68,7 @@ class RDDExperimentRunner:
 
     def run(self) -> RDDExperimentRunResult:
         experiment_config = self.config.experiment_config
-        manifest_paths = build_experiment_manifest_paths(
-            experiment_config,
-            best_previous_experiment_name=self.config.best_previous_experiment_name,
-        )
+        manifest_paths = build_experiment_manifest_paths(experiment_config)
 
         print()
         print(f"RDD2022 experiment: {experiment_config.experiment_name}")
@@ -119,7 +115,6 @@ class RDDExperimentRunner:
                     RDDTrainingConfig(
                         model_name=model_name,
                         experiment_name=experiment_config.experiment_name,
-                        training_input_mode=experiment_config.training_input_mode,
                         train_manifest_path=manifest_paths.train_manifest_path,
                         validation_manifest_path=(
                             manifest_paths.validation_manifest_path
@@ -128,7 +123,6 @@ class RDDExperimentRunner:
                         target_pothole_fraction=experiment_config.target_pothole_fraction,
                         augmentation_strategy=experiment_config.augmentation_strategy,
                         output_dir=self.config.output_dir,
-                        best_metric=experiment_config.target_metric,
                     )
                 )
                 result = trainer.train()
@@ -159,11 +153,15 @@ class RDDExperimentRunner:
         evaluation_model_names = tuple(trained_model_names) or self.config.model_names
 
         print()
-        print(f"RDD2022 binary pothole evaluation: {self.config.experiment_config.experiment_name}")
+        print(
+            f"RDD2022 binary pothole evaluation: {self.config.experiment_config.experiment_name}"
+        )
         for model_name in evaluation_model_names:
             print()
             print(f"Evaluating {model_name}")
-            metrics_path = self.config.experiment_output_dir / model_name / "test_metrics.csv"
+            metrics_path = (
+                self.config.experiment_output_dir / model_name / "test_metrics.csv"
+            )
             if self.config.skip_existing_evaluations and metrics_path.is_file():
                 evaluation_rows.extend(
                     load_evaluation_rows_from_metrics_csv(
@@ -179,15 +177,6 @@ class RDDExperimentRunner:
                     RDDEvaluationConfig(
                         model_name=model_name,
                         experiment_name=self.config.experiment_config.experiment_name,
-                        training_input_mode=(
-                            self.config.experiment_config.training_input_mode
-                        ),
-                        evaluation_input_mode=(
-                            self.config.experiment_config.evaluation_input_mode
-                        ),
-                        validation_manifest_path=(
-                            manifest_paths.validation_manifest_path
-                        ),
                         test_manifest_path=manifest_paths.test_manifest_path,
                         output_dir=self.config.output_dir,
                     )
@@ -213,7 +202,9 @@ class RDDExperimentRunner:
             return None
 
         print()
-        print(f"RDD2022 binary pothole model comparison: {self.config.experiment_config.experiment_name}")
+        print(
+            f"RDD2022 binary pothole model comparison: {self.config.experiment_config.experiment_name}"
+        )
         comparison_model_names = tuple(trained_model_names) or self.config.model_names
         if not evaluation_rows:
             evaluation_rows = load_evaluation_rows_from_metrics_csv(
@@ -249,9 +240,7 @@ class RDDExperimentRunner:
 
     def _handle_model_failure(self, model_name: str, phase: str) -> None:
         error_log_path = (
-            self.config.experiment_output_dir
-            / model_name
-            / f"{phase}_error.log"
+            self.config.experiment_output_dir / model_name / f"{phase}_error.log"
         )
         write_failure_log(error_log_path, traceback.format_exc())
         print(f"  {phase} failed for {model_name}: {error_log_path}")
