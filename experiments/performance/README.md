@@ -27,11 +27,12 @@ Run every model with a checkpoint already downloaded under `models/`:
 uv run python experiments/performance/system_performance.py --model all-loaded --device cuda:0
 ```
 
-The `all-loaded` option checks for model weight files under `models/`. It does
-not select empty cache directories or checkpoints that only exist in a global
-library cache. It also skips models listed in `ALL_LOADED_EXCLUDED_MODELS`,
-currently `smolvlm_2b`, because that checkpoint can exceed common local GPU
-memory. You can still benchmark it explicitly with `--model smolvlm_2b`.
+The `all-loaded` option selects model weights available under `models/` plus
+source-defined custom classifiers, which require no checkpoint. It does not
+select empty cache directories or checkpoints that exist only in a global
+library cache. It skips models listed in `ALL_LOADED_EXCLUDED_MODELS`, currently
+`smolvlm_2b`, because that checkpoint can exceed common local GPU memory. You
+can still benchmark it explicitly with `--model smolvlm_2b`.
 
 The benchmark uses all validation images by default. Use `--num-images` for a
 smaller run. The same limit is applied to every selected model:
@@ -43,8 +44,12 @@ uv run python experiments/performance/system_performance.py --model yolov5nu --d
 During inference, the benchmark prints progress every 50 completed images and
 once more when the final image is complete.
 
-Results are appended to
+Results are saved to
 `results/system_metrics/system_performance_results.csv`.
+
+Rerunning the same model, workload, device, precision, image count, and warmup
+configuration replaces the matching row instead of creating an ambiguous
+duplicate. After upgrading from the old CSV schema, run once with `-o`.
 
 Use `-o` to overwrite the existing results CSV with only the rows from the
 current run:
@@ -68,6 +73,12 @@ CPU RAM is the benchmark process RSS. GPU RAM is PyTorch CUDA allocated memory.
 On Jetson, GPU utilization and input-rail system power are read from
 `tegrastats`. On other NVIDIA systems, GPU utilization and GPU board power are
 read through NVML. Any unavailable hardware metric is left blank in the CSV.
+CPU runs do not sample an NVIDIA GPU.
+
+The CSV records which power backend produced each value. Jetson system-input
+power and discrete-GPU board power represent different measurement boundaries.
+SmolVLM rows are also labeled as prompted forward passes without text
+generation, rather than complete response latency.
 
 ## Plot Results
 
@@ -79,23 +90,23 @@ uv run python experiments/performance/plot_system_performance.py
 
 By default, the script reads
 `results/system_metrics/system_performance_results.csv` and saves PNG plots in
-four folders next to that CSV:
+three task-specific folders next to that CSV:
 
 - `results/system_metrics/image_classification/` compares MobileNet, MobileViT,
-  EfficientFormer, EfficientNet, ResNet, and Inception classifiers.
+  EfficientFormer, EfficientNet, ResNet, ShuffleNet, and custom classifiers.
 - `results/system_metrics/object_detection/` compares YOLO object detectors.
-- `results/system_metrics/semantic_interpretation/` compares SmolVLM models
-  using the fixed semantic-description prompt.
-- `results/system_metrics/all_models/` contains every CSV row for an overall
-  system-cost comparison across tasks.
+- `results/system_metrics/vision_language/` compares SmolVLM prompted forward
+  passes without text generation.
 
-Each folder contains one bar plot per numeric CSV metric. When the script is
-rerun, stale `*_bar.png` files in these four folders are removed before the new
-plots are written.
+Each folder contains plots for the ten measured performance metrics. Metadata
+such as image count and warmup runs remains in the CSV but is not plotted.
+Cross-task plots are intentionally omitted because the workloads do not produce
+equivalent outputs. Stale `*_bar.png` files are removed before new plots are
+written.
 
 ## Files
 
 - `system_performance.py` runs the benchmark and writes the CSV row.
 - `plot_system_performance.py` reads the CSV and creates comparison plots.
-- `constants.py` contains experiment-local constants such as the `all-loaded`
-  CLI token, plot output folder names, and task-specific model groups.
+- `constants.py` contains the `all-loaded` token, result identity, supported
+  task names, and plotted metric names.

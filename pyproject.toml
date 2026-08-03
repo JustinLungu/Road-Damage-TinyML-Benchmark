@@ -5,14 +5,18 @@ requires-python = ">=3.10"
 dependencies = [
     "accelerate>=0.21.0",
     "gitpython>=3.1.30",
+    "matplotlib>=3.7.0",
     "numpy>=2.2.6",
     "nvidia-ml-py>=13.610.43",
     "pandas>=1.1.4",
+    "pillow>=9.5.0",
     "pycocotools>=2.0.7",
     "psutil>=7.2.2",
     "seaborn>=0.11.0",
     "sentencepiece>=0.1.99",
     "timm>=0.9.12",
+    "torch>=2.2.0",
+    "torchvision>=0.17.0",
     "transformers>=4.49,<5",
     "ultralytics>=8.4.60",
 ]

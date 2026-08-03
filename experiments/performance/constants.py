@@ -1,66 +1,39 @@
 from pathlib import Path
 
-from src.constants import (
-    EFFICIENTFORMER_MODEL_IDS,
-    EFFICIENTNET_MODEL_CHECKPOINTS,
-    INCEPTION_MODEL_CHECKPOINTS,
-    MOBILENET_MODEL_CHECKPOINTS,
-    MOBILEVIT_MODEL_IDS,
-    RESNET_MODEL_CHECKPOINTS,
-    SMOLVLM_MODEL_IDS,
-    SYSTEM_PERFORMANCE_RESULTS_CSV,
-    YOLO_MODEL_CHECKPOINTS,
-)
+from src.constants import SYSTEM_PERFORMANCE_RESULTS_CSV
 
 
-###############
-# CLI Keywords
-###############
-
-# Special --model value that expands to every checkpoint already present locally.
 ALL_LOADED = "all-loaded"
-
-# Supported explicitly, but skipped by all-loaded because it can exceed local GPU RAM.
 ALL_LOADED_EXCLUDED_MODELS = {"smolvlm_2b"}
 
-
-###############
-# Result Paths
-###############
-
 RESULTS_CSV: Path = SYSTEM_PERFORMANCE_RESULTS_CSV
-DEFAULT_CSV: Path = RESULTS_CSV
 
-
-################
-# Plot Folders
-################
-
-IMAGE_CLASSIFICATION_DIR = "image_classification"
-OBJECT_DETECTION_DIR = "object_detection"
-SEMANTIC_INTERPRETATION_DIR = "semantic_interpretation"
-ALL_MODELS_DIR = "all_models"
-
-
-#################
-# Plot Model Groups
-#################
-
-IMAGE_CLASSIFICATION_MODELS = frozenset(
-    {
-        *MOBILENET_MODEL_CHECKPOINTS,
-        *EFFICIENTNET_MODEL_CHECKPOINTS,
-        *RESNET_MODEL_CHECKPOINTS,
-        *INCEPTION_MODEL_CHECKPOINTS,
-        *MOBILEVIT_MODEL_IDS,
-        *EFFICIENTFORMER_MODEL_IDS,
-    }
+PERFORMANCE_RESULT_KEYS = (
+    "model_name",
+    "workload",
+    "device",
+    "device_name",
+    "precision",
+    "batch_size",
+    "timing_scope",
+    "warmup_runs",
+    "num_images",
 )
-OBJECT_DETECTION_MODELS = frozenset(YOLO_MODEL_CHECKPOINTS)
-SEMANTIC_INTERPRETATION_MODELS = frozenset(SMOLVLM_MODEL_IDS)
 
-TASK_MODEL_GROUPS = (
-    (IMAGE_CLASSIFICATION_DIR, IMAGE_CLASSIFICATION_MODELS),
-    (OBJECT_DETECTION_DIR, OBJECT_DETECTION_MODELS),
-    (SEMANTIC_INTERPRETATION_DIR, SEMANTIC_INTERPRETATION_MODELS),
+PERFORMANCE_TASKS = (
+    "image_classification",
+    "object_detection",
+    "vision_language",
+)
+PERFORMANCE_METRICS = (
+    "fps",
+    "avg_latency_ms",
+    "p95_latency_ms",
+    "avg_cpu_ram_mb",
+    "peak_cpu_ram_mb",
+    "avg_gpu_ram_mb",
+    "peak_gpu_ram_mb",
+    "avg_gpu_utilization_pct",
+    "avg_power_w",
+    "energy_per_inference_j",
 )

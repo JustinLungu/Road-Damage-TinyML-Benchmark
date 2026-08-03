@@ -1,123 +1,18 @@
 from __future__ import annotations
 
 import csv
-import json
-import math
 from pathlib import Path
 from typing import Any, Iterable
 
 import torch
-import torch.nn as nn
 
 from src.rdd_benchmark.constants import (
-    ID_TO_LABEL,
-    LABEL_TO_ID,
     NEGATIVE_LABEL,
     POSITIVE_LABEL,
     RDD_COMPARISON_RANKING_METRIC,
-    RDD_COMPARISON_TOP_K,
-    RDD_MODEL_MODE,
-    RDD_MODEL_NAMES,
-    RDD_SINGLE_MODEL,
 )
 from src.rdd_benchmark.data_preprocessing.augmentation import make_rdd_image_transform
 from src.rdd_benchmark.training.constants import DEFAULT_IMAGE_SIZE, MODEL_IMAGE_SIZES
-
-
-def require_attribute(model: Any, attribute_name: str) -> Any:
-    if not hasattr(model, attribute_name):
-        raise ValueError(f"Model has no {attribute_name} attribute.")
-    return getattr(model, attribute_name)
-
-
-def require_linear_attribute(model: Any, attribute_name: str) -> nn.Linear:
-    layer = require_attribute(model, attribute_name)
-    if not isinstance(layer, nn.Linear):
-        raise ValueError(f"Expected {attribute_name} to be nn.Linear.")
-    return layer
-
-
-def make_replacement_linear(layer: nn.Linear, num_classes: int) -> nn.Linear:
-    return nn.Linear(
-        in_features=layer.in_features,
-        out_features=num_classes,
-        bias=layer.bias is not None,
-    )
-
-
-def replace_linear_attribute(
-    model: Any,
-    attribute_name: str,
-    num_classes: int,
-) -> None:
-    layer = require_linear_attribute(model, attribute_name)
-    setattr(model, attribute_name, make_replacement_linear(layer, num_classes))
-
-
-def replace_last_linear(module: Any, num_classes: int) -> None:
-    if isinstance(module, nn.Linear):
-        raise ValueError("Expected a classifier container, received nn.Linear.")
-    if not hasattr(module, "__len__") or not hasattr(module, "__getitem__"):
-        raise ValueError("Classifier does not support indexed layer replacement.")
-
-    for index in reversed(range(len(module))):
-        layer = module[index]
-        if isinstance(layer, nn.Linear):
-            module[index] = make_replacement_linear(layer, num_classes)
-            return
-
-    raise ValueError("Classifier contains no nn.Linear layer to replace.")
-
-
-def update_hugging_face_label_config(model: Any, num_classes: int) -> None:
-    config = getattr(model, "config", None)
-    if config is None:
-        return
-
-    config.num_labels = num_classes
-    config.id2label = dict(ID_TO_LABEL)
-    config.label2id = dict(LABEL_TO_ID)
-
-
-def adapt_model_for_binary_pothole(model_name: str, model: Any) -> Any:
-    from src.rdd_benchmark.training.model_adapter import BinaryPotholeModelAdapter
-
-    return BinaryPotholeModelAdapter(model_name).adapt(model)
-
-
-def load_and_adapt_model_for_binary_pothole(model_name: str) -> Any:
-    from src.load_model import load_model
-
-    model = load_model(model_name)
-    return adapt_model_for_binary_pothole(model_name, model)
-
-
-def load_and_adapt_all_binary_pothole_models(
-    model_names: Iterable[str] = RDD_MODEL_NAMES,
-) -> dict[str, Any]:
-    adapted_models = {}
-
-    for model_name in sorted(model_names):
-        adapted_models[model_name] = load_and_adapt_model_for_binary_pothole(model_name)
-
-    return adapted_models
-
-
-def select_rdd_model_names(
-    mode: str | None = None,
-    model_names: Iterable[str] | None = None,
-    single_model: str | None = None,
-) -> tuple[str, ...]:
-    mode = RDD_MODEL_MODE if mode is None else mode
-    model_names = RDD_MODEL_NAMES if model_names is None else model_names
-    single_model = RDD_SINGLE_MODEL if single_model is None else single_model
-
-    if mode == "single":
-        return (single_model,)
-    if mode == "all":
-        return tuple(model_names)
-
-    raise ValueError("RDD_MODEL_MODE must be 'single' or 'all'.")
 
 
 def make_image_transform(
@@ -214,11 +109,13 @@ def compute_binary_roc_auc(
         current_index = next_index
 
     positive_rank_sum = sum(
-        rank for rank, label in zip(ranks, labels, strict=True) if label == POSITIVE_LABEL
+        rank
+        for rank, label in zip(ranks, labels, strict=True)
+        if label == POSITIVE_LABEL
     )
-    return (
-        positive_rank_sum - positive_count * (positive_count + 1) / 2
-    ) / (positive_count * negative_count)
+    return (positive_rank_sum - positive_count * (positive_count + 1) / 2) / (
+        positive_count * negative_count
+    )
 
 
 def compute_binary_roc_curve(
@@ -263,48 +160,40 @@ def safe_divide(numerator: float, denominator: float) -> float:
     return numerator / denominator
 
 
-def write_training_loss_plot(
+def write_training_curves(
     plot_path: Path,
     history: list[dict[str, Any]],
-) -> None:
-    write_training_metric_plot(
-        plot_path=plot_path,
-        history=history,
-        metric_name="loss",
-        y_label="Loss",
-        title="RDD Binary Pothole Training Loss",
-    )
-
-
-def write_training_metric_plot(
-    plot_path: Path,
-    history: list[dict[str, Any]],
-    metric_name: str,
-    y_label: str,
-    title: str,
 ) -> None:
     import matplotlib.pyplot as plt
 
     epochs = [int(row["epoch"]) for row in history]
-    train_values = [float(row[f"train_{metric_name}"]) for row in history]
-    validation_values = [float(row[f"validation_{metric_name}"]) for row in history]
-
     plot_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.figure(figsize=(6, 4))
-    plt.plot(epochs, train_values, marker="o", label=f"train {metric_name}")
-    plt.plot(
-        epochs,
-        validation_values,
-        marker="o",
-        label=f"validation {metric_name}",
-    )
-    plt.xlabel("Epoch")
-    plt.ylabel(y_label)
-    plt.title(title)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(plot_path, dpi=160)
-    plt.close()
+    figure, axes = plt.subplots(1, 3, figsize=(15, 4))
+    for axis, (metric_name, title) in zip(
+        axes,
+        (("loss", "Loss"), ("f1", "F1-score"), ("accuracy", "Accuracy")),
+        strict=True,
+    ):
+        axis.plot(
+            epochs,
+            [float(row[f"train_{metric_name}"]) for row in history],
+            marker="o",
+            label="train",
+        )
+        axis.plot(
+            epochs,
+            [float(row[f"validation_{metric_name}"]) for row in history],
+            marker="o",
+            label="validation",
+        )
+        axis.set_title(title)
+        axis.set_xlabel("Epoch")
+        axis.set_ylabel(title)
+        axis.legend()
+
+    figure.tight_layout()
+    figure.savefig(plot_path, dpi=160)
+    plt.close(figure)
 
 
 def write_failure_log(
@@ -313,17 +202,6 @@ def write_failure_log(
 ) -> None:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text(message, encoding="utf-8")
-
-
-def write_evaluation_metrics_json(
-    metrics_path: Path,
-    metrics: dict[str, Any],
-) -> None:
-    metrics_path.parent.mkdir(parents=True, exist_ok=True)
-    metrics_path.write_text(
-        json.dumps(sanitize_metrics_for_json(metrics), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
 
 
 def write_evaluation_metrics_csv(
@@ -339,34 +217,6 @@ def write_evaluation_metrics_csv(
         writer = csv.DictWriter(metrics_file, fieldnames=list(row))
         writer.writeheader()
         writer.writerow(row)
-
-
-def write_confusion_matrix_csv(
-    confusion_matrix_path: Path,
-    metrics: dict[str, float],
-) -> None:
-    confusion_matrix_path.parent.mkdir(parents=True, exist_ok=True)
-    rows = [
-        {
-            "actual": "non_pothole",
-            "predicted_non_pothole": int(metrics["true_negative"]),
-            "predicted_pothole": int(metrics["false_positive"]),
-        },
-        {
-            "actual": "pothole",
-            "predicted_non_pothole": int(metrics["false_negative"]),
-            "predicted_pothole": int(metrics["true_positive"]),
-        },
-    ]
-
-    with confusion_matrix_path.open(
-        "w",
-        newline="",
-        encoding="utf-8",
-    ) as confusion_file:
-        writer = csv.DictWriter(confusion_file, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
 
 
 def write_confusion_matrix_plot(
@@ -419,33 +269,10 @@ def write_roc_curve_plot(
     plt.close()
 
 
-def write_metric_bar_plot(
-    plot_path: Path,
-    metrics: dict[str, float],
-) -> None:
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-
-    metric_names = ["balanced_accuracy", "precision", "recall", "f1", "roc_auc"]
-    metric_values = [metrics[metric_name] for metric_name in metric_names]
-    plot_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.figure(figsize=(7, 4))
-    sns.barplot(x=metric_names, y=metric_values, hue=metric_names, palette="viridis")
-    plt.ylim(0, 1)
-    plt.xlabel("")
-    plt.ylabel("Score")
-    plt.title("RDD Binary Pothole Test Metrics")
-    plt.xticks(rotation=20, ha="right")
-    plt.tight_layout()
-    plt.savefig(plot_path, dpi=160)
-    plt.close()
-
-
 def write_model_comparison_csv(
     comparison_path: Path,
     evaluation_rows: list[dict[str, Any]],
     ranking_metric: str = RDD_COMPARISON_RANKING_METRIC,
-    top_k: int = RDD_COMPARISON_TOP_K,
 ) -> list[dict[str, Any]]:
     comparison_path.parent.mkdir(parents=True, exist_ok=True)
     ranked_rows = rank_evaluation_rows(evaluation_rows, ranking_metric)
@@ -454,12 +281,6 @@ def write_model_comparison_csv(
         writer = csv.DictWriter(comparison_file, fieldnames=list(ranked_rows[0]))
         writer.writeheader()
         writer.writerows(ranked_rows)
-
-    top_models_path = comparison_path.with_name("top_models.csv")
-    with top_models_path.open("w", newline="", encoding="utf-8") as top_models_file:
-        writer = csv.DictWriter(top_models_file, fieldnames=list(ranked_rows[0]))
-        writer.writeheader()
-        writer.writerows(ranked_rows[:top_k])
 
     return ranked_rows
 
@@ -519,13 +340,6 @@ def rank_evaluation_rows(
         }
         for rank, row in enumerate(ranked_rows, start=1)
     ]
-
-
-def sanitize_metrics_for_json(metrics: dict[str, Any]) -> dict[str, Any]:
-    return {
-        key: None if isinstance(value, float) and math.isnan(value) else value
-        for key, value in metrics.items()
-    }
 
 
 def parse_metric_value(value: str) -> float | str:

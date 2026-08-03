@@ -103,8 +103,7 @@ Run the documentation demo:
 Use it in the RDD benchmark by setting:
 
 ```python
-RDD_MODEL_MODE = "single"
-RDD_SINGLE_MODEL = "tiny_cnn"
+RDD_MODEL_NAMES = ("tiny_cnn",)
 ```
 
 ## Output Interpretation

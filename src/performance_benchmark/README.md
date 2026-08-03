@@ -9,9 +9,9 @@ accuracy.
 
 - `performance_benchmark.py` contains the main `PerformanceBenchmark` class
   that runs warmup passes, times inference, and creates the final result.
-- `model_inference_adapter.py` prepares a consistent inference call for each
-  supported model family: YOLO, MobileNetV2/V3, EfficientNet-B0, ResNet18,
-  InceptionV3, MobileViT, EfficientFormer, and SmolVLM.
+- `model_inference_adapter.py` normalizes YOLO, image-classifier, and SmolVLM
+  calls. Classifier preprocessing is shared with the vision benchmark through
+  `src/image_classification_inference_adapter.py`.
 - `system_metrics_sampler.py` samples process RAM, CUDA memory, GPU utilization,
   and power while inference is running.
 - `nvml_monitor.py` reads GPU utilization and GPU board power through NVML on
@@ -19,14 +19,10 @@ accuracy.
 - `tegrastats_monitor.py` reads GPU utilization and input-rail system power from
   `tegrastats` on Jetson devices.
 - `benchmark_result.py` defines the result fields written to the CSV file.
-- `metric_samples.py` stores the raw system metric samples collected during a
-  benchmark.
-- `constants.py` contains benchmark-specific model groups, prompts, sampling
-  defaults, and parser patterns. Shared repo paths and model IDs live in
-  `src/constants.py`.
+- `constants.py` contains the prompt, sampling defaults, timing settings, and
+  tegrastats parser patterns.
 - `utils.py` contains shared helpers for devices, COCO image paths, image
-  loading, statistics, and CSV writing.
-- `__init__.py` exposes the package's public imports.
+  loading, and statistics.
 
 The experiment entry point is
 `experiments/performance/system_performance.py`, and its results are written to
@@ -54,7 +50,17 @@ The experiment entry point is
    measured correctly.
 7. The benchmark calculates FPS, average latency, p95 latency, memory values,
    average utilization, average power, and energy per inference.
-8. The experiment runner appends one result row to
-   `results/system_metrics/system_performance_results.csv`. Hardware metrics
-   that are not available are left blank. With `-o`, the existing CSV is
-   removed once before rows from the current run are written.
+8. The experiment runner saves one result row to
+   `results/system_metrics/system_performance_results.csv`. A matching model,
+   workload, device, precision, and image-count configuration replaces its
+   previous row. Hardware metrics that are not available are left blank.
+
+Each row records the task, exact workload, device and device name, model
+precision, batch size, timing scope, warmup count, and power source. SmolVLM is
+explicitly labeled `prompted_forward_no_generation`; it is not end-to-end text
+generation latency.
+
+CPU runs do not initialize NVML or tegrastats and leave GPU metrics blank. CUDA
+power uses either `nvml_gpu_board` on desktop NVIDIA GPUs or
+`tegrastats_system_input` on Jetson. These sources measure different power
+boundaries and should not be compared as if they were identical.

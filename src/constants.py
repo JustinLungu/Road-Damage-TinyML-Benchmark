@@ -15,9 +15,7 @@ IMAGENETTE_DIR = DATASETS_DIR / "imagenette"
 IMAGENETTE_VALIDATION_LABELS = IMAGENETTE_DIR / "validation_labels.csv"
 RDD2022_DIR = DATASETS_DIR / "rdd2022"
 RDD2022_BINARY_POTHOLE_DIR = RDD2022_DIR / "binary_pothole"
-RDD2022_BINARY_POTHOLE_PATCH_DIR = RDD2022_DIR / "binary_pothole_patches"
 RDD2022_BINARY_POTHOLE_EXPERIMENTS_DIR = RDD2022_DIR / "binary_pothole_experiments"
-RDD2022_SYNTHETIC_POTHOLE_DIR = RDD2022_DIR / "synthetic_potholes"
 
 MODELS_DIR = PROJECT_ROOT / "models"
 CNN_DIR = MODELS_DIR / "cnn"
@@ -30,9 +28,12 @@ SYSTEM_METRICS_RESULTS_DIR = RESULTS_DIR / "system_metrics"
 SYSTEM_PERFORMANCE_RESULTS_CSV = (
     SYSTEM_METRICS_RESULTS_DIR / "system_performance_results.csv"
 )
-DETECTION_METRICS_RESULTS_DIR = RESULTS_DIR / "detection_metrics"
-DETECTION_BENCHMARK_RESULTS_CSV = (
-    DETECTION_METRICS_RESULTS_DIR / "detection_benchmark_results.csv"
+VISION_METRICS_RESULTS_DIR = RESULTS_DIR / "vision_metrics"
+CLASSIFICATION_BENCHMARK_RESULTS_CSV = (
+    VISION_METRICS_RESULTS_DIR / "classification_results.csv"
+)
+OBJECT_DETECTION_BENCHMARK_RESULTS_CSV = (
+    VISION_METRICS_RESULTS_DIR / "object_detection_results.csv"
 )
 RDD_TRAINING_RESULTS_DIR = RESULTS_DIR / "rdd_trained_models"
 
@@ -103,6 +104,37 @@ SMOLVLM_MODEL_IDS = {
     "smolvlm_256m": "HuggingFaceTB/SmolVLM-256M-Instruct",
     "smolvlm_500m": "HuggingFaceTB/SmolVLM-500M-Instruct",
     "smolvlm_2b": "HuggingFaceTB/SmolVLM-Instruct",
+}
+
+
+################
+# Model Workloads
+################
+
+IMAGE_CLASSIFICATION_MODELS = frozenset(
+    {
+        *MOBILENET_MODEL_CHECKPOINTS,
+        *EFFICIENTNET_MODEL_CHECKPOINTS,
+        *RESNET_MODEL_CHECKPOINTS,
+        *SHUFFLENET_MODEL_CHECKPOINTS,
+        *INCEPTION_MODEL_CHECKPOINTS,
+        *MOBILEVIT_MODEL_IDS,
+        *EFFICIENTFORMER_MODEL_IDS,
+        *CUSTOM_IMAGE_CLASSIFICATION_MODELS,
+    }
+)
+OBJECT_DETECTION_MODELS = frozenset(YOLO_MODEL_CHECKPOINTS)
+VISION_LANGUAGE_MODELS = frozenset(SMOLVLM_MODEL_IDS)
+
+MODEL_TASK_BY_NAME = {
+    **{name: "image_classification" for name in IMAGE_CLASSIFICATION_MODELS},
+    **{name: "object_detection" for name in OBJECT_DETECTION_MODELS},
+    **{name: "vision_language" for name in VISION_LANGUAGE_MODELS},
+}
+MODEL_WORKLOAD_BY_NAME = {
+    **{name: "single_image_forward" for name in IMAGE_CLASSIFICATION_MODELS},
+    **{name: "single_image_detection" for name in OBJECT_DETECTION_MODELS},
+    **{name: "prompted_forward_no_generation" for name in VISION_LANGUAGE_MODELS},
 }
 
 

@@ -15,29 +15,7 @@ MANIFEST_COLUMNS = [
     "image_height",
 ]
 
-# Columns written for annotation-centered patch manifests.
-PATCH_MANIFEST_COLUMNS = [
-    "image_path",
-    "annotation_path",
-    "country",
-    "split",
-    "label",
-    "label_name",
-    "source_object_label",
-    "patch_source",
-    "bbox_xmin",
-    "bbox_ymin",
-    "bbox_xmax",
-    "bbox_ymax",
-    "patch_xmin",
-    "patch_ymin",
-    "patch_xmax",
-    "patch_ymax",
-    "image_width",
-    "image_height",
-]
-
-# Minimal columns required by both full-image and patch dataset loaders.
+# Minimal columns required by the dataset loader.
 REQUIRED_MANIFEST_COLUMNS = {
     "image_path",
     "annotation_path",

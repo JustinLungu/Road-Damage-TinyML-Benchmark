@@ -12,9 +12,11 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from src.performance_benchmark.utils import load_rgb_image, resolve_device  # noqa: E402
 from src.rdd_benchmark.constants import ID_TO_LABEL  # noqa: E402
+from src.rdd_benchmark.training.model_adapter import (  # noqa: E402
+    load_and_adapt_model_for_binary_pothole,
+)
 from src.rdd_benchmark.training.utils import (  # noqa: E402
     extract_logits,
-    load_and_adapt_model_for_binary_pothole,
     make_image_transform,
 )
 
@@ -51,7 +53,9 @@ def select_image_path() -> Path:
     if IMAGE_PATH is not None:
         return resolve_repo_path(IMAGE_PATH)
 
-    with resolve_repo_path(MANIFEST_PATH).open(newline="", encoding="utf-8") as csv_file:
+    with resolve_repo_path(MANIFEST_PATH).open(
+        newline="", encoding="utf-8"
+    ) as csv_file:
         row = next(csv.DictReader(csv_file))
 
     return resolve_repo_path(Path(row["image_path"]))

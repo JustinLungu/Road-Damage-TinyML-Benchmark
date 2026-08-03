@@ -1,277 +1,150 @@
-# RDD Benchmark Constants
+# RDD Benchmark Settings
 
-All RDD preprocessing, training, evaluation, and comparison work should be run
-through:
+The benchmark has one entry point:
 
 ```bash
 uv run python -m src.rdd_benchmark.main
 ```
 
-Change behavior by editing `src/rdd_benchmark/constants.py`.
+If `uv` is unavailable, use the project environment directly:
 
-## Preprocessing Switches
+```bash
+.venv/bin/python -m src.rdd_benchmark.main
+```
+
+Edit `src/rdd_benchmark/constants.py` before running. The pipeline is always
+full-image binary classification; settings only control preprocessing,
+experiments, models, training, evaluation, and comparison.
+
+The stages run in that order. A single command can therefore regenerate the
+manifests and immediately train, evaluate, and compare the selected models.
+
+## Typical Run
+
+For a quick run of one model on the natural-data baseline:
 
 ```python
-RUN_RDD_FULL_IMAGE_PREPROCESSING = False
-```
-
-If `True`, `main.py` regenerates full-image binary manifests:
-
-```text
-datasets/rdd2022/binary_pothole/
-```
-
-Each CSV row is one full road image. The image is labeled `pothole` if its XML
-contains at least one `D40` object with bounding-box area at least
-`RDD_MIN_BOX_AREA`, currently `400` px.
-
-```python
-RUN_RDD_PATCH_PREPROCESSING = True
-```
-
-If `True`, `main.py` regenerates annotation-patch manifests:
-
-```text
-datasets/rdd2022/binary_pothole_patches/
-```
-
-Each CSV row is one crop around an XML bounding box. `D40` boxes are positive
-pothole patches. Non-`D40` boxes are negative non-pothole patches.
-
-After the CSVs exist, set preprocessing flags back to `False` unless you want to
-overwrite the manifests.
-
-## Dataset Split
-
-```python
-RDD_SPLIT_MODE = "stratified_by_country"
-RDD_SPLIT_FRACTIONS = {
-    "train": 0.70,
-    "validation": 0.15,
-    "test": 0.15,
-}
-RDD_SPLIT_RANDOM_SEED = 42
-```
-
-Available split modes:
-
-- `"stratified_by_country"`: each country contributes examples to
-  train/validation/test, while splitting pothole and non-pothole images
-  separately. This is the recommended mode for development runs because
-  validation gets more pothole examples for threshold tuning.
-- `"country_holdout"`: entire countries are held out into one split using
-  `SPLIT_COUNTRIES`. This is useful as a harder cross-country generalization
-  benchmark after the model behaves well.
-
-Patch manifests inherit the full-image split, so all annotation patches from the
-same original image stay in the same split.
-
-## Experiment Registry
-
-```python
+RUN_RDD_PREPROCESSING = False
 RDD_ACTIVE_EXPERIMENT_IDS = ("A",)
+
+RDD_MODEL_NAMES = ("mobilevit_xxs",)
+
+RUN_RDD_TRAINING = True
+RUN_RDD_EVALUATION = True
+RUN_RDD_COMPARISON = True
 ```
 
-This selects metadata from `src/rdd_benchmark/experiments/`. Valid IDs are
-`"A"`, `"B"`, `"C"`, `"D"`, `"E"`, `"F"`, `"G"`, and `"H"`. `main.py` runs each selected
-experiment through `RDDExperimentRunner`.
+The runner resumes interrupted work by default: an existing `best.pt` skips
+training, and an existing `test_metrics.csv` skips evaluation.
+
+## Dataset Preparation
 
 ```python
-RDD_BEST_PREVIOUS_EXPERIMENT_NAME = None
+RUN_RDD_PREPROCESSING = False
+RDD_SPLIT_MODE = "stratified_by_country"
 ```
 
-This is only needed for Experiment E. Set it to the experiment folder name that
-E should use as its synthetic-data base, usually the better of C or D.
+Set `RUN_RDD_PREPROCESSING = True` only when the raw RDD data was downloaded or
+the split settings changed. It regenerates:
 
-Current experiment defaults:
+```text
+datasets/rdd2022/binary_pothole/train.csv
+datasets/rdd2022/binary_pothole/validation.csv
+datasets/rdd2022/binary_pothole/test.csv
+```
 
-- `"A"`: natural full-image data, no balancing, no sampler, standard
-  augmentation, no synthetic data.
-- `"B"`: weighted sampler with standard augmentation and an explicit 50%
-  pothole target per epoch/batch.
-- `"C"`: weighted sampler with stronger minority/pothole augmentation and an
-  explicit 50% pothole target.
-- `"D"`: moderate majority downsampling, weighted sampler, stronger
-  minority/pothole augmentation, and an explicit 50% pothole target. Moderate
-  downsampling currently means pothole:non-pothole = 1:3.
-- `"E"`: selected previous dataset plus small synthetic pothole addition, with
-  synthetic potholes defaulting to 20% of the real pothole count. Its training
-  settings are weighted sampler plus stronger minority augmentation.
-- `"F"`: gentler weighted sampler with standard augmentation and a 25%
-  pothole target.
-- `"G"`: downsample-only 1:5 train set with standard augmentation.
-- `"H"`: downsample-only 1:5 train set with stronger minority augmentation.
+An image is positive when its XML contains a `D40` pothole box of at least 400
+square pixels. A `D40` annotation below that threshold does not make the image
+positive. The two split modes are:
 
-Balanced experiment manifests are written under:
+- `stratified_by_country`: every country contributes to every split while
+  preserving class proportions. This is the normal benchmark split.
+- `country_holdout`: whole countries are assigned to train, validation, or
+  test for a harder geographic generalization check.
+
+Both modes create local splits from the official annotated training data. They
+do not reproduce the challenge's private test-server evaluation. The default
+stratified split operates at image level and does not group adjacent video
+frames.
+
+Split fractions, country assignments, the random seed, and the 400-pixel
+minimum live in `data_preprocessing/constants.py` because they are only used
+during preprocessing.
+
+## Experiments
+
+```python
+RDD_ACTIVE_EXPERIMENT_IDS = ("A", "G", "H")
+```
+
+Each experiment changes only the training data strategy. Validation and test
+manifests remain unchanged.
+
+| ID | Training strategy |
+|---|---|
+| `A` | Natural sampling and standard augmentation |
+| `B` | 50% pothole weighted sampling and standard augmentation |
+| `C` | 50% pothole weighted sampling and strong augmentation |
+| `D` | 1:3 majority downsampling, 50% weighted sampling, and strong augmentation |
+| `F` | 25% pothole weighted sampling and standard augmentation |
+| `G` | 1:5 majority downsampling and standard augmentation |
+| `H` | 1:5 majority downsampling and strong augmentation |
+
+Downsampling changes only the generated training manifest under:
 
 ```text
 datasets/rdd2022/binary_pothole_experiments/<experiment_name>/
 ```
 
-For downsampling experiments, only `train.csv` is changed. `validation.csv` and
-`test.csv` are copied from the original full-image manifests unchanged.
+The registry is `src/rdd_benchmark/experiments/experiment_registry.py`.
 
-The experiment dataset builder chooses manifests as follows:
-
-- Experiments without `non_potholes_per_pothole` use the original full-image
-  manifests.
-- Experiments with `non_potholes_per_pothole` write a new downsampled training
-  manifest and keep validation/test unchanged.
-- `"E"` adds synthetic potholes to an explicitly selected best previous
-  experiment dataset. `RDD_BEST_PREVIOUS_EXPERIMENT_NAME` must be set before
-  running E.
-
-The trainer accepts the selected experiment's concrete manifest paths plus the
-generic training controls: `sampler_strategy`, `target_pothole_fraction`, and
-`augmentation_strategy`. It does not hardcode individual experiment behavior.
-
-The experiment runner executes one selected experiment end to end: build
-manifest paths, train selected model(s), evaluate them, and write
-`model_comparison.csv` under:
-
-```text
-results/rdd_trained_models/<experiment_name>/
-```
-
-`RDD_EXPERIMENT_NAME` still exists in `constants.py`, but it is now only the
-low-level default used when the trainer/evaluator classes are instantiated
-directly. Normal runs through `main.py` use the A-E experiment names from the
-registry.
-
-Synthetic pothole experiments expect generated assets under:
-
-```text
-datasets/rdd2022/synthetic_potholes/
-```
-
-The source folder must contain:
-
-```text
-manifest.csv
-```
-
-with the same columns as `datasets/rdd2022/binary_pothole/train.csv`. Synthetic
-rows are added only to the training split and capped by
-`synthetic_pothole_ratio`, for example `0.2` means at most 20% of the real
-pothole training count.
-
-## Training Input Mode
-
-```python
-RDD_TRAINING_INPUT_MODE = "annotation_patch"
-```
-
-Available modes:
-
-- `"full_image"`: train directly on full road images from
-  `datasets/rdd2022/binary_pothole/`.
-- `"annotation_patch"`: train on XML annotation-centered crops from
-  `datasets/rdd2022/binary_pothole_patches/`.
-
-For the paper-aligned patch-grid pipeline, use:
-
-```python
-RDD_TRAINING_INPUT_MODE = "annotation_patch"
-```
-
-## Evaluation Input Mode
-
-```python
-RDD_EVALUATION_INPUT_MODE = "grid_image"
-```
-
-Available modes:
-
-- `"full_image"`: evaluate each full test image directly.
-- `"grid_image"`: split each full test image into a grid, score every patch,
-  and classify the full image using the maximum patch pothole probability.
-
-For realistic patch-grid inference without test-time bounding boxes, use:
-
-```python
-RDD_EVALUATION_INPUT_MODE = "grid_image"
-```
-
-## Patch Settings
-
-```python
-RDD_PATCH_PADDING = 0.15
-RDD_MIN_BOX_AREA = 400
-```
-
-`RDD_PATCH_PADDING` expands annotation boxes before cropping patches.
-`RDD_MIN_BOX_AREA` skips tiny boxes that are likely too small/noisy for useful
-classification.
-
-These settings affect patch manifest generation, so rerun patch preprocessing if
-you change them.
-
-## Grid Settings
-
-```python
-RDD_GRID_SIZE = 3
-RDD_PATCH_DECISION_THRESHOLD = 0.5
-```
-
-`RDD_GRID_SIZE = 3` means every full image is split into `3 x 3 = 9` patches.
-
-`RDD_PATCH_DECISION_THRESHOLD` is the fallback threshold. If threshold tuning is
-enabled, the tuned validation threshold is used instead.
-
-## Threshold Tuning
-
-```python
-RDD_TUNE_PATCH_THRESHOLD = True
-RDD_THRESHOLD_METRIC = "f1"
-RDD_THRESHOLD_VALUES = tuple(index / 100 for index in range(5, 96, 5))
-```
-
-If tuning is enabled, validation full images are evaluated using grid inference.
-The threshold that gives the best `RDD_THRESHOLD_METRIC` is saved to:
-
-```text
-threshold.json
-```
-
-Then test evaluation uses that threshold.
-
-This is important because RDD pothole labels are imbalanced, so a fixed `0.5`
-threshold may not maximize F1 or recall.
+Standard augmentation uses a random resized crop and horizontal flip. Strong
+augmentation adds stronger cropping, color jitter, small rotations, and mild
+perspective changes. Weighted sampling changes the expected class mix of
+training draws; it does not duplicate rows in the source manifest. Every
+experiment also uses class-weighted cross-entropy.
 
 ## Model Selection
 
-```python
-RDD_MODEL_MODE = "single"
-RDD_SINGLE_MODEL = "mobilevit_xxs"
-```
-
-Available modes:
-
-- `"single"`: train/evaluate only `RDD_SINGLE_MODEL`.
-- `"all"`: train/evaluate every model listed in `RDD_MODEL_NAMES`.
-
-For smoke testing, use one small model:
+Use one model for smoke tests:
 
 ```python
-RDD_MODEL_MODE = "single"
-RDD_SINGLE_MODEL = "mobilevit_xxs"
+RDD_MODEL_NAMES = ("mobilevit_xxs",)
 ```
 
-## Training Controls
+Add models to the same tuple for a full sweep:
+
+```python
+RDD_MODEL_NAMES = (
+    "tiny_cnn",
+    "resnet8",
+    "ds_cnn_small",
+    "mobilenet_v1_025",
+    "shufflenet_v2_x0_5",
+)
+```
+
+The supported names are listed beside `RDD_MODEL_NAMES` in the constants file.
+
+## Training
 
 ```python
 RUN_RDD_TRAINING = True
-RDD_TRAINING_EPOCHS = 1
-RDD_TRAINING_BATCH_SIZE = 16
+RDD_TRAINING_BATCH_SIZE = 32
+RDD_TRAINING_EPOCHS = 30
+RDD_TRAINING_LEARNING_RATE = 1e-4
+RDD_TRAINING_WEIGHT_DECAY = 1e-4
+RDD_TRAINING_BEST_METRIC = "balanced_accuracy"
+RDD_TRAINING_EARLY_STOPPING_PATIENCE = 8
 ```
 
-For smoke testing, keep `RDD_TRAINING_EPOCHS = 1`.
+The trainer saves the checkpoint with the best validation metric and stops
+when that metric has not improved for the configured patience. Pretrained
+classifiers are fine-tuned; source-defined tiny classifiers start with random
+weights. Experiments differ only in sampling, downsampling, and augmentation.
 
-For a real run, increase epochs after the smoke test passes, for example:
-
-```python
-RDD_TRAINING_EPOCHS = 20
-```
+Keep `RDD_TRAINING_DROP_LAST_BATCH = True` for models with batch normalization.
+It avoids a final one-sample training batch.
 
 ## Evaluation And Comparison
 
@@ -281,145 +154,42 @@ RUN_RDD_COMPARISON = True
 RDD_COMPARISON_RANKING_METRIC = "f1"
 ```
 
-Evaluation writes per-model outputs:
+Evaluation reports accuracy, balanced accuracy, precision, recall, F1,
+ROC-AUC, confusion matrices, and end-to-end evaluation throughput on two views:
+
+- the original imbalanced test split, which represents realistic prevalence;
+- a deterministic balanced subset, which makes class-level behavior easier to
+  compare.
+
+Evaluation throughput includes image loading, preprocessing, transfer, and
+batched model execution. It is not the batch-size-1 latency measured by the
+system performance benchmark.
+
+Results are written to:
 
 ```text
-test_metrics.json
-test_metrics.csv
-threshold.json
-inference_metrics.json
-confusion_matrix.csv
-confusion_matrix.png
-roc_curve.png
-test_metric_bars.png
-balanced_test_metrics.json
-balanced_test_metrics.csv
-balanced_confusion_matrix.csv
-balanced_confusion_matrix.png
-balanced_roc_curve.png
-balanced_test_metric_bars.png
+results/rdd_trained_models/<experiment_name>/<model_name>/
 ```
 
-The normal `test_metrics.*` files use the realistic imbalanced test set. The
-`balanced_*` files are diagnostic only: they keep all pothole test images and a
-deterministic equal-size sample of non-pothole test images, so plain accuracy is
-easier to interpret.
+Each model folder contains the best checkpoint, training history and curves,
+realistic and balanced-test metrics, confusion matrices, and the realistic-test
+ROC curve. Evaluation timing is included in `test_metrics.csv`. The experiment
+folder contains the complete ranked `model_comparison.csv`.
 
-Comparison writes:
+## Run Only One Stage
 
-```text
-model_comparison.csv
-top_models.csv
-```
-
-Models are ranked by `RDD_COMPARISON_RANKING_METRIC`. For this imbalanced binary
-pothole task, `f1`, `recall`, or `balanced_accuracy` are more meaningful than
-plain accuracy.
-
-## Common Setups
-
-### One-Model Experiment Smoke Test
+The three stage switches are independent. For example, to rebuild comparison
+CSVs from existing evaluations:
 
 ```python
-RUN_RDD_FULL_IMAGE_PREPROCESSING = False
-RUN_RDD_PATCH_PREPROCESSING = False
-RDD_ACTIVE_EXPERIMENT_IDS = ("A",)
-RDD_MODEL_MODE = "single"
-RDD_SINGLE_MODEL = "mobilevit_xxs"
-RDD_TRAINING_INPUT_MODE = "full_image"
-RDD_EVALUATION_INPUT_MODE = "full_image"
-RDD_TRAINING_EPOCHS = 10
-RUN_RDD_TRAINING = True
-RUN_RDD_EVALUATION = True
+RUN_RDD_TRAINING = False
+RUN_RDD_EVALUATION = False
 RUN_RDD_COMPARISON = True
 ```
 
-Run:
-
-```bash
-uv run python -m src.rdd_benchmark.main
-```
-
-### Run A-D On One Tester Model
+To force a rerun, set the relevant skip option to `False`:
 
 ```python
-RDD_ACTIVE_EXPERIMENT_IDS = ("A", "B", "C", "D")
-RDD_MODEL_MODE = "single"
-RDD_SINGLE_MODEL = "mobilevit_xxs"
-RDD_TRAINING_INPUT_MODE = "full_image"
-RDD_EVALUATION_INPUT_MODE = "full_image"
-RUN_RDD_FULL_IMAGE_PREPROCESSING = False
-RUN_RDD_PATCH_PREPROCESSING = False
-```
-
-### Run F-H Gentler Balancing Tests
-
-```python
-RDD_ACTIVE_EXPERIMENT_IDS = ("F", "G", "H")
-RDD_MODEL_MODE = "single"
-RDD_SINGLE_MODEL = "mobilevit_xxs"
-RDD_TRAINING_INPUT_MODE = "full_image"
-RDD_EVALUATION_INPUT_MODE = "full_image"
-RUN_RDD_FULL_IMAGE_PREPROCESSING = False
-RUN_RDD_PATCH_PREPROCESSING = False
-```
-
-### Run A/F/H On Two Probe Models
-
-```python
-RDD_ACTIVE_EXPERIMENT_IDS = ("A", "F", "H")
-RDD_MODEL_MODE = "all"
-RDD_MODEL_NAMES = (
-    "mobilevit_xxs",
-    "mobilenet_v3_small",
-    "efficientnet_b0",
-)
-RDD_TRAINING_INPUT_MODE = "full_image"
-RDD_EVALUATION_INPUT_MODE = "full_image"
-RUN_RDD_FULL_IMAGE_PREPROCESSING = False
-RUN_RDD_PATCH_PREPROCESSING = False
-```
-
-### Run Clean400 Non-Synthetic Experiments On Three Probe Models
-
-```python
-RUN_RDD_FULL_IMAGE_PREPROCESSING = True
-RUN_RDD_PATCH_PREPROCESSING = False
-RDD_ACTIVE_EXPERIMENT_IDS = ("A", "B", "C", "D", "F", "G", "H")
-RDD_MODEL_MODE = "all"
-RDD_MODEL_NAMES = (
-    "mobilevit_xxs",
-    "mobilenet_v3_small",
-    "efficientnet_b0",
-)
-RDD_TRAINING_INPUT_MODE = "full_image"
-RDD_EVALUATION_INPUT_MODE = "full_image"
-```
-
-### Run The Best Experiment On All Models
-
-```python
-RDD_ACTIVE_EXPERIMENT_IDS = ("C",)
-RDD_MODEL_MODE = "all"
-RUN_RDD_FULL_IMAGE_PREPROCESSING = False
-RUN_RDD_PATCH_PREPROCESSING = False
-RDD_TRAINING_INPUT_MODE = "full_image"
-RDD_EVALUATION_INPUT_MODE = "full_image"
-RUN_RDD_TRAINING = True
-RUN_RDD_EVALUATION = True
-RUN_RDD_COMPARISON = True
-```
-
-### Optional Patch-Grid Run
-
-```python
-RUN_RDD_PATCH_PREPROCESSING = False
-RDD_ACTIVE_EXPERIMENT_IDS = ("A",)
-RDD_MODEL_MODE = "all"
-RDD_TRAINING_INPUT_MODE = "annotation_patch"
-RDD_EVALUATION_INPUT_MODE = "grid_image"
-RDD_GRID_SIZE = 3
-RUN_RDD_TRAINING = True
-RUN_RDD_EVALUATION = True
-RUN_RDD_COMPARISON = True
+RDD_TRAINING_SKIP_EXISTING_CHECKPOINTS = False
+RDD_EVALUATION_SKIP_EXISTING_RESULTS = False
 ```

@@ -7,7 +7,7 @@ experiment-specific documentation.
 
 - `performance/` contains the system performance benchmark and plotting scripts
   for comparing loaded models on COCO validation images.
-- `detection/` contains prediction-quality benchmarks for COCO object detection
+- `vision/` contains prediction-quality benchmarks for COCO object detection
   and manifest-labeled image classification.
 
 ## Quick Start
@@ -54,10 +54,10 @@ plots with:
 uv run python experiments/performance/plot_system_performance.py
 ```
 
-Plots are separated into `image_classification/`, `object_detection/`,
-`semantic_interpretation/`, and `all_models/` under
-`results/system_metrics/`.
+Plots are separated into `image_classification/`, `object_detection/`, and
+`vision_language/` under `results/system_metrics/`. Cross-task plots are not
+created because the workloads produce different outputs.
 
 See `performance/README.md` for the full benchmark details.
 
-See `detection/README.md` for detection and classification metric definitions.
+See `vision/README.md` for detection and classification metric definitions.

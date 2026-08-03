@@ -87,6 +87,12 @@ def install_fake_model_modules(monkeypatch) -> None:
     )
     torchvision_models.inception_v3 = lambda weights: FakeModel("inception_v3")
     torchvision.models = torchvision_models
+    torchvision.transforms = SimpleNamespace(
+        Compose=lambda transforms: lambda image: torch.ones(3, 2, 2),
+        Resize=lambda size: object(),
+        ToTensor=lambda: object(),
+        Normalize=lambda **kwargs: object(),
+    )
     monkeypatch.setitem(sys.modules, "torchvision", torchvision)
     monkeypatch.setitem(sys.modules, "torchvision.models", torchvision_models)
 
@@ -276,10 +282,12 @@ def test_adapter_prepare_paths_run_without_real_models(monkeypatch, tmp_path) ->
         "mobilenet_v3_large",
         "efficientnet_b0",
         "resnet18",
+        "shufflenet_v2_x0_5",
         "inception_v3",
         "mobilevit_xxs",
         "efficientformer_l1",
         "smolvlm_256m",
+        "tiny_cnn",
     ):
         fake_model = FakeModel(model_name)
         adapter = ModelInferenceAdapter(model_name, fake_model, torch.device("cpu"))
@@ -297,14 +305,11 @@ def test_adapter_private_infer_helpers_validate_initialization(tmp_path) -> None
     make_image(image_path)
 
     adapter = ModelInferenceAdapter.__new__(ModelInferenceAdapter)
-    adapter.transform = None
-    with pytest.raises(RuntimeError, match="transform"):
-        adapter._infer_transformed_tensor(image_path)
+    adapter.classification_adapter = None
+    with pytest.raises(RuntimeError, match="Classification adapter"):
+        adapter._infer_image_classifier(image_path)
 
     adapter.processor = None
-    with pytest.raises(RuntimeError, match="processor"):
-        adapter._infer_mobilevit(image_path)
-
     adapter.prompt = None
     with pytest.raises(RuntimeError, match="SmolVLM processor"):
         adapter._infer_smolvlm(image_path)

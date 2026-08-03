@@ -1,54 +1,45 @@
 # Road-Damage TinyML Benchmark
 
-Benchmarking and fine-tuning pipeline for lightweight road-damage image
+Training and evaluation pipeline for lightweight road-damage image
 classification, centered on binary pothole detection with RDD2022.
 
-This repository was originally started as a broader edge/VLM prototype. It is
-now scoped as a self-contained benchmark project for:
-
 - preparing RDD2022 binary pothole datasets;
-- testing full-image and patch/grid image-classification workflows;
 - running imbalance-aware data experiments;
-- fine-tuning tiny, small, and standard image classifiers;
+- training custom tiny classifiers and fine-tuning pretrained classifiers;
 - comparing models with accuracy, balanced accuracy, precision, recall, F1,
   ROC-AUC, confusion matrices, inference speed, and training curves;
 - documenting model loading and demo inference paths.
 
-## Recommended Repository Name
+## Setup
 
-Use one of these names on GitHub:
+The project requires Python 3.10 or newer and uses the committed `uv.lock` for
+reproducible environments. After installing `uv`, run from the repository root:
 
-- `road-damage-tinyml-benchmark` recommended
-- `rdd-tinyml-benchmark`
-- `pothole-classification-benchmark`
+```bash
+uv sync
+```
 
-The first name is broad enough to include RDD2022, tiny models, and future
-road-damage datasets without implying Jetson/VLM/cascaded inference work.
+Run commands through `uv run`, or use `.venv/bin/python` directly after the
+environment has been created. Datasets, downloaded model weights, and generated
+results are intentionally not included in the repository.
 
 ## What Is In The Repo
 
 ```text
 .
 ├── datasets/                 # ignored dataset downloads and generated manifests
-├── docs/                     # model notes, RDD constants guide, demos
-├── experiments/              # standalone performance/detection benchmark entry points
+├── docs/                     # model notes, settings guide, inference demos
+├── experiments/              # standalone performance/vision benchmark entry points
 ├── models/                   # ignored downloaded model weights, plus model notes
 ├── notebooks/                # RDD2022 exploration notebook
 ├── results/                  # ignored generated benchmark outputs
 ├── scripts/                  # download and demo helper scripts
 ├── src/                      # reusable benchmark implementation
-│   ├── detection_benchmark/
 │   ├── performance_benchmark/
-│   └── rdd_benchmark/
+│   ├── rdd_benchmark/
+│   └── vision_benchmark/
 └── tests/                    # unit and behavior tests
 ```
-
-Removed from the old roadmap:
-
-- `configs/`: no active config files; RDD settings live in
-  `src/rdd_benchmark/constants.py`.
-- `jetson/`: Jetson deployment belongs in the next project, not this benchmark
-  repo.
 
 ## RDD2022 Binary Pothole Benchmark
 
@@ -59,7 +50,7 @@ src/rdd_benchmark/
 ├── constants.py              # run switches and experiment/model selection
 ├── main.py                   # single entry point for preprocessing/training/eval
 ├── data_loader/              # manifest and dataset classes
-├── data_preprocessing/       # splits, patches, balancing, augmentation, synthetic hooks
+├── data_preprocessing/       # splits, balancing, and augmentation
 ├── experiments/              # experiment registry and runner
 └── training/                 # model adaptation, trainer, evaluation, comparison
 ```
@@ -85,18 +76,28 @@ uv run python -m src.rdd_benchmark.main
 See [docs/rdd_benchmark_constants.md](docs/rdd_benchmark_constants.md) for the
 full explanation of the switches.
 
+The benchmark derives local train, validation, and test manifests from the
+annotated RDD2022 training data. A positive image contains at least one `D40`
+pothole annotation with a bounding-box area of at least 400 square pixels. The
+task is full-image binary classification, not the official CRDDC
+object-detection task.
+
 ## RDD Experiments
 
-The benchmark supports reproducible experiment IDs. The most important final
-experiments are:
+The benchmark supports reproducible experiment IDs:
 
 - `A`: natural clean400 full-image baseline with standard augmentation;
 - `F`: weighted sampler with 25 percent target pothole sampling and standard
   augmentation;
 - `G`: majority downsampling to 1 pothole : 5 non-potholes with standard
   augmentation;
-- `H`: majority downsampling to 1 pothole : 5 non-potholes with stronger
-  pothole augmentation.
+- `H`: majority downsampling to 1 pothole : 5 non-potholes with strong
+  augmentation.
+
+`B`, `C`, and `D` retain the earlier, more aggressive balancing strategies for
+reproducibility. Select one or more IDs with `RDD_ACTIVE_EXPERIMENT_IDS`.
+Every experiment uses the same class-weighted cross-entropy loss; experiment
+IDs vary only the training-data sampling, downsampling, and augmentation.
 
 The tiny/small model sweep currently uses:
 
@@ -121,22 +122,20 @@ Typical files include:
 
 - `best.pt`
 - `history.csv`
-- `loss_curve.png`
-- `f1_curve.png`
-- `accuracy_curve.png`
-- `test_metrics.json`
+- `training_curves.png`
 - `test_metrics.csv`
-- `balanced_test_metrics.json`
-- `confusion_matrix.csv`
+- `balanced_test_metrics.csv`
 - `confusion_matrix.png`
+- `balanced_confusion_matrix.png`
 - `roc_curve.png`
-- `inference_metrics.json`
+
+The metrics CSV includes evaluation throughput and average image processing
+time alongside the classification metrics.
 
 Experiment-level comparisons are written as:
 
 ```text
 results/rdd_trained_models/<experiment_name>/model_comparison.csv
-results/rdd_trained_models/<experiment_name>/top_models.csv
 ```
 
 ## Dataset Downloads

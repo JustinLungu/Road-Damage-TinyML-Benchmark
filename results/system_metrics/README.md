@@ -8,26 +8,19 @@ visualize one metric at a time so models can be compared quickly.
 
 - `system_performance_results.csv` stores one benchmark row per model run.
 - `image_classification/` contains plots for MobileNet, MobileViT,
-  EfficientFormer, EfficientNet, ResNet, and Inception models.
+  EfficientFormer, EfficientNet, ResNet, ShuffleNet, and custom classifiers.
 - `object_detection/` contains plots for YOLO object detectors.
-- `semantic_interpretation/` contains plots for SmolVLM models.
-- `all_models/` contains plots for every row in the CSV.
+- `vision_language/` contains plots for SmolVLM prompted forward passes.
 
-The task-specific folders compare models doing the same kind of work.
-`all_models/` is useful for comparing overall system cost, but its models do
-not produce equivalent outputs. SmolVLM uses a fixed prompt forward pass:
-`Describe the image briefly.`, classifiers return ImageNet logits, and YOLO
-returns object detections.
-
-The plot script derives these groups from the model registries in
-`src/constants.py`. A future model that has not been assigned to a task group
-is included only in `all_models/` and reported in the script output.
+The plot script uses the `task` recorded in each result row. It does not create
+cross-task plots because SmolVLM prompted forward passes, classifier logits,
+and YOLO detections are not equivalent workloads.
 
 ## How to Read the Plots
 
 Each PNG is a bar plot. The x-axis is the model name, and the y-axis is the
-metric value. For repeated runs of the same model, labels are numbered so each
-run stays visible.
+metric value. Matching benchmark configurations replace their previous row.
+Separate rows remain when hardware, precision, workload, or image count differs.
 
 Before measuring, the benchmark runs five warmup passes that are not included
 in the results. During the measured run, each image is timed with
@@ -131,6 +124,9 @@ systems this uses `nvmlDeviceGetUtilizationRates(...).gpu` through NVML.
 
 This field is blank when GPU utilization cannot be read.
 
+CPU runs do not initialize a GPU monitor, so unrelated GPU activity cannot
+appear in their measurements.
+
 ### `avg_power_w_bar.png`
 
 Shows average power draw in watts when power data is available. Lower is better
@@ -142,6 +138,10 @@ On other NVIDIA systems this uses `nvmlDeviceGetPowerUsage`, also converted from
 milliwatts to watts.
 
 This field is blank when power cannot be read.
+
+The `power_source` column identifies whether the value is discrete-GPU board
+power from NVML or Jetson system-input power from tegrastats. These are not the
+same measurement boundary.
 
 ### `energy_per_inference_j_bar.png`
 
@@ -156,18 +156,6 @@ energy_per_inference_j = avg_power_w * avg_latency_seconds
 ```
 
 This field is blank when average power is unavailable.
-
-### `num_images_bar.png`
-
-Shows how many images were processed in that benchmark row. This is mainly a
-sanity check so you can see whether models were compared over the same number
-of images.
-
-Calculated as:
-
-```text
-num_images = len(image_paths_used_for_this_run)
-```
 
 ## Missing Values
 

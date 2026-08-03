@@ -40,28 +40,15 @@ SUMMARY_COLUMNS = [
     "pothole_objects",
 ]
 
-# Columns written in binary_pothole_patches/summary.csv.
-PATCH_SUMMARY_COLUMNS = [
-    "split",
-    "country",
-    "patches",
-    "pothole_patches",
-    "non_pothole_patches",
-    "pothole_fraction",
-]
-
-# Expands each annotation box before making a square training patch.
-RDD_PATCH_PADDING = 0.15
-
 # Skips very small annotation boxes that are likely too noisy for training.
 RDD_MIN_BOX_AREA = 400
 
 # Training augmentation strategies used by the experiment registry.
 RDD_AUGMENTATION_NONE = "none"
 RDD_AUGMENTATION_STANDARD = "standard"
-RDD_AUGMENTATION_MINORITY_STRONG = "minority_strong"
+RDD_AUGMENTATION_STRONG = "strong"
 RDD_SUPPORTED_AUGMENTATION_STRATEGIES = (
     RDD_AUGMENTATION_NONE,
     RDD_AUGMENTATION_STANDARD,
-    RDD_AUGMENTATION_MINORITY_STRONG,
+    RDD_AUGMENTATION_STRONG,
 )

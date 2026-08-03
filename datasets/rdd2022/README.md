@@ -1,4 +1,4 @@
-# RDD2022 Country Training Subset
+# RDD2022 Dataset
 
 RDD2022 is a multi-country road-damage object-detection dataset released for
 CRDDC 2022. Its annotations use Pascal VOC XML files and cover four challenge
@@ -11,9 +11,8 @@ classes:
 
 RDD2022 does not provide an annotated validation split. The official `train`
 split contains images and annotations, while the challenge `test` split
-contains images only. For the first domain-specific experiments, this
-repository therefore downloads one country's annotated training data rather
-than the full multi-country archive.
+contains images only. This repository therefore derives local train,
+validation, and test manifests from the annotated training data.
 
 ## How The Official Test Set Was Evaluated
 
@@ -28,62 +27,54 @@ This prevents participants from tuning models directly against the final test
 labels. The public download therefore contains test images without their XML
 annotations.
 
-For local experiments, create deterministic training, validation, and test
-partitions from the annotated country `train` data. A reasonable initial split
-is 80% training, 10% validation, and 10% local testing. Keep the local test
-partition untouched until final evaluation. When images are sequential road
-frames, split related frames as a group so near-duplicate scenes do not leak
-between partitions.
+These local splits support reproducible model development, but they are not the
+official challenge evaluation. The default split is image-level and does not
+group adjacent frames, so results should not be presented as sequence-level or
+private-test performance.
 
-## Download The Default Subset
+## Download The Dataset
 
-Run the script from the repository root:
-
-```bash
-./scripts/download_rdd2022_subset.sh
-```
-
-The default is India. It is a road-facing, vehicle-mounted subset and has
-substantial pothole representation. The source archive is approximately
-502.3 MB.
-
-Only `India/train/` is extracted. The unannotated test images and downloaded
-ZIP file are not retained.
-
-## Select Another Country
-
-List the official country-specific archives:
-
-```bash
-./scripts/download_rdd2022_subset.sh --list
-```
-
-Download another annotated training subset:
-
-```bash
-./scripts/download_rdd2022_subset.sh china-motorbike
-./scripts/download_rdd2022_subset.sh czech
-./scripts/download_rdd2022_subset.sh united-states
-```
-
-Download every available country-specific annotated training subset:
+The benchmark expects every country listed in
+`src/rdd_benchmark/data_preprocessing/constants.py`. Download all available
+annotated country archives from the repository root:
 
 ```bash
 ./scripts/download_rdd2022_subset.sh all
 ```
 
-The `all` command skips country folders that already contain a `train/`
-directory. Norway is available but its official archive is approximately
-9.9 GB, so the full download is large.
+The downloader extracts each annotated `train/` directory, skips countries
+already present, and does not retain the downloaded ZIP files. Norway is
+available but its official archive is approximately 9.9 GB, so the complete
+download is large.
+
+For dataset inspection or a custom country configuration, list and download
+individual archives instead:
+
+```bash
+./scripts/download_rdd2022_subset.sh --list
+./scripts/download_rdd2022_subset.sh
+./scripts/download_rdd2022_subset.sh china-motorbike
+./scripts/download_rdd2022_subset.sh czech
+./scripts/download_rdd2022_subset.sh united-states
+```
+
+The command without an argument downloads India.
 
 ## Resulting Layout
 
-The default command creates:
+Each country uses the same layout:
 
 ```text
 datasets/rdd2022/
 ├── README.md
-└── India/
+├── India/
+│   └── train/
+│       ├── annotations/
+│       │   └── xmls/
+│       │       └── *.xml
+│       └── images/
+│           └── *.jpg
+└── <other_country>/
     └── train/
         ├── annotations/
         │   └── xmls/
@@ -97,9 +88,8 @@ coordinates for its corresponding image.
 
 ## Binary Pothole Image Classification
 
-For the initial supervisor-requested image-classification task, the repository
-can create binary pothole/non-pothole manifests from the downloaded XML
-annotations. All RDD training actions are controlled from
+The repository creates binary pothole/non-pothole manifests from the downloaded
+XML annotations. All RDD actions are controlled from
 `src/rdd_benchmark/constants.py` and run through the single entry point:
 
 ```bash
@@ -109,22 +99,22 @@ uv run python -m src.rdd_benchmark.main
 For a detailed explanation of each RDD pipeline constant, see
 `docs/rdd_benchmark_constants.md`.
 
-The binary target is:
+The clean400 binary target is:
 
-- `1`, `pothole`: the image contains at least one `D40` object.
-- `0`, `non_pothole`: the image contains no `D40` object.
+- `1`, `pothole`: the image contains at least one `D40` bounding box with an
+  area of at least 400 square pixels.
+- `0`, `non_pothole`: the image contains no qualifying `D40` bounding box.
 
 `non_pothole` therefore includes images with other road-damage classes, repair
-labels, and images with no annotated objects. This keeps the first task aligned
-with the requested question: pothole versus non-pothole.
+labels, no annotated objects, or only smaller `D40` boxes.
 
-The default fine-tuning split is now `stratified_by_country`:
+The default split is `stratified_by_country`:
 
 - every country contributes to train, validation, and test;
 - pothole and non-pothole images are split separately inside each country;
 - the default ratio is `70%` train, `15%` validation, and `15%` test.
 
-This gives validation enough pothole examples for threshold tuning while keeping
+This gives validation enough pothole examples for model selection while keeping
 the test set meaningful. The older country-holdout split is still available for
 a harder cross-country generalization benchmark:
 
@@ -134,7 +124,7 @@ a harder cross-country generalization benchmark:
 | `validation` | `United_States` |
 | `test` | `Japan`, `Norway` |
 
-The script writes local generated CSV files under:
+Preprocessing writes generated CSV files under:
 
 ```text
 datasets/rdd2022/binary_pothole/
@@ -152,8 +142,7 @@ size. Use `summary.csv` to check class balance before training.
 To regenerate these full-image manifests, set:
 
 ```python
-RUN_RDD_FULL_IMAGE_PREPROCESSING = True
-RUN_RDD_PATCH_PREPROCESSING = False
+RUN_RDD_PREPROCESSING = True
 ```
 
 Then run:
@@ -162,136 +151,18 @@ Then run:
 uv run python -m src.rdd_benchmark.main
 ```
 
-After the manifests are generated, set the preprocessing flags back to `False`
+After the manifests are generated, set the preprocessing flag back to `False`
 unless you changed the dataset split or want to overwrite the CSV files.
 
-## Patch-Grid Binary Pothole Pipeline
+Only image-classification models are supported by this benchmark. Pretrained
+MobileNet, EfficientNet, ResNet, Inception, MobileViT, EfficientFormer, and
+ShuffleNet models are fine-tuned. The custom tiny classifiers are trained from
+scratch. YOLO detectors and SmolVLM vision-language models are excluded.
 
-The patch-grid pipeline is closer to the RDD classification papers while still
-supporting full-image inference without test-time bounding boxes.
-
-Training uses annotation-derived patches:
-
-- `D40` bounding boxes become `pothole` patches.
-- Non-`D40` damage boxes become `non_pothole` patches.
-
-Testing/inference uses full images:
-
-```text
-full image -> 3x3 grid patches -> patch classifier -> max pothole score -> image label
-```
-
-This keeps the trained model as a binary image classifier. It does not train a
-YOLO-style box regression head, and it does not use bounding boxes at test time.
-
-To create the patch manifests, set:
-
-```python
-RUN_RDD_FULL_IMAGE_PREPROCESSING = False
-RUN_RDD_PATCH_PREPROCESSING = True
-```
-
-Then run:
-
-```bash
-uv run python -m src.rdd_benchmark.main
-```
-
-This writes:
-
-```text
-datasets/rdd2022/binary_pothole_patches/
-├── all.csv
-├── train.csv
-├── validation.csv
-├── test.csv
-└── summary.csv
-```
-
-To train on annotation patches and evaluate on full images with 3x3 grid
-inference, use constants like:
-
-```python
-RDD_EXPERIMENT_NAME = "annotation_patch_grid3"
-RDD_TRAINING_INPUT_MODE = "annotation_patch"
-RDD_EVALUATION_INPUT_MODE = "grid_image"
-RDD_GRID_SIZE = 3
-RDD_PATCH_DECISION_THRESHOLD = 0.5
-RDD_TUNE_PATCH_THRESHOLD = True
-
-RUN_RDD_PATCH_PREPROCESSING = False
-RUN_RDD_TRAINING = True
-RUN_RDD_EVALUATION = True
-RUN_RDD_COMPARISON = True
-```
-
-Then run:
-
-```bash
-uv run python -m src.rdd_benchmark.main
-```
-
-Results are saved under the experiment name:
-
-```text
-results/rdd_trained_models/<RDD_EXPERIMENT_NAME>/<model_name>/
-├── best.pt
-├── history.csv
-├── threshold.json
-├── test_metrics.json
-├── test_metrics.csv
-├── inference_metrics.json
-├── confusion_matrix.csv
-├── confusion_matrix.png
-├── roc_curve.png
-└── test_metric_bars.png
-```
-
-The experiment comparison files are saved to:
-
-```text
-results/rdd_trained_models/<RDD_EXPERIMENT_NAME>/model_comparison.csv
-results/rdd_trained_models/<RDD_EXPERIMENT_NAME>/top_models.csv
-```
-
-Load the generated manifests for training with:
-
-```python
-from pathlib import Path
-
-from src.rdd_benchmark import BinaryPotholeDataset
-
-train_dataset = BinaryPotholeDataset(
-    Path("datasets/rdd2022/binary_pothole/train.csv"),
-    expected_split="train",
-)
-```
-
-Smoke-test the loader and print split summaries with:
-
-```bash
-uv run python -m src.rdd_benchmark.main
-```
-
-Adapt a pretrained image-classification model for binary pothole fine-tuning:
-
-```python
-from src.load_model import load_model
-from src.rdd_benchmark.training.utils import adapt_model_for_binary_pothole
-
-model_name = "mobilenet_v3_small"
-model = load_model(model_name)
-model = adapt_model_for_binary_pothole(model_name, model)
-```
-
-Only image-classification models are supported for this RDD fine-tuning path:
-MobileNet, EfficientNet-B0, ResNet18, InceptionV3, MobileViT, and
-EfficientFormer. YOLO detectors and SmolVLM vision-language models are
-intentionally excluded.
-
-To change the country split, edit `SPLIT_COUNTRIES` in
-`src/rdd_benchmark/constants.py`, enable the preprocessing flag for the manifests
-you want to regenerate, then rerun:
+To change country-holdout assignments, edit `SPLIT_COUNTRIES`. To change the
+countries used by the stratified split, edit `RDD_AVAILABLE_COUNTRIES`. Both
+live in `src/rdd_benchmark/data_preprocessing/constants.py`. Then enable
+preprocessing and rerun:
 
 ```bash
 uv run python -m src.rdd_benchmark.main
