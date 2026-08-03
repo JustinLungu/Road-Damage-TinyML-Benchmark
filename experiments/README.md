@@ -54,9 +54,9 @@ plots with:
 uv run python experiments/performance/plot_system_performance.py
 ```
 
-Plots are separated into `image_classification/`, `object_detection/`,
-`semantic_interpretation/`, and `all_models/` under
-`results/system_metrics/`.
+Plots are separated into `image_classification/`, `object_detection/`, and
+`vision_language/` under `results/system_metrics/`. Cross-task plots are not
+created because the workloads produce different outputs.
 
 See `performance/README.md` for the full benchmark details.
 

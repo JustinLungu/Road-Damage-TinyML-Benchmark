@@ -8,20 +8,13 @@ visualize one metric at a time so models can be compared quickly.
 
 - `system_performance_results.csv` stores one benchmark row per model run.
 - `image_classification/` contains plots for MobileNet, MobileViT,
-  EfficientFormer, EfficientNet, ResNet, and Inception models.
+  EfficientFormer, EfficientNet, ResNet, ShuffleNet, and custom classifiers.
 - `object_detection/` contains plots for YOLO object detectors.
-- `semantic_interpretation/` contains plots for SmolVLM models.
-- `all_models/` contains plots for every row in the CSV.
+- `vision_language/` contains plots for SmolVLM prompted forward passes.
 
-The task-specific folders compare models doing the same kind of work.
-`all_models/` is useful for comparing overall system cost, but its models do
-not produce equivalent outputs. SmolVLM uses a fixed prompt forward pass:
-`Describe the image briefly.`, classifiers return ImageNet logits, and YOLO
-returns object detections.
-
-The plot script derives these groups from the model registries in
-`src/constants.py`. A future model that has not been assigned to a task group
-is included only in `all_models/` and reported in the script output.
+The plot script uses the `task` recorded in each result row. It does not create
+cross-task plots because SmolVLM prompted forward passes, classifier logits,
+and YOLO detections are not equivalent workloads.
 
 ## How to Read the Plots
 
@@ -163,18 +156,6 @@ energy_per_inference_j = avg_power_w * avg_latency_seconds
 ```
 
 This field is blank when average power is unavailable.
-
-### `num_images_bar.png`
-
-Shows how many images were processed in that benchmark row. This is mainly a
-sanity check so you can see whether models were compared over the same number
-of images.
-
-Calculated as:
-
-```text
-num_images = len(image_paths_used_for_this_run)
-```
 
 ## Missing Values
 

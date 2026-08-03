@@ -1,37 +1,29 @@
 import argparse
-import re
 import sys
-from collections import Counter
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# Allow this script to be run directly from the repo root with `uv run python ...`.
+# Allow direct execution from the repository root.
 REPO_ROOT_FOR_IMPORTS = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT_FOR_IMPORTS))
 
 from experiments.performance.constants import (  # noqa: E402
-    ALL_MODELS_DIR,
-    DEFAULT_CSV,
-    TASK_MODEL_GROUPS,
+    PERFORMANCE_METRICS,
+    PERFORMANCE_TASKS,
+    RESULTS_CSV,
 )
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Create one bar plot per system performance metric."
+        description="Create task-specific system performance plots."
     )
-    parser.add_argument(
-        "--csv",
-        type=Path,
-        default=DEFAULT_CSV,
-        help="CSV file to plot. Defaults to the system metrics results CSV.",
-    )
+    parser.add_argument("--csv", type=Path, default=RESULTS_CSV)
     args = parser.parse_args()
 
     created_plots = create_metric_plots(args.csv)
-
     print(f"Created {len(created_plots)} plots:")
     for plot_path in created_plots:
         print(f"- {plot_path}")
@@ -42,133 +34,112 @@ def create_metric_plots(csv_path: Path) -> list[Path]:
         raise FileNotFoundError(f"Results CSV does not exist: {csv_path}")
 
     results = pd.read_csv(csv_path)
-    if "model_name" not in results.columns:
-        raise ValueError("Results CSV must contain a model_name column.")
-
-    output_root = csv_path.parent
-    model_names = results["model_name"].astype(str)
-    plot_groups = [
-        (
-            group_name,
-            results[model_names.isin(group_model_names)].copy(),
+    required_columns = {"model_name", "task", "device_name", "num_images"}
+    missing_columns = required_columns - set(results.columns)
+    if missing_columns:
+        raise ValueError(
+            "Results CSV is missing columns: " + ", ".join(sorted(missing_columns))
         )
-        for group_name, group_model_names in TASK_MODEL_GROUPS
-    ]
-    plot_groups.append((ALL_MODELS_DIR, results))
 
-    # Every numeric CSV column except model_name gets its own bar plot.
-    metric_columns = [column for column in results.columns if column != "model_name"]
     created_plots = []
-
-    for group_name, group_results in plot_groups:
-        output_dir = output_root / group_name
+    for task in PERFORMANCE_TASKS:
+        task_results = results[results["task"] == task].copy()
+        output_dir = csv_path.parent / task
         remove_stale_plots(output_dir)
-        created_plots.extend(
-            create_metric_plots_for_group(
-                results=group_results,
-                metric_columns=metric_columns,
-                output_dir=output_dir,
-                group_name=group_name,
-            )
-        )
+        created_plots.extend(create_task_plots(task_results, output_dir, task))
 
-    known_model_names = set().union(
-        *(group_model_names for _, group_model_names in TASK_MODEL_GROUPS)
-    )
-    unknown_model_names = sorted(set(model_names) - known_model_names)
-    if unknown_model_names:
-        print(
-            "Models included only in all_models because they have no task group: "
-            f"{', '.join(unknown_model_names)}"
-        )
+    unknown_tasks = sorted(set(results["task"].astype(str)) - set(PERFORMANCE_TASKS))
+    if unknown_tasks:
+        print("Rows skipped for unknown tasks: " + ", ".join(unknown_tasks))
 
     return created_plots
 
 
-def create_metric_plots_for_group(
+def create_task_plots(
     results: pd.DataFrame,
-    metric_columns: list[str],
     output_dir: Path,
-    group_name: str,
+    task: str,
 ) -> list[Path]:
     if results.empty:
-        print(f"Skipping {group_name}: no rows to plot.")
+        print(f"Skipping {task}: no rows to plot.")
         return []
 
-    plot_labels = make_plot_labels(results["model_name"].astype(str).tolist())
+    labels = make_plot_labels(results)
     created_plots = []
 
-    for metric_column in metric_columns:
-        # Blank hardware fields become NaN and are skipped for that metric.
-        metric_values = pd.to_numeric(results[metric_column], errors="coerce")
-        plot_data = pd.DataFrame(
-            {
-                "model_name": plot_labels,
-                metric_column: metric_values,
-            }
-        ).dropna(subset=[metric_column])
-
-        if plot_data.empty:
-            print(f"Skipping {group_name}/{metric_column}: no numeric values found.")
+    for metric in PERFORMANCE_METRICS:
+        if metric not in results.columns:
             continue
 
-        output_path = output_dir / f"{safe_filename(metric_column)}_bar.png"
-        plot_metric(plot_data, metric_column, output_path)
+        values = pd.to_numeric(results[metric], errors="coerce")
+        plot_data = pd.DataFrame({"model_name": labels, metric: values}).dropna(
+            subset=[metric]
+        )
+        if plot_data.empty:
+            continue
+
+        output_path = output_dir / f"{metric}_bar.png"
+        plot_metric(plot_data, metric, output_path)
         created_plots.append(output_path)
 
     return created_plots
 
 
-def remove_stale_plots(output_dir: Path) -> None:
-    if not output_dir.is_dir():
-        return
-
-    for plot_path in output_dir.glob("*_bar.png"):
-        plot_path.unlink()
-
-
-def make_plot_labels(model_names: list[str]) -> list[str]:
-    total_counts = Counter(model_names)
-    seen_counts: dict[str, int] = {}
-    labels = []
-
-    for model_name in model_names:
-        seen_counts[model_name] = seen_counts.get(model_name, 0) + 1
-        if total_counts[model_name] == 1:
-            labels.append(model_name)
-        else:
-            # Repeated model rows are separate benchmark runs, so keep both visible.
-            labels.append(f"{model_name} #{seen_counts[model_name]}")
-
-    return labels
+def make_plot_labels(results: pd.DataFrame) -> list[str]:
+    model_names = results["model_name"].astype(str)
+    duplicate_models = model_names.duplicated(keep=False)
+    labels = model_names.copy()
+    labels.loc[duplicate_models] = (
+        model_names[duplicate_models]
+        + "\n"
+        + results.loc[duplicate_models, "device_name"].astype(str)
+        + ", n="
+        + results.loc[duplicate_models, "num_images"].astype(str)
+    )
+    return labels.tolist()
 
 
-def plot_metric(plot_data: pd.DataFrame, metric_column: str, output_path: Path) -> None:
+def plot_metric(
+    plot_data: pd.DataFrame,
+    metric: str,
+    output_path: Path,
+) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    # Wider figures keep model labels readable when many models are plotted.
-    figure_width = max(8, len(plot_data) * 0.8)
-    figure, axis = plt.subplots(figsize=(figure_width, 5))
-
-    axis.bar(plot_data["model_name"], plot_data[metric_column])
-    axis.set_title(format_metric_name(metric_column))
+    figure, axis = plt.subplots(figsize=(max(8, len(plot_data) * 0.8), 5))
+    bars = axis.bar(plot_data["model_name"], plot_data[metric])
+    axis.set_title(format_metric_name(metric))
     axis.set_xlabel("Model")
-    axis.set_ylabel(metric_column)
+    axis.set_ylabel(format_metric_name(metric))
     axis.tick_params(axis="x", rotation=45)
-
-    for tick_label in axis.get_xticklabels():
-        tick_label.set_horizontalalignment("right")
+    axis.bar_label(bars, fmt="%.2f", padding=3, fontsize=8)
+    for label in axis.get_xticklabels():
+        label.set_horizontalalignment("right")
 
     figure.tight_layout()
     figure.savefig(output_path, dpi=200)
     plt.close(figure)
 
 
-def format_metric_name(metric_column: str) -> str:
-    return metric_column.replace("_", " ").title()
+def remove_stale_plots(output_dir: Path) -> None:
+    if output_dir.is_dir():
+        for plot_path in output_dir.glob("*_bar.png"):
+            plot_path.unlink()
 
 
-def safe_filename(metric_column: str) -> str:
-    return re.sub(r"[^a-zA-Z0-9_-]+", "_", metric_column).strip("_").lower()
+def format_metric_name(metric: str) -> str:
+    labels = {
+        "fps": "Images per Second (Batch Size 1)",
+        "avg_latency_ms": "Average Latency (ms)",
+        "p95_latency_ms": "P95 Latency (ms)",
+        "avg_cpu_ram_mb": "Average CPU RAM (MB)",
+        "peak_cpu_ram_mb": "Peak CPU RAM (MB)",
+        "avg_gpu_ram_mb": "Average GPU RAM (MB)",
+        "peak_gpu_ram_mb": "Peak GPU RAM (MB)",
+        "avg_gpu_utilization_pct": "Average GPU Utilization (%)",
+        "avg_power_w": "Average Power (W)",
+        "energy_per_inference_j": "Energy per Inference (J)",
+    }
+    return labels[metric]
 
 
 if __name__ == "__main__":

@@ -4,15 +4,15 @@ from typing import Any
 
 import torch.nn as nn
 
-from src.performance_benchmark.constants import (
+from src.constants import (
     CUSTOM_IMAGE_CLASSIFICATION_MODELS,
-    EFFICIENTFORMER_MODELS,
-    EFFICIENTNET_MODELS,
-    INCEPTION_MODELS,
-    MOBILEVIT_MODELS,
-    MOBILENET_MODELS,
-    RESNET_MODELS,
-    SHUFFLENET_MODELS,
+    EFFICIENTFORMER_MODEL_IDS,
+    EFFICIENTNET_MODEL_CHECKPOINTS,
+    INCEPTION_MODEL_CHECKPOINTS,
+    MOBILENET_MODEL_CHECKPOINTS,
+    MOBILEVIT_MODEL_IDS,
+    RESNET_MODEL_CHECKPOINTS,
+    SHUFFLENET_MODEL_CHECKPOINTS,
 )
 from src.rdd_benchmark.constants import (
     NUM_BINARY_CLASSES,
@@ -37,7 +37,9 @@ class BinaryPotholeModelAdapter:
         num_classes: int = NUM_BINARY_CLASSES,
     ) -> None:
         if model_name not in RDD_IMAGE_CLASSIFICATION_MODELS:
-            raise ValueError(f"Model is not supported for RDD fine-tuning: {model_name}")
+            raise ValueError(
+                f"Model is not supported for RDD fine-tuning: {model_name}"
+            )
         if num_classes <= 1:
             raise ValueError("num_classes must be greater than one.")
 
@@ -45,17 +47,19 @@ class BinaryPotholeModelAdapter:
         self.num_classes = num_classes
 
     def adapt(self, model: Any) -> Any:
-        if self.model_name in MOBILENET_MODELS | EFFICIENTNET_MODELS:
+        if self.model_name in (
+            MOBILENET_MODEL_CHECKPOINTS.keys() | EFFICIENTNET_MODEL_CHECKPOINTS.keys()
+        ):
             return self._adapt_classifier_sequence(model)
-        if self.model_name in RESNET_MODELS:
+        if self.model_name in RESNET_MODEL_CHECKPOINTS:
             return self._adapt_linear_attribute(model, "fc")
-        if self.model_name in SHUFFLENET_MODELS:
+        if self.model_name in SHUFFLENET_MODEL_CHECKPOINTS:
             return self._adapt_linear_attribute(model, "fc")
-        if self.model_name in INCEPTION_MODELS:
+        if self.model_name in INCEPTION_MODEL_CHECKPOINTS:
             return self._adapt_inception(model)
-        if self.model_name in MOBILEVIT_MODELS:
+        if self.model_name in MOBILEVIT_MODEL_IDS:
             return self._adapt_mobilevit(model)
-        if self.model_name in EFFICIENTFORMER_MODELS:
+        if self.model_name in EFFICIENTFORMER_MODEL_IDS:
             return self._adapt_efficientformer(model)
         if self.model_name in CUSTOM_IMAGE_CLASSIFICATION_MODELS:
             if hasattr(model, "fc"):

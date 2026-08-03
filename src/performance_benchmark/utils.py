@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import csv
-from dataclasses import asdict
 import platform
 from pathlib import Path
 from statistics import fmean
@@ -9,8 +7,6 @@ from typing import Any
 
 import torch
 from PIL import Image
-
-from src.performance_benchmark.benchmark_result import BenchmarkResult
 
 
 def resolve_device(device_name: str) -> torch.device:
@@ -58,18 +54,6 @@ def list_coco_images(images_dir: Path, num_images: int | None = None) -> list[Pa
         image_paths = image_paths[:num_images]
 
     return image_paths
-
-
-def append_result_csv(result: BenchmarkResult, output_path: Path) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    # Append rows across runs, but create the header for a new/empty file.
-    write_header = not output_path.exists() or output_path.stat().st_size == 0
-
-    with output_path.open("a", newline="", encoding="utf-8") as output_file:
-        writer = csv.DictWriter(output_file, fieldnames=list(asdict(result).keys()))
-        if write_header:
-            writer.writeheader()
-        writer.writerow(asdict(result))
 
 
 def load_rgb_image(image_path: Path) -> Image.Image:

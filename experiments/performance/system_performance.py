@@ -23,11 +23,10 @@ from src.load_model import (  # noqa: E402
     get_downloaded_model_names,
     load_model,
 )
-from src.performance_benchmark import (  # noqa: E402
+from src.performance_benchmark.performance_benchmark import (  # noqa: E402
     PerformanceBenchmark,
-    list_coco_images,
-    resolve_device,
 )
+from src.performance_benchmark.utils import list_coco_images, resolve_device  # noqa: E402
 from src.result_csv import save_result_csv  # noqa: E402
 
 

@@ -9,9 +9,9 @@ accuracy.
 
 - `performance_benchmark.py` contains the main `PerformanceBenchmark` class
   that runs warmup passes, times inference, and creates the final result.
-- `model_inference_adapter.py` prepares a consistent inference call for each
-  supported model family: YOLO, MobileNetV2/V3, EfficientNet-B0, ResNet18,
-  InceptionV3, MobileViT, EfficientFormer, and SmolVLM.
+- `model_inference_adapter.py` normalizes YOLO, image-classifier, and SmolVLM
+  calls. Classifier preprocessing is shared with the vision benchmark through
+  `src/image_classification_inference_adapter.py`.
 - `system_metrics_sampler.py` samples process RAM, CUDA memory, GPU utilization,
   and power while inference is running.
 - `nvml_monitor.py` reads GPU utilization and GPU board power through NVML on
@@ -19,14 +19,10 @@ accuracy.
 - `tegrastats_monitor.py` reads GPU utilization and input-rail system power from
   `tegrastats` on Jetson devices.
 - `benchmark_result.py` defines the result fields written to the CSV file.
-- `metric_samples.py` stores the raw system metric samples collected during a
-  benchmark.
-- `constants.py` contains benchmark-specific model groups, prompts, sampling
-  defaults, and parser patterns. Shared repo paths and model IDs live in
-  `src/constants.py`.
+- `constants.py` contains the prompt, sampling defaults, timing settings, and
+  tegrastats parser patterns.
 - `utils.py` contains shared helpers for devices, COCO image paths, image
-  loading, statistics, and CSV writing.
-- `__init__.py` exposes the package's public imports.
+  loading, and statistics.
 
 The experiment entry point is
 `experiments/performance/system_performance.py`, and its results are written to

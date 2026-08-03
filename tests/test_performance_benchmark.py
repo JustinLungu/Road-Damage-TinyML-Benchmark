@@ -7,9 +7,9 @@ import torch
 from PIL import Image
 
 import src.performance_benchmark.performance_benchmark as benchmark_module
-from src.performance_benchmark.benchmark_result import BenchmarkResult
-from src.performance_benchmark.metric_samples import MetricSamples
+from src.performance_benchmark.benchmark_result import PerformanceBenchmarkResult
 from src.performance_benchmark.performance_benchmark import PerformanceBenchmark
+from src.performance_benchmark.system_metrics_sampler import MetricSamples
 from src.performance_benchmark.utils import (
     average_or_none,
     describe_device,
@@ -54,8 +54,8 @@ class FakeSampler:
         self.stopped = True
 
 
-def make_result(model_name: str) -> BenchmarkResult:
-    return BenchmarkResult(
+def make_result(model_name: str) -> PerformanceBenchmarkResult:
+    return PerformanceBenchmarkResult(
         model_name=model_name,
         task="image_classification",
         workload="single_image_forward",

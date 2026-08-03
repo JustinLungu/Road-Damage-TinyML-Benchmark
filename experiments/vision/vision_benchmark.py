@@ -41,7 +41,7 @@ from src.vision_benchmark.object_detection_benchmark import (  # noqa: E402
     ObjectDetectionBenchmark,
 )
 from src.load_model import get_downloaded_model_names, load_model  # noqa: E402
-from src.performance_benchmark import resolve_device  # noqa: E402
+from src.performance_benchmark.utils import resolve_device  # noqa: E402
 
 
 def main() -> None:

@@ -24,7 +24,3 @@ class PerformanceBenchmarkResult:
     avg_power_w: float | None
     energy_per_inference_j: float | None
     num_images: int
-
-
-# Backward-compatible name for existing imports and saved checkpoints.
-BenchmarkResult = PerformanceBenchmarkResult
