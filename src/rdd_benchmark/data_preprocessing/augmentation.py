@@ -3,9 +3,9 @@ from __future__ import annotations
 from torchvision import transforms
 
 from src.rdd_benchmark.data_preprocessing.constants import (
-    RDD_AUGMENTATION_MINORITY_STRONG,
     RDD_AUGMENTATION_NONE,
     RDD_AUGMENTATION_STANDARD,
+    RDD_AUGMENTATION_STRONG,
     RDD_SUPPORTED_AUGMENTATION_STRATEGIES,
 )
 
@@ -43,8 +43,8 @@ def make_standard_train_transform(image_size: int):
     )
 
 
-def make_minority_strong_train_transform(image_size: int):
-    """Stronger but road-safe augmentation for oversampled pothole examples."""
+def make_strong_train_transform(image_size: int):
+    """Stronger road-safe augmentation applied to every training image."""
     return transforms.Compose(
         [
             transforms.RandomResizedCrop(image_size, scale=(0.60, 1.0)),
@@ -88,7 +88,7 @@ def make_rdd_image_transform(
         return make_eval_transform(image_size)
     if augmentation_strategy == RDD_AUGMENTATION_STANDARD:
         return make_standard_train_transform(image_size)
-    if augmentation_strategy == RDD_AUGMENTATION_MINORITY_STRONG:
-        return make_minority_strong_train_transform(image_size)
+    if augmentation_strategy == RDD_AUGMENTATION_STRONG:
+        return make_strong_train_transform(image_size)
 
     raise ValueError(f"Unsupported augmentation_strategy: {augmentation_strategy}.")

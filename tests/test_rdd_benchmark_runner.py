@@ -129,7 +129,7 @@ def test_rdd_experiment_runner_trains_evaluates_and_compares(
     )
     assert trainer_config.sampler_strategy == "weighted_sampler"
     assert trainer_config.target_pothole_fraction == 0.5
-    assert trainer_config.augmentation_strategy == "minority_strong"
+    assert trainer_config.augmentation_strategy == "strong"
     assert trainer_config.best_metric == "balanced_accuracy"
     assert evaluation_config.test_manifest_path == manifest_paths.test_manifest_path
     assert captured["comparison"][2] == "f1"

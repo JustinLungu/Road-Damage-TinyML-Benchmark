@@ -5,9 +5,9 @@ from torchvision import transforms
 
 from src.rdd_benchmark.data_preprocessing.augmentation import (
     make_eval_transform,
-    make_minority_strong_train_transform,
     make_rdd_image_transform,
     make_standard_train_transform,
+    make_strong_train_transform,
 )
 from src.rdd_benchmark.training import utils as training_utils
 
@@ -33,8 +33,8 @@ def test_standard_train_transform_uses_light_augmentation():
     ]
 
 
-def test_minority_strong_train_transform_adds_extra_augmentation():
-    transform = make_minority_strong_train_transform(image_size=32)
+def test_strong_train_transform_adds_extra_augmentation():
+    transform = make_strong_train_transform(image_size=32)
 
     assert transform_class_names(transform) == [
         "RandomResizedCrop",
@@ -61,7 +61,7 @@ def test_eval_transform_ignores_training_augmentation_strategy():
     transform = make_rdd_image_transform(
         image_size=32,
         is_train=False,
-        augmentation_strategy="minority_strong",
+        augmentation_strategy="strong",
     )
 
     assert transform_class_names(transform) == ["Resize", "ToTensor", "Normalize"]
@@ -106,8 +106,8 @@ def test_training_image_transform_forwards_model_size_and_strategy(monkeypatch):
     transform = training_utils.make_image_transform(
         model_name="inception_v3",
         is_train=True,
-        augmentation_strategy="minority_strong",
+        augmentation_strategy="strong",
     )
 
     assert isinstance(transform, transforms.Compose)
-    assert captured["args"] == (299, True, "minority_strong")
+    assert captured["args"] == (299, True, "strong")

@@ -57,8 +57,6 @@ RDD_TRAINING_WEIGHT_DECAY = 1e-4
 # Best checkpoint is selected using this validation metric.
 RDD_TRAINING_BEST_METRIC = "balanced_accuracy"
 
-# Compensates for pothole/non-pothole imbalance in the training loss.
-RDD_TRAINING_USE_WEIGHTED_LOSS = True
 RDD_TRAINING_PROGRESS_INTERVAL = 50
 RDD_TRAINING_SAVE_PLOTS = True
 

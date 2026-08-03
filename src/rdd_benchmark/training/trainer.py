@@ -21,7 +21,6 @@ from src.rdd_benchmark.constants import (
     RDD_TRAINING_NUM_WORKERS,
     RDD_TRAINING_PROGRESS_INTERVAL,
     RDD_TRAINING_SAVE_PLOTS,
-    RDD_TRAINING_USE_WEIGHTED_LOSS,
     RDD_TRAINING_WEIGHT_DECAY,
 )
 from src.rdd_benchmark.data_loader.dataset import (
@@ -69,7 +68,6 @@ class RDDTrainingConfig:
     best_metric: str = RDD_TRAINING_BEST_METRIC
     early_stopping_patience: int = RDD_TRAINING_EARLY_STOPPING_PATIENCE
     early_stopping_min_delta: float = RDD_TRAINING_EARLY_STOPPING_MIN_DELTA
-    use_weighted_loss: bool = RDD_TRAINING_USE_WEIGHTED_LOSS
     progress_interval: int = RDD_TRAINING_PROGRESS_INTERVAL
     save_plots: bool = RDD_TRAINING_SAVE_PLOTS
     drop_last_train_batch: bool = RDD_TRAINING_DROP_LAST_BATCH
@@ -137,7 +135,8 @@ class BinaryPotholeTrainer:
             f"device={self.device}, epochs={self.config.epochs}, "
             f"batch_size={self.config.batch_size}, "
             f"sampler_strategy={self.config.sampler_strategy}, "
-            f"augmentation_strategy={self.config.augmentation_strategy}"
+            f"augmentation_strategy={self.config.augmentation_strategy}, "
+            "loss=class_weighted_cross_entropy"
         )
         print(
             "  data: "
@@ -365,9 +364,6 @@ class BinaryPotholeTrainer:
         )
 
     def _make_criterion(self, train_manifest: BinaryPotholeManifest) -> nn.Module:
-        if not self.config.use_weighted_loss:
-            return nn.CrossEntropyLoss()
-
         class_weights = calculate_class_weights(train_manifest.class_counts()).to(
             self.device
         )

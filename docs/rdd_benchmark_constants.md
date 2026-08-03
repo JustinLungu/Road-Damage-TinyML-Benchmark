@@ -73,13 +73,13 @@ manifests remain unchanged.
 
 | ID | Training strategy |
 |---|---|
-| `A` | Natural data and standard augmentation |
+| `A` | Natural sampling and standard augmentation |
 | `B` | 50% pothole weighted sampling and standard augmentation |
-| `C` | 50% pothole weighted sampling and stronger pothole augmentation |
-| `D` | 1:3 majority downsampling, 50% weighted sampling, stronger pothole augmentation |
+| `C` | 50% pothole weighted sampling and strong augmentation |
+| `D` | 1:3 majority downsampling, 50% weighted sampling, and strong augmentation |
 | `F` | 25% pothole weighted sampling and standard augmentation |
 | `G` | 1:5 majority downsampling and standard augmentation |
-| `H` | 1:5 majority downsampling and stronger pothole augmentation |
+| `H` | 1:5 majority downsampling and strong augmentation |
 
 Downsampling changes only the generated training manifest under:
 
@@ -124,8 +124,9 @@ RDD_TRAINING_EARLY_STOPPING_PATIENCE = 8
 ```
 
 The trainer saves the checkpoint with the best validation metric and stops
-when that metric has not improved for the configured patience. Weighted loss
-is enabled by default to account for the natural class imbalance.
+when that metric has not improved for the configured patience. Every experiment
+uses class-weighted cross-entropy to account for class imbalance; experiments
+differ only in sampling, downsampling, and augmentation.
 
 Keep `RDD_TRAINING_DROP_LAST_BATCH = True` for models with batch normalization.
 It avoids a final one-sample training batch.
@@ -140,11 +141,15 @@ RDD_COMPARISON_TOP_K = 3
 ```
 
 Evaluation reports accuracy, balanced accuracy, precision, recall, F1,
-ROC-AUC, confusion matrices, and inference speed on two views:
+ROC-AUC, confusion matrices, and end-to-end evaluation throughput on two views:
 
 - the original imbalanced test split, which represents realistic prevalence;
 - a deterministic balanced subset, which makes class-level behavior easier to
   compare.
+
+Evaluation throughput includes image loading, preprocessing, transfer, and
+batched model execution. It is not the batch-size-1 latency measured by the
+system performance benchmark.
 
 Results are written to:
 

@@ -39,24 +39,24 @@ RDD_EXPERIMENT_REGISTRY = {
     ),
     "C": RDDExperimentConfig(
         experiment_id="C",
-        experiment_name="C_clean400_full_image_weighted_sampler_minority_aug",
-        dataset_strategy="Weighted sampler + stronger minority augmentation",
+        experiment_name="C_clean400_full_image_weighted_sampler_strong_aug",
+        dataset_strategy="Weighted sampler + strong augmentation",
         reason="Most likely to help",
         sampler_strategy="weighted_sampler",
         target_pothole_fraction=0.5,
-        augmentation_strategy="minority_strong",
+        augmentation_strategy="strong",
         non_potholes_per_pothole=None,
     ),
     "D": RDDExperimentConfig(
         experiment_id="D",
-        experiment_name="D_clean400_full_image_downsample_majority_minority_aug",
+        experiment_name="D_clean400_full_image_downsample_majority_strong_aug",
         dataset_strategy=(
-            "Moderate majority downsampling + weighted sampler + minority augmentation"
+            "Moderate majority downsampling + weighted sampler + strong augmentation"
         ),
         reason="Tests whether reducing majority dominance helps",
         sampler_strategy="weighted_sampler",
         target_pothole_fraction=0.5,
-        augmentation_strategy="minority_strong",
+        augmentation_strategy="strong",
         non_potholes_per_pothole=3,
     ),
     "F": RDDExperimentConfig(
@@ -81,12 +81,12 @@ RDD_EXPERIMENT_REGISTRY = {
     ),
     "H": RDDExperimentConfig(
         experiment_id="H",
-        experiment_name="H_clean400_full_image_downsample_1to5_minority_aug",
-        dataset_strategy="Majority downsampling only + minority augmentation",
-        reason="Tests gentler downsampling with stronger pothole augmentation",
+        experiment_name="H_clean400_full_image_downsample_1to5_strong_aug",
+        dataset_strategy="Majority downsampling only + strong augmentation",
+        reason="Tests gentler downsampling with stronger augmentation",
         sampler_strategy="none",
         target_pothole_fraction=None,
-        augmentation_strategy="minority_strong",
+        augmentation_strategy="strong",
         non_potholes_per_pothole=5,
     ),
 }

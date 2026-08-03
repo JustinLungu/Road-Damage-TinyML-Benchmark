@@ -82,11 +82,13 @@ The benchmark supports reproducible experiment IDs:
   augmentation;
 - `G`: majority downsampling to 1 pothole : 5 non-potholes with standard
   augmentation;
-- `H`: majority downsampling to 1 pothole : 5 non-potholes with stronger
-  pothole augmentation.
+- `H`: majority downsampling to 1 pothole : 5 non-potholes with strong
+  augmentation applied to every training image.
 
 `B`, `C`, and `D` retain the earlier, more aggressive balancing strategies for
 reproducibility. Select one or more IDs with `RDD_ACTIVE_EXPERIMENT_IDS`.
+Every experiment uses the same class-weighted cross-entropy loss; experiment
+IDs vary only the training-data sampling, downsampling, and augmentation.
 
 The tiny/small model sweep currently uses:
 
@@ -120,7 +122,7 @@ Typical files include:
 - `confusion_matrix.csv`
 - `confusion_matrix.png`
 - `roc_curve.png`
-- `inference_metrics.json`
+- `evaluation_timing.json`
 
 Experiment-level comparisons are written as:
 

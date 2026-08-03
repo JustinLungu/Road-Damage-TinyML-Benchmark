@@ -165,7 +165,7 @@ def test_binary_pothole_trainer_forwards_augmentation_strategy(
     trainer = BinaryPotholeTrainer(
         config=RDDTrainingConfig(
             model_name="tiny",
-            augmentation_strategy="minority_strong",
+            augmentation_strategy="strong",
             device="cpu",
         ),
         model=TinyClassifier(),
@@ -189,7 +189,7 @@ def test_binary_pothole_trainer_forwards_augmentation_strategy(
     dataset = trainer._make_dataset(split="train", is_train=True)
 
     assert isinstance(dataset, FakeDataset)
-    assert captured["transform"] == ("tiny", True, "minority_strong")
+    assert captured["transform"] == ("tiny", True, "strong")
 
 
 def test_binary_pothole_trainer_uses_weighted_sampler_for_training() -> None:

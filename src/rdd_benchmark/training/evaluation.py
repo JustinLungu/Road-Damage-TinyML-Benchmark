@@ -73,7 +73,7 @@ class RDDEvaluationResult:
     confusion_matrix_plot_path: Path | None
     roc_curve_plot_path: Path | None
     metric_bar_plot_path: Path | None
-    inference_metrics_path: Path
+    evaluation_timing_path: Path
 
     def comparison_row(self) -> dict[str, float | str]:
         return {
@@ -118,6 +118,7 @@ class BinaryPotholeEvaluator:
         predictions = []
         targets = []
         positive_scores = []
+        self._synchronize_device()
         start_time = time.perf_counter()
         with torch.no_grad():
             for batch_index, batch in enumerate(data_loader, start=1):
@@ -127,6 +128,7 @@ class BinaryPotholeEvaluator:
                 predictions.append(logits.argmax(dim=1))
                 targets.append(labels)
                 positive_scores.append(torch.softmax(logits, dim=1)[:, POSITIVE_LABEL])
+                self._synchronize_device()
 
                 if self._should_print_progress(batch_index, len(data_loader)):
                     print(f"  evaluated batches: {batch_index}/{len(data_loader)}")
@@ -136,13 +138,13 @@ class BinaryPotholeEvaluator:
         all_scores = torch.cat(positive_scores)
         total_seconds = time.perf_counter() - start_time
         metrics = self._calculate_metrics(all_predictions, all_targets, all_scores)
-        inference_metrics = self._make_inference_metrics(len(manifest), total_seconds)
+        evaluation_timing = self._make_evaluation_timing(len(manifest), total_seconds)
         metrics.update(
-            {"experiment_name": self.config.experiment_name, **inference_metrics}
+            {"experiment_name": self.config.experiment_name, **evaluation_timing}
         )
 
-        inference_metrics_path = self.config.model_output_dir / "inference_metrics.json"
-        write_evaluation_metrics_json(inference_metrics_path, inference_metrics)
+        evaluation_timing_path = self.config.model_output_dir / "evaluation_timing.json"
+        write_evaluation_metrics_json(evaluation_timing_path, evaluation_timing)
         self._write_balanced_test_outputs(
             manifest,
             all_predictions,
@@ -221,7 +223,7 @@ class BinaryPotholeEvaluator:
             confusion_matrix_plot_path=confusion_matrix_plot_path,
             roc_curve_plot_path=roc_curve_plot_path,
             metric_bar_plot_path=metric_bar_plot_path,
-            inference_metrics_path=output_dir / "inference_metrics.json",
+            evaluation_timing_path=output_dir / "evaluation_timing.json",
         )
 
     def _write_balanced_test_outputs(
@@ -300,19 +302,25 @@ class BinaryPotholeEvaluator:
             f"roc_auc={metrics['roc_auc']:.4f}"
         )
 
-    def _make_inference_metrics(
+    def _make_evaluation_timing(
         self,
         image_count: int,
         total_seconds: float,
     ) -> dict[str, float]:
         return {
             "num_images": float(image_count),
-            "total_inference_seconds": total_seconds,
-            "avg_image_inference_ms": (
+            "total_evaluation_seconds": total_seconds,
+            "avg_image_processing_ms": (
                 total_seconds * 1000 / image_count if image_count else 0.0
             ),
-            "images_per_second": image_count / total_seconds if total_seconds else 0.0,
+            "evaluation_images_per_second": (
+                image_count / total_seconds if total_seconds else 0.0
+            ),
         }
+
+    def _synchronize_device(self) -> None:
+        if self.device.type == "cuda":
+            torch.cuda.synchronize(self.device)
 
     def _load_model(self) -> nn.Module:
         model = self.model or load_and_adapt_model_for_binary_pothole(
