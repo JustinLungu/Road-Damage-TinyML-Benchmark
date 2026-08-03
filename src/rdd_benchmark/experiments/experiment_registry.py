@@ -7,21 +7,16 @@ from dataclasses import dataclass
 class RDDExperimentConfig:
     experiment_id: str
     experiment_name: str
-    dataset_strategy: str
-    reason: str
     sampler_strategy: str
     target_pothole_fraction: float | None
     augmentation_strategy: str
     non_potholes_per_pothole: int | None
-    random_seed: int = 42
 
 
 RDD_EXPERIMENT_REGISTRY = {
     "A": RDDExperimentConfig(
         experiment_id="A",
         experiment_name="A_clean400_full_image_natural_standard_aug",
-        dataset_strategy="Natural data + standard augmentation",
-        reason="Baseline",
         sampler_strategy="none",
         target_pothole_fraction=None,
         augmentation_strategy="standard",
@@ -30,8 +25,6 @@ RDD_EXPERIMENT_REGISTRY = {
     "B": RDDExperimentConfig(
         experiment_id="B",
         experiment_name="B_clean400_full_image_weighted_sampler_standard_aug",
-        dataset_strategy="Weighted sampler / balanced batches + standard augmentation",
-        reason="Tests upsampling effect",
         sampler_strategy="weighted_sampler",
         target_pothole_fraction=0.5,
         augmentation_strategy="standard",
@@ -40,8 +33,6 @@ RDD_EXPERIMENT_REGISTRY = {
     "C": RDDExperimentConfig(
         experiment_id="C",
         experiment_name="C_clean400_full_image_weighted_sampler_strong_aug",
-        dataset_strategy="Weighted sampler + strong augmentation",
-        reason="Most likely to help",
         sampler_strategy="weighted_sampler",
         target_pothole_fraction=0.5,
         augmentation_strategy="strong",
@@ -50,10 +41,6 @@ RDD_EXPERIMENT_REGISTRY = {
     "D": RDDExperimentConfig(
         experiment_id="D",
         experiment_name="D_clean400_full_image_downsample_majority_strong_aug",
-        dataset_strategy=(
-            "Moderate majority downsampling + weighted sampler + strong augmentation"
-        ),
-        reason="Tests whether reducing majority dominance helps",
         sampler_strategy="weighted_sampler",
         target_pothole_fraction=0.5,
         augmentation_strategy="strong",
@@ -62,8 +49,6 @@ RDD_EXPERIMENT_REGISTRY = {
     "F": RDDExperimentConfig(
         experiment_id="F",
         experiment_name="F_clean400_full_image_weighted_sampler_025_standard_aug",
-        dataset_strategy="Gentler weighted sampler + standard augmentation",
-        reason="Tests whether 25% pothole sampling improves precision vs B",
         sampler_strategy="weighted_sampler",
         target_pothole_fraction=0.25,
         augmentation_strategy="standard",
@@ -72,8 +57,6 @@ RDD_EXPERIMENT_REGISTRY = {
     "G": RDDExperimentConfig(
         experiment_id="G",
         experiment_name="G_clean400_full_image_downsample_1to5_standard_aug",
-        dataset_strategy="Majority downsampling only + standard augmentation",
-        reason="Tests downsampling without weighted-sampler overcorrection",
         sampler_strategy="none",
         target_pothole_fraction=None,
         augmentation_strategy="standard",
@@ -82,8 +65,6 @@ RDD_EXPERIMENT_REGISTRY = {
     "H": RDDExperimentConfig(
         experiment_id="H",
         experiment_name="H_clean400_full_image_downsample_1to5_strong_aug",
-        dataset_strategy="Majority downsampling only + strong augmentation",
-        reason="Tests gentler downsampling with stronger augmentation",
         sampler_strategy="none",
         target_pothole_fraction=None,
         augmentation_strategy="strong",

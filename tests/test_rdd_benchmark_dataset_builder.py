@@ -5,8 +5,8 @@ import pytest
 from src.rdd_benchmark.constants import NEGATIVE_LABEL, POSITIVE_LABEL
 from src.rdd_benchmark.data_loader.constants import MANIFEST_COLUMNS
 from src.rdd_benchmark.experiments.dataset_builder import (
+    RDDExperimentManifestPaths,
     build_experiment_manifest_paths,
-    make_manifest_paths,
     validate_manifest_paths,
 )
 from src.rdd_benchmark.experiments.experiment_registry import get_rdd_experiment_config
@@ -52,7 +52,7 @@ def write_base_manifests(source_dir):
 
 def test_validate_manifest_paths_rejects_missing_manifest(tmp_path):
     with pytest.raises(FileNotFoundError, match="Experiment manifest is missing"):
-        validate_manifest_paths(make_manifest_paths("missing", tmp_path))
+        validate_manifest_paths(RDDExperimentManifestPaths(tmp_path))
 
 
 @pytest.mark.parametrize("experiment_id", ["A", "B", "C", "F"])

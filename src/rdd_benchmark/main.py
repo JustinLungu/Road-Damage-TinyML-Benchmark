@@ -25,8 +25,6 @@ def print_experiment_plan(selected_experiment_configs, selected_model_names) -> 
         print(
             f"  {experiment_config.experiment_id}: {experiment_config.experiment_name}"
         )
-        print(f"    dataset_strategy: {experiment_config.dataset_strategy}")
-        print(f"    reason: {experiment_config.reason}")
         print(f"    sampler_strategy: {experiment_config.sampler_strategy}")
         print(f"    augmentation_strategy: {experiment_config.augmentation_strategy}")
         print(

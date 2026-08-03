@@ -9,11 +9,9 @@ from src.rdd_benchmark.constants import (
     NUM_BINARY_CLASSES,
 )
 from src.rdd_benchmark.training.constants import RDD_IMAGE_CLASSIFICATION_MODELS
-from src.rdd_benchmark.training.model_adapter import BinaryPotholeModelAdapter
-import src.rdd_benchmark.training.utils as training_utils
-from src.rdd_benchmark.training.utils import (
+from src.rdd_benchmark.training.model_adapter import (
+    BinaryPotholeModelAdapter,
     adapt_model_for_binary_pothole,
-    load_and_adapt_all_binary_pothole_models,
 )
 
 
@@ -179,24 +177,3 @@ def test_rejects_unsupported_or_malformed_models() -> None:
     malformed_resnet = SimpleNamespace(fc=object())
     with pytest.raises(ValueError, match="nn.Linear"):
         adapt_model_for_binary_pothole("resnet18", malformed_resnet)
-
-
-def test_load_and_adapt_all_models_iterates_in_stable_order(monkeypatch) -> None:
-    adapted = {}
-
-    def fake_load_and_adapt_model_for_binary_pothole(model_name: str):
-        adapted[model_name] = object()
-        return adapted[model_name]
-
-    monkeypatch.setattr(
-        training_utils,
-        "load_and_adapt_model_for_binary_pothole",
-        fake_load_and_adapt_model_for_binary_pothole,
-    )
-
-    result = load_and_adapt_all_binary_pothole_models(
-        model_names={"resnet18", "mobilenet_v2"},
-    )
-
-    assert list(result) == ["mobilenet_v2", "resnet18"]
-    assert result == adapted

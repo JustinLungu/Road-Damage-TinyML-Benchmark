@@ -50,6 +50,17 @@ class FakeDataset:
         return 4
 
 
+def make_training_config(**overrides) -> RDDTrainingConfig:
+    values = {
+        "model_name": "tiny",
+        "train_manifest_path": Path("train.csv"),
+        "validation_manifest_path": Path("validation.csv"),
+        "device": "cpu",
+        **overrides,
+    }
+    return RDDTrainingConfig(**values)
+
+
 def make_loader() -> DataLoader:
     samples = [
         make_sample(label=0),
@@ -97,8 +108,7 @@ def test_binary_pothole_trainer_runs_and_saves_best_checkpoint(
     tmp_path,
     capsys,
 ) -> None:
-    config = RDDTrainingConfig(
-        model_name="tiny",
+    config = make_training_config(
         experiment_name="full_image_baseline",
         output_dir=tmp_path / "results",
         batch_size=2,
@@ -108,7 +118,6 @@ def test_binary_pothole_trainer_runs_and_saves_best_checkpoint(
         weight_decay=0.0,
         best_metric="f1",
         progress_interval=1,
-        device="cpu",
     )
     trainer = BinaryPotholeTrainer(config=config, model=TinyClassifier())
 
@@ -126,18 +135,12 @@ def test_binary_pothole_trainer_runs_and_saves_best_checkpoint(
     result = trainer.train()
     output = capsys.readouterr().out
 
-    assert result.model_name == "tiny"
-    assert result.experiment_name == "full_image_baseline"
     assert result.best_epoch in {1, 2}
-    assert result.best_metric_name == "f1"
     assert result.best_checkpoint_path.is_file()
-    assert result.history_path.is_file()
-    assert result.loss_curve_path is not None
-    assert result.loss_curve_path.is_file()
-    assert result.f1_curve_path is not None
-    assert result.f1_curve_path.is_file()
-    assert result.accuracy_curve_path is not None
-    assert result.accuracy_curve_path.is_file()
+    assert (config.model_output_dir / "history.csv").is_file()
+    assert (config.model_output_dir / "loss_curve.png").is_file()
+    assert (config.model_output_dir / "f1_curve.png").is_file()
+    assert (config.model_output_dir / "accuracy_curve.png").is_file()
     assert result.best_checkpoint_path.parent == (
         tmp_path / "results" / "full_image_baseline" / "tiny"
     )
@@ -163,10 +166,8 @@ def test_binary_pothole_trainer_forwards_augmentation_strategy(
 ) -> None:
     captured = {}
     trainer = BinaryPotholeTrainer(
-        config=RDDTrainingConfig(
-            model_name="tiny",
+        config=make_training_config(
             augmentation_strategy="strong",
-            device="cpu",
         ),
         model=TinyClassifier(),
     )
@@ -175,32 +176,31 @@ def test_binary_pothole_trainer_forwards_augmentation_strategy(
         captured["transform"] = (model_name, is_train, augmentation_strategy)
         return "transform"
 
-    def fake_make_rdd_dataset(split, transform):
-        captured["dataset"] = (split, transform)
-        return FakeDataset(split)
+    def fake_dataset(manifest_path, transform, expected_split):
+        captured["dataset"] = (manifest_path, transform, expected_split)
+        return FakeDataset(expected_split)
 
     monkeypatch.setattr(
         trainer_module,
         "make_image_transform",
         fake_make_image_transform,
     )
-    monkeypatch.setattr(trainer_module, "make_rdd_dataset", fake_make_rdd_dataset)
+    monkeypatch.setattr(trainer_module, "BinaryPotholeDataset", fake_dataset)
 
     dataset = trainer._make_dataset(split="train", is_train=True)
 
     assert isinstance(dataset, FakeDataset)
     assert captured["transform"] == ("tiny", True, "strong")
+    assert captured["dataset"] == (Path("train.csv"), "transform", "train")
 
 
 def test_binary_pothole_trainer_uses_weighted_sampler_for_training() -> None:
     trainer = BinaryPotholeTrainer(
-        config=RDDTrainingConfig(
-            model_name="tiny",
+        config=make_training_config(
             batch_size=2,
             num_workers=0,
             sampler_strategy="weighted_sampler",
             target_pothole_fraction=0.5,
-            device="cpu",
         ),
         model=TinyClassifier(),
     )
@@ -212,13 +212,11 @@ def test_binary_pothole_trainer_uses_weighted_sampler_for_training() -> None:
 
 def test_binary_pothole_trainer_disables_sampler_for_validation() -> None:
     trainer = BinaryPotholeTrainer(
-        config=RDDTrainingConfig(
-            model_name="tiny",
+        config=make_training_config(
             batch_size=2,
             num_workers=0,
             sampler_strategy="weighted_sampler",
             target_pothole_fraction=0.5,
-            device="cpu",
         ),
         model=TinyClassifier(),
     )
@@ -229,8 +227,7 @@ def test_binary_pothole_trainer_disables_sampler_for_validation() -> None:
 
 
 def test_binary_pothole_trainer_rejects_invalid_early_stopping_patience() -> None:
-    config = RDDTrainingConfig(
-        model_name="tiny",
+    config = make_training_config(
         early_stopping_patience=-1,
     )
 
@@ -239,8 +236,7 @@ def test_binary_pothole_trainer_rejects_invalid_early_stopping_patience() -> Non
 
 
 def test_binary_pothole_trainer_rejects_invalid_sampler_strategy() -> None:
-    config = RDDTrainingConfig(
-        model_name="tiny",
+    config = make_training_config(
         sampler_strategy="balanced_magic",
     )
 

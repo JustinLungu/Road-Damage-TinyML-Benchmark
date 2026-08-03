@@ -187,7 +187,7 @@ Adapt a pretrained image-classification model for binary pothole fine-tuning:
 
 ```python
 from src.load_model import load_model
-from src.rdd_benchmark.training.utils import adapt_model_for_binary_pothole
+from src.rdd_benchmark.training.model_adapter import adapt_model_for_binary_pothole
 
 model_name = "mobilenet_v3_small"
 model = load_model(model_name)

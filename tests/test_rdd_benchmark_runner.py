@@ -13,14 +13,7 @@ from src.rdd_benchmark.experiments.runner import (
 
 
 def make_manifest_paths(tmp_path: Path) -> RDDExperimentManifestPaths:
-    dataset_dir = tmp_path / "dataset"
-    return RDDExperimentManifestPaths(
-        experiment_name="A_clean400_full_image_natural_standard_aug",
-        dataset_dir=dataset_dir,
-        train_manifest_path=dataset_dir / "train.csv",
-        validation_manifest_path=dataset_dir / "validation.csv",
-        test_manifest_path=dataset_dir / "test.csv",
-    )
+    return RDDExperimentManifestPaths(tmp_path / "dataset")
 
 
 def test_rdd_experiment_runner_rejects_empty_model_names():
@@ -50,9 +43,7 @@ def test_rdd_experiment_runner_trains_evaluates_and_compares(
 
         def train(self):
             return SimpleNamespace(
-                model_name="tiny",
                 best_checkpoint_path=tmp_path / "best.pt",
-                best_metric_name="balanced_accuracy",
                 best_metric_value=0.75,
                 best_epoch=2,
             )
@@ -62,16 +53,11 @@ def test_rdd_experiment_runner_trains_evaluates_and_compares(
             captured["evaluation_configs"].append(config)
 
         def evaluate(self):
-            return SimpleNamespace(
-                metrics_json_path=tmp_path / "metrics.json",
-                confusion_matrix_path=tmp_path / "confusion.csv",
-                comparison_row=lambda: {
-                    "model_name": "tiny",
-                    "balanced_accuracy": 0.75,
-                    "f1": 0.72,
-                    "recall": 0.70,
-                },
-            )
+            return {
+                "balanced_accuracy": 0.75,
+                "f1": 0.72,
+                "recall": 0.70,
+            }
 
     def fake_write_model_comparison_csv(
         comparison_path,
@@ -110,14 +96,12 @@ def test_rdd_experiment_runner_trains_evaluates_and_compares(
         model_names=("tiny",),
         output_dir=tmp_path / "results",
     )
-    result = RDDExperimentRunner(run_config).run()
+    RDDExperimentRunner(run_config).run()
 
     trainer_config = captured["trainer_configs"][0]
     evaluation_config = captured["evaluation_configs"][0]
 
-    assert result.experiment_name == experiment_config.experiment_name
-    assert result.trained_model_names == ("tiny",)
-    assert result.comparison_path == (
+    assert captured["comparison"][0] == (
         tmp_path
         / "results"
         / experiment_config.experiment_name
@@ -171,10 +155,9 @@ def test_rdd_experiment_runner_skips_existing_checkpoint(
         run_evaluation=False,
         run_comparison=False,
     )
-    result = RDDExperimentRunner(run_config).run()
+    RDDExperimentRunner(run_config).run()
 
     assert trainer_called is False
-    assert result.trained_model_names == ("tiny",)
 
 
 def test_rdd_experiment_runner_loads_comparison_rows_when_evaluation_not_run(
@@ -226,9 +209,9 @@ def test_rdd_experiment_runner_loads_comparison_rows_when_evaluation_not_run(
         run_evaluation=False,
         run_comparison=True,
     )
-    result = RDDExperimentRunner(run_config).run()
+    RDDExperimentRunner(run_config).run()
 
-    assert result.comparison_path == (
+    assert captured["comparison"][0] == (
         tmp_path
         / "results"
         / experiment_config.experiment_name

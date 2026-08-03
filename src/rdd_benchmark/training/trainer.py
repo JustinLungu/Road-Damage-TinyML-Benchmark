@@ -37,13 +37,14 @@ from src.rdd_benchmark.data_loader.sampling import (
 )
 from src.rdd_benchmark.data_loader.utils import (
     collate_binary_pothole_batch,
-    make_rdd_dataset,
 )
 from src.rdd_benchmark.data_preprocessing.constants import RDD_AUGMENTATION_STANDARD
+from src.rdd_benchmark.training.model_adapter import (
+    load_and_adapt_model_for_binary_pothole,
+)
 from src.rdd_benchmark.training.utils import (
     compute_binary_classification_metrics,
     extract_logits,
-    load_and_adapt_model_for_binary_pothole,
     make_image_transform,
     write_training_loss_plot,
     write_training_metric_plot,
@@ -53,9 +54,9 @@ from src.rdd_benchmark.training.utils import (
 @dataclass(frozen=True)
 class RDDTrainingConfig:
     model_name: str
+    train_manifest_path: Path
+    validation_manifest_path: Path
     experiment_name: str = "default"
-    train_manifest_path: Path | None = None
-    validation_manifest_path: Path | None = None
     sampler_strategy: str = RDD_SAMPLER_NONE
     target_pothole_fraction: float | None = None
     augmentation_strategy: str = RDD_AUGMENTATION_STANDARD
@@ -74,26 +75,15 @@ class RDDTrainingConfig:
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
     @property
-    def experiment_output_dir(self) -> Path:
-        return self.output_dir / self.experiment_name
-
-    @property
     def model_output_dir(self) -> Path:
-        return self.experiment_output_dir / self.model_name
+        return self.output_dir / self.experiment_name / self.model_name
 
 
 @dataclass(frozen=True)
 class RDDTrainingResult:
-    model_name: str
-    experiment_name: str
     best_epoch: int
-    best_metric_name: str
     best_metric_value: float
     best_checkpoint_path: Path
-    history_path: Path
-    loss_curve_path: Path | None
-    f1_curve_path: Path | None
-    accuracy_curve_path: Path | None
 
 
 class BinaryPotholeTrainer:
@@ -121,7 +111,6 @@ class BinaryPotholeTrainer:
         self.model = model
 
     def train(self) -> RDDTrainingResult:
-        self.config.experiment_output_dir.mkdir(parents=True, exist_ok=True)
         model_output_dir = self.config.model_output_dir
         model_output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -265,16 +254,9 @@ class BinaryPotholeTrainer:
             accuracy_curve_path = None
 
         return RDDTrainingResult(
-            model_name=self.config.model_name,
-            experiment_name=self.config.experiment_name,
             best_epoch=best_epoch,
-            best_metric_name=self.config.best_metric,
             best_metric_value=best_metric_value,
             best_checkpoint_path=best_checkpoint_path,
-            history_path=history_path,
-            loss_curve_path=loss_curve_path,
-            f1_curve_path=f1_curve_path,
-            accuracy_curve_path=accuracy_curve_path,
         )
 
     def evaluate(
@@ -330,16 +312,10 @@ class BinaryPotholeTrainer:
             self.config.augmentation_strategy,
         )
 
-        if manifest_path is not None:
-            return BinaryPotholeDataset(
-                manifest_path,
-                transform=transform,
-                expected_split=split,
-            )
-
-        return make_rdd_dataset(
-            split=split,
+        return BinaryPotholeDataset(
+            manifest_path,
             transform=transform,
+            expected_split=split,
         )
 
     def _make_data_loader(

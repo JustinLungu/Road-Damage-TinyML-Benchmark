@@ -10,7 +10,6 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 from src.constants import PROJECT_ROOT
-from src.rdd_benchmark.constants import POSITIVE_LABEL
 from src.rdd_benchmark.data_loader.utils import (
     load_rgb_image,
     parse_manifest_row,
@@ -20,7 +19,6 @@ from src.rdd_benchmark.data_loader.utils import (
 
 
 ImageTransform = Callable[[Image.Image], Any]
-TargetTransform = Callable[[int], Any]
 
 
 @dataclass(frozen=True)
@@ -58,13 +56,14 @@ class BinaryPotholeManifest:
             reader = csv.DictReader(manifest_file)
             validate_manifest_columns(reader.fieldnames, manifest_path)
             samples = [
-                parse_manifest_row(
-                    row,
-                    row_number,
-                    manifest_path,
-                    BinaryPotholeSample,
-                    project_root,
-                    expected_split,
+                BinaryPotholeSample(
+                    **parse_manifest_row(
+                        row,
+                        row_number,
+                        manifest_path,
+                        project_root,
+                        expected_split,
+                    )
                 )
                 for row_number, row in enumerate(reader, start=2)
             ]
@@ -73,17 +72,8 @@ class BinaryPotholeManifest:
     def __len__(self) -> int:
         return len(self.samples)
 
-    def __iter__(self):
-        return iter(self.samples)
-
     def class_counts(self) -> Counter[int]:
         return Counter(sample.label for sample in self.samples)
-
-    def country_counts(self) -> Counter[str]:
-        return Counter(sample.country for sample in self.samples)
-
-    def positive_fraction(self) -> float:
-        return self.class_counts()[POSITIVE_LABEL] / len(self.samples)
 
 
 class BinaryPotholeDataset(Dataset):
@@ -93,7 +83,6 @@ class BinaryPotholeDataset(Dataset):
         self,
         manifest: BinaryPotholeManifest | Path,
         transform: ImageTransform | None = None,
-        target_transform: TargetTransform | None = None,
         expected_split: str | None = None,
     ) -> None:
         if isinstance(manifest, Path):
@@ -105,7 +94,6 @@ class BinaryPotholeDataset(Dataset):
 
         self.manifest = manifest
         self.transform = transform
-        self.target_transform = target_transform
 
     def __len__(self) -> int:
         return len(self.manifest)
@@ -117,8 +105,6 @@ class BinaryPotholeDataset(Dataset):
 
         if self.transform is not None:
             image = self.transform(image)
-        if self.target_transform is not None:
-            label = self.target_transform(label)
 
         return {
             "image": image,

@@ -11,7 +11,6 @@ from src.rdd_benchmark.data_loader.dataset import (
 )
 from src.rdd_benchmark.data_loader.utils import (
     expected_label_name,
-    make_rdd_dataset,
     parse_binary_label,
     resolve_manifest_path,
 )
@@ -60,7 +59,7 @@ def test_manifest_loads_samples_and_counts(tmp_path):
 
     manifest = BinaryPotholeManifest.from_csv(manifest_path, expected_split="train")
 
-    assert list(manifest)[0] == BinaryPotholeSample(
+    assert manifest.samples[0] == BinaryPotholeSample(
         image_a,
         annotation_a,
         1,
@@ -69,7 +68,6 @@ def test_manifest_loads_samples_and_counts(tmp_path):
         "train",
     )
     assert manifest.class_counts() == {1: 1, 0: 1}
-    assert manifest.positive_fraction() == pytest.approx(0.5)
 
 
 def test_dataset_loads_rgb_image_and_metadata(tmp_path):
@@ -103,17 +101,6 @@ def test_manifest_rejects_invalid_label_and_split(tmp_path):
     write_manifest(manifest_path, [row])
     with pytest.raises(ValueError, match="Expected split train"):
         BinaryPotholeManifest.from_csv(manifest_path, expected_split="train")
-
-
-def test_make_rdd_dataset_uses_requested_manifest(tmp_path):
-    image, annotation = make_files(tmp_path)
-    manifest_path = tmp_path / "train.csv"
-    write_manifest(manifest_path, [make_row(image, annotation, 0)])
-
-    dataset = make_rdd_dataset("train", manifest_path=manifest_path)
-
-    assert isinstance(dataset, BinaryPotholeDataset)
-    assert len(dataset) == 1
 
 
 def test_manifest_helpers_parse_labels_and_paths(tmp_path):

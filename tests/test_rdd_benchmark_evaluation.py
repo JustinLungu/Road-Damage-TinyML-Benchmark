@@ -64,17 +64,17 @@ def test_evaluator_writes_realistic_and_balanced_test_outputs(tmp_path):
     config.model_output_dir.mkdir(parents=True)
     torch.save({"model_state_dict": model.state_dict()}, config.checkpoint_path)
 
-    result = BinaryPotholeEvaluator(config, model=model).evaluate()
+    metrics = BinaryPotholeEvaluator(config, model=model).evaluate()
 
-    assert result.metrics["accuracy"] == 0.5
-    assert result.metrics["recall"] == 1.0
-    assert result.metrics_csv_path.is_file()
-    assert result.evaluation_timing_path.is_file()
-    assert "total_evaluation_seconds" in result.metrics
-    assert "avg_image_processing_ms" in result.metrics
-    assert "evaluation_images_per_second" in result.metrics
+    assert metrics["accuracy"] == 0.5
+    assert metrics["recall"] == 1.0
+    assert (config.model_output_dir / "test_metrics.csv").is_file()
+    assert (config.model_output_dir / "evaluation_timing.json").is_file()
+    assert "total_evaluation_seconds" in metrics
+    assert "avg_image_processing_ms" in metrics
+    assert "evaluation_images_per_second" in metrics
     assert (config.model_output_dir / "balanced_test_metrics.csv").is_file()
-    assert result.confusion_matrix_plot_path is None
+    assert not (config.model_output_dir / "confusion_matrix.png").exists()
 
 
 def test_balanced_test_indices_are_deterministic_and_class_balanced(tmp_path):
@@ -120,6 +120,7 @@ def test_evaluator_synchronizes_cuda_timing(monkeypatch, tmp_path):
     evaluator = BinaryPotholeEvaluator(
         RDDEvaluationConfig(
             model_name="resnet18",
+            test_manifest_path=tmp_path / "test.csv",
             output_dir=tmp_path,
             device="cuda",
         )

@@ -51,22 +51,13 @@ class RDDExperimentRunConfig:
         return self.output_dir / self.experiment_config.experiment_name
 
 
-@dataclass(frozen=True)
-class RDDExperimentRunResult:
-    experiment_name: str
-    manifest_paths: RDDExperimentManifestPaths
-    trained_model_names: tuple[str, ...]
-    evaluation_rows: tuple[dict[str, float | str], ...]
-    comparison_path: Path | None
-
-
 class RDDExperimentRunner:
     def __init__(self, config: RDDExperimentRunConfig) -> None:
         if not config.model_names:
             raise ValueError("At least one model name is required.")
         self.config = config
 
-    def run(self) -> RDDExperimentRunResult:
+    def run(self) -> None:
         experiment_config = self.config.experiment_config
         manifest_paths = build_experiment_manifest_paths(experiment_config)
 
@@ -79,15 +70,7 @@ class RDDExperimentRunner:
 
         trained_model_names = self._run_training(manifest_paths)
         evaluation_rows = self._run_evaluation(manifest_paths, trained_model_names)
-        comparison_path = self._run_comparison(trained_model_names, evaluation_rows)
-
-        return RDDExperimentRunResult(
-            experiment_name=experiment_config.experiment_name,
-            manifest_paths=manifest_paths,
-            trained_model_names=tuple(trained_model_names),
-            evaluation_rows=tuple(evaluation_rows),
-            comparison_path=comparison_path,
-        )
+        self._run_comparison(trained_model_names, evaluation_rows)
 
     def _run_training(
         self,
@@ -111,33 +94,28 @@ class RDDExperimentRunner:
                 continue
 
             try:
-                trainer = BinaryPotholeTrainer(
-                    RDDTrainingConfig(
-                        model_name=model_name,
-                        experiment_name=experiment_config.experiment_name,
-                        train_manifest_path=manifest_paths.train_manifest_path,
-                        validation_manifest_path=(
-                            manifest_paths.validation_manifest_path
-                        ),
-                        sampler_strategy=experiment_config.sampler_strategy,
-                        target_pothole_fraction=experiment_config.target_pothole_fraction,
-                        augmentation_strategy=experiment_config.augmentation_strategy,
-                        output_dir=self.config.output_dir,
-                    )
+                training_config = RDDTrainingConfig(
+                    model_name=model_name,
+                    experiment_name=experiment_config.experiment_name,
+                    train_manifest_path=manifest_paths.train_manifest_path,
+                    validation_manifest_path=manifest_paths.validation_manifest_path,
+                    sampler_strategy=experiment_config.sampler_strategy,
+                    target_pothole_fraction=experiment_config.target_pothole_fraction,
+                    augmentation_strategy=experiment_config.augmentation_strategy,
+                    output_dir=self.config.output_dir,
                 )
-                result = trainer.train()
-                trained_model_names.append(result.model_name)
+                result = BinaryPotholeTrainer(training_config).train()
+                trained_model_names.append(model_name)
                 print(
                     "  best_checkpoint: "
                     f"{result.best_checkpoint_path} "
-                    f"({result.best_metric_name}={result.best_metric_value:.4f}, "
+                    f"({training_config.best_metric}={result.best_metric_value:.4f}, "
                     f"epoch={result.best_epoch})"
                 )
             except Exception:
                 self._handle_model_failure(model_name, "training")
                 if not self.config.skip_failed_models:
                     raise
-                continue
 
         return trained_model_names
 
@@ -173,23 +151,31 @@ class RDDExperimentRunner:
                 continue
 
             try:
-                evaluator = BinaryPotholeEvaluator(
-                    RDDEvaluationConfig(
-                        model_name=model_name,
-                        experiment_name=self.config.experiment_config.experiment_name,
-                        test_manifest_path=manifest_paths.test_manifest_path,
-                        output_dir=self.config.output_dir,
-                    )
+                evaluation_config = RDDEvaluationConfig(
+                    model_name=model_name,
+                    experiment_name=self.config.experiment_config.experiment_name,
+                    test_manifest_path=manifest_paths.test_manifest_path,
+                    output_dir=self.config.output_dir,
                 )
-                result = evaluator.evaluate()
-                evaluation_rows.append(result.comparison_row())
-                print(f"  metrics_json: {result.metrics_json_path}")
-                print(f"  confusion_matrix: {result.confusion_matrix_path}")
+                metrics = BinaryPotholeEvaluator(evaluation_config).evaluate()
+                evaluation_rows.append(
+                    {
+                        "model_name": model_name,
+                        "checkpoint_path": str(evaluation_config.checkpoint_path),
+                        **metrics,
+                    }
+                )
+                print(
+                    f"  metrics_json: {evaluation_config.model_output_dir / 'test_metrics.json'}"
+                )
+                print(
+                    "  confusion_matrix: "
+                    f"{evaluation_config.model_output_dir / 'confusion_matrix.csv'}"
+                )
             except Exception:
                 self._handle_model_failure(model_name, "evaluation")
                 if not self.config.skip_failed_models:
                     raise
-                continue
 
         return evaluation_rows
 
@@ -197,9 +183,9 @@ class RDDExperimentRunner:
         self,
         trained_model_names: list[str],
         evaluation_rows: list[dict[str, float | str]],
-    ) -> Path | None:
+    ) -> None:
         if not self.config.run_comparison:
-            return None
+            return
 
         print()
         print(
@@ -214,7 +200,7 @@ class RDDExperimentRunner:
             )
         if not evaluation_rows:
             print("  no evaluation rows available; skipping comparison.")
-            return None
+            return
 
         comparison_path = self.config.experiment_output_dir / "model_comparison.csv"
         ranked_rows = write_model_comparison_csv(
@@ -236,7 +222,6 @@ class RDDExperimentRunner:
                 f"{self.config.comparison_ranking_metric}="
                 f"{row[self.config.comparison_ranking_metric]:.4f}"
             )
-        return comparison_path
 
     def _handle_model_failure(self, model_name: str, phase: str) -> None:
         error_log_path = (

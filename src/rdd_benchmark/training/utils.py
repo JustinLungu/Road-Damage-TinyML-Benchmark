@@ -7,98 +7,15 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import torch
-import torch.nn as nn
 
 from src.rdd_benchmark.constants import (
-    ID_TO_LABEL,
-    LABEL_TO_ID,
     NEGATIVE_LABEL,
     POSITIVE_LABEL,
     RDD_COMPARISON_RANKING_METRIC,
     RDD_COMPARISON_TOP_K,
-    RDD_MODEL_NAMES,
 )
 from src.rdd_benchmark.data_preprocessing.augmentation import make_rdd_image_transform
 from src.rdd_benchmark.training.constants import DEFAULT_IMAGE_SIZE, MODEL_IMAGE_SIZES
-
-
-def require_attribute(model: Any, attribute_name: str) -> Any:
-    if not hasattr(model, attribute_name):
-        raise ValueError(f"Model has no {attribute_name} attribute.")
-    return getattr(model, attribute_name)
-
-
-def require_linear_attribute(model: Any, attribute_name: str) -> nn.Linear:
-    layer = require_attribute(model, attribute_name)
-    if not isinstance(layer, nn.Linear):
-        raise ValueError(f"Expected {attribute_name} to be nn.Linear.")
-    return layer
-
-
-def make_replacement_linear(layer: nn.Linear, num_classes: int) -> nn.Linear:
-    return nn.Linear(
-        in_features=layer.in_features,
-        out_features=num_classes,
-        bias=layer.bias is not None,
-    )
-
-
-def replace_linear_attribute(
-    model: Any,
-    attribute_name: str,
-    num_classes: int,
-) -> None:
-    layer = require_linear_attribute(model, attribute_name)
-    setattr(model, attribute_name, make_replacement_linear(layer, num_classes))
-
-
-def replace_last_linear(module: Any, num_classes: int) -> None:
-    if isinstance(module, nn.Linear):
-        raise ValueError("Expected a classifier container, received nn.Linear.")
-    if not hasattr(module, "__len__") or not hasattr(module, "__getitem__"):
-        raise ValueError("Classifier does not support indexed layer replacement.")
-
-    for index in reversed(range(len(module))):
-        layer = module[index]
-        if isinstance(layer, nn.Linear):
-            module[index] = make_replacement_linear(layer, num_classes)
-            return
-
-    raise ValueError("Classifier contains no nn.Linear layer to replace.")
-
-
-def update_hugging_face_label_config(model: Any, num_classes: int) -> None:
-    config = getattr(model, "config", None)
-    if config is None:
-        return
-
-    config.num_labels = num_classes
-    config.id2label = dict(ID_TO_LABEL)
-    config.label2id = dict(LABEL_TO_ID)
-
-
-def adapt_model_for_binary_pothole(model_name: str, model: Any) -> Any:
-    from src.rdd_benchmark.training.model_adapter import BinaryPotholeModelAdapter
-
-    return BinaryPotholeModelAdapter(model_name).adapt(model)
-
-
-def load_and_adapt_model_for_binary_pothole(model_name: str) -> Any:
-    from src.load_model import load_model
-
-    model = load_model(model_name)
-    return adapt_model_for_binary_pothole(model_name, model)
-
-
-def load_and_adapt_all_binary_pothole_models(
-    model_names: Iterable[str] = RDD_MODEL_NAMES,
-) -> dict[str, Any]:
-    adapted_models = {}
-
-    for model_name in sorted(model_names):
-        adapted_models[model_name] = load_and_adapt_model_for_binary_pothole(model_name)
-
-    return adapted_models
 
 
 def make_image_transform(

@@ -7,7 +7,7 @@ from typing import Any
 import torch
 from PIL import Image
 
-from src.constants import PROJECT_ROOT, RDD2022_BINARY_POTHOLE_DIR
+from src.constants import PROJECT_ROOT
 from src.rdd_benchmark.constants import NEGATIVE_LABEL, POSITIVE_LABEL
 from src.rdd_benchmark.data_loader.constants import REQUIRED_MANIFEST_COLUMNS
 
@@ -71,10 +71,9 @@ def parse_manifest_row(
     row: dict[str, str],
     row_number: int,
     manifest_path: Path,
-    sample_class,
     project_root: Path = PROJECT_ROOT,
     expected_split: str | None = None,
-):
+) -> dict[str, Any]:
     split = row["split"].strip()
     if expected_split is not None and split != expected_split:
         raise ValueError(
@@ -106,14 +105,14 @@ def parse_manifest_row(
     if not country:
         raise ValueError(f"Missing country on row {row_number}.")
 
-    return sample_class(
-        image_path=image_path,
-        annotation_path=annotation_path,
-        label=label,
-        label_name=label_name,
-        country=country,
-        split=split,
-    )
+    return {
+        "image_path": image_path,
+        "annotation_path": annotation_path,
+        "label": label,
+        "label_name": label_name,
+        "country": country,
+        "split": split,
+    }
 
 
 def validate_manifest_split(samples, expected_split: str, manifest_path: Path) -> None:
@@ -127,24 +126,6 @@ def validate_manifest_split(samples, expected_split: str, manifest_path: Path) -
         )
 
 
-def make_rdd_dataset(
-    split: str,
-    transform=None,
-    target_transform=None,
-    manifest_path: Path | None = None,
-):
-    from src.rdd_benchmark.data_loader.dataset import BinaryPotholeDataset
-
-    if split not in {"train", "validation", "test"}:
-        raise ValueError(f"Unsupported RDD split: {split}")
-    return BinaryPotholeDataset(
-        manifest_path or RDD2022_BINARY_POTHOLE_DIR / f"{split}.csv",
-        transform=transform,
-        target_transform=target_transform,
-        expected_split=split,
-    )
-
-
 def load_rgb_image(image_path: Path) -> Image.Image:
     with Image.open(image_path) as image:
         return image.convert("RGB")
@@ -156,8 +137,4 @@ def collate_binary_pothole_batch(batch: list[dict[str, Any]]) -> dict[str, Any]:
         "label": torch.as_tensor(
             [int(item["label"]) for item in batch], dtype=torch.long
         ),
-        "image_path": [item["image_path"] for item in batch],
-        "label_name": [item["label_name"] for item in batch],
-        "country": [item["country"] for item in batch],
-        "split": [item["split"] for item in batch],
     }

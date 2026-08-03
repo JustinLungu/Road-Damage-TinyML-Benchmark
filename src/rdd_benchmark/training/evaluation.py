@@ -9,7 +9,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
-from src.constants import RDD2022_BINARY_POTHOLE_DIR, RDD_TRAINING_RESULTS_DIR
+from src.constants import RDD_TRAINING_RESULTS_DIR
 from src.rdd_benchmark.constants import (
     NEGATIVE_LABEL,
     POSITIVE_LABEL,
@@ -23,12 +23,15 @@ from src.rdd_benchmark.data_loader.dataset import (
     BinaryPotholeManifest,
 )
 from src.rdd_benchmark.data_loader.utils import collate_binary_pothole_batch
+from src.rdd_benchmark.data_preprocessing.constants import RDD_SPLIT_RANDOM_SEED
+from src.rdd_benchmark.training.model_adapter import (
+    load_and_adapt_model_for_binary_pothole,
+)
 from src.rdd_benchmark.training.utils import (
     compute_binary_classification_metrics,
     compute_binary_roc_auc,
     compute_binary_roc_curve,
     extract_logits,
-    load_and_adapt_model_for_binary_pothole,
     make_image_transform,
     write_confusion_matrix_csv,
     write_confusion_matrix_plot,
@@ -42,15 +45,14 @@ from src.rdd_benchmark.training.utils import (
 @dataclass(frozen=True)
 class RDDEvaluationConfig:
     model_name: str
+    test_manifest_path: Path
     experiment_name: str = "default"
-    test_manifest_path: Path = RDD2022_BINARY_POTHOLE_DIR / "test.csv"
     output_dir: Path = RDD_TRAINING_RESULTS_DIR
     batch_size: int = RDD_EVALUATION_BATCH_SIZE
     num_workers: int = RDD_EVALUATION_NUM_WORKERS
     progress_interval: int = RDD_EVALUATION_PROGRESS_INTERVAL
     save_plots: bool = RDD_EVALUATION_SAVE_PLOTS
     save_balanced_test_metrics: bool = True
-    balanced_test_random_seed: int = 42
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
     @property
@@ -60,27 +62,6 @@ class RDDEvaluationConfig:
     @property
     def checkpoint_path(self) -> Path:
         return self.model_output_dir / "best.pt"
-
-
-@dataclass(frozen=True)
-class RDDEvaluationResult:
-    model_name: str
-    checkpoint_path: Path
-    metrics: dict[str, float | str]
-    metrics_json_path: Path
-    metrics_csv_path: Path
-    confusion_matrix_path: Path
-    confusion_matrix_plot_path: Path | None
-    roc_curve_plot_path: Path | None
-    metric_bar_plot_path: Path | None
-    evaluation_timing_path: Path
-
-    def comparison_row(self) -> dict[str, float | str]:
-        return {
-            "model_name": self.model_name,
-            "checkpoint_path": str(self.checkpoint_path),
-            **self.metrics,
-        }
 
 
 class BinaryPotholeEvaluator:
@@ -95,7 +76,7 @@ class BinaryPotholeEvaluator:
         self.device = torch.device(config.device)
         self.model = model
 
-    def evaluate(self) -> RDDEvaluationResult:
+    def evaluate(self) -> dict[str, float | str]:
         if not self.config.checkpoint_path.is_file():
             raise FileNotFoundError(
                 f"Trained checkpoint does not exist: {self.config.checkpoint_path}"
@@ -168,7 +149,7 @@ class BinaryPotholeEvaluator:
         metrics: dict[str, float | str],
         positive_scores: torch.Tensor,
         targets: torch.Tensor,
-    ) -> RDDEvaluationResult:
+    ) -> dict[str, float | str]:
         output_dir = self.config.model_output_dir
         metrics_json_path = output_dir / "test_metrics.json"
         metrics_csv_path = output_dir / "test_metrics.csv"
@@ -213,18 +194,7 @@ class BinaryPotholeEvaluator:
             f"roc_auc={metrics['roc_auc']:.4f}"
         )
 
-        return RDDEvaluationResult(
-            model_name=self.config.model_name,
-            checkpoint_path=self.config.checkpoint_path,
-            metrics=metrics,
-            metrics_json_path=metrics_json_path,
-            metrics_csv_path=metrics_csv_path,
-            confusion_matrix_path=confusion_matrix_path,
-            confusion_matrix_plot_path=confusion_matrix_plot_path,
-            roc_curve_plot_path=roc_curve_plot_path,
-            metric_bar_plot_path=metric_bar_plot_path,
-            evaluation_timing_path=output_dir / "evaluation_timing.json",
-        )
+        return metrics
 
     def _write_balanced_test_outputs(
         self,
@@ -238,7 +208,7 @@ class BinaryPotholeEvaluator:
 
         indices = select_balanced_test_indices(
             manifest,
-            self.config.balanced_test_random_seed,
+            RDD_SPLIT_RANDOM_SEED,
         )
         if not indices:
             return
