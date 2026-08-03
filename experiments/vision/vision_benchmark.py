@@ -11,28 +11,35 @@ import torch
 REPO_ROOT_FOR_IMPORTS = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT_FOR_IMPORTS))
 
-from experiments.detection.constants import (  # noqa: E402
+from experiments.vision.constants import (  # noqa: E402
     ALL_LOADED,
-    IMAGE_CLASSIFICATION_MODELS,
-    OBJECT_DETECTION_MODELS,
-    RESULTS_CSV,
-    SUPPORTED_MODELS,
+    CLASSIFICATION_RESULT_KEYS,
+    CLASSIFICATION_RESULTS_CSV,
+    OBJECT_DETECTION_RESULT_KEYS,
+    OBJECT_DETECTION_RESULTS_CSV,
 )
 from src.constants import (  # noqa: E402
     COCO_IMAGES_DIR,
     COCO_INSTANCES_VAL_ANNOTATIONS,
     IMAGENETTE_VALIDATION_LABELS,
 )
-from src.detection_benchmark import (  # noqa: E402
+from src.vision_benchmark.classification_benchmark import (  # noqa: E402
     ClassificationBenchmark,
-    ObjectDetectionBenchmark,
-    append_result_csv,
+)
+from src.vision_benchmark.classification_dataset import (  # noqa: E402
     load_classification_manifest,
 )
-from src.detection_benchmark.constants import (  # noqa: E402
+from src.vision_benchmark.constants import (  # noqa: E402
     DEFAULT_CONFIDENCE_THRESHOLD,
     DEFAULT_IOU_THRESHOLD,
+    IMAGE_CLASSIFICATION_MODELS,
+    OBJECT_DETECTION_MODELS,
+    SUPPORTED_MODELS,
 )
+from src.vision_benchmark.object_detection_benchmark import (  # noqa: E402
+    ObjectDetectionBenchmark,
+)
+from src.vision_benchmark.utils import save_result_csv  # noqa: E402
 from src.load_model import get_downloaded_model_names, load_model  # noqa: E402
 from src.performance_benchmark import resolve_device  # noqa: E402
 
@@ -44,7 +51,8 @@ def main() -> None:
     validate_task_arguments(model_names, args.classification_labels, parser)
 
     if args.overwrite:
-        RESULTS_CSV.unlink(missing_ok=True)
+        CLASSIFICATION_RESULTS_CSV.unlink(missing_ok=True)
+        OBJECT_DETECTION_RESULTS_CSV.unlink(missing_ok=True)
 
     if len(model_names) > 1:
         run_model_processes(model_names, args)
@@ -66,10 +74,7 @@ def main() -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description=(
-            "Evaluate YOLO object detection or ImageNet-style classification "
-            "accuracy."
-        )
+        description="Evaluate pretrained object detectors and image classifiers."
     )
     parser.add_argument(
         "--model",
@@ -136,7 +141,7 @@ def build_parser() -> argparse.ArgumentParser:
         "-o",
         "--overwrite",
         action="store_true",
-        help="Overwrite the result CSV before writing this run.",
+        help="Clear both vision benchmark result CSVs before this run.",
     )
     return parser
 
@@ -212,9 +217,7 @@ def run_model_processes(
         if args.num_images is not None:
             command.extend(["--num-images", str(args.num_images)])
         if args.classification_labels is not None:
-            command.extend(
-                ["--classification-labels", str(args.classification_labels)]
-            )
+            command.extend(["--classification-labels", str(args.classification_labels)])
 
         completed_process = subprocess.run(command, check=False)
         if completed_process.returncode != 0:
@@ -251,14 +254,12 @@ def run_model_benchmark(
             iou_threshold=iou_threshold,
             num_images=num_images,
         )
+        output_path = OBJECT_DETECTION_RESULTS_CSV
+        result_keys = OBJECT_DETECTION_RESULT_KEYS
     else:
         if classification_labels is None:
-            raise ValueError(
-                "classification_labels is required for image classifiers."
-            )
-        print(
-            f"Evaluating image classification from {classification_labels}..."
-        )
+            raise ValueError("classification_labels is required for image classifiers.")
+        print(f"Evaluating image classification from {classification_labels}...")
         samples = load_classification_manifest(
             classification_labels,
             num_images,
@@ -271,11 +272,13 @@ def run_model_benchmark(
             dataset_name=classification_dataset_name,
             split=classification_split,
         )
+        output_path = CLASSIFICATION_RESULTS_CSV
+        result_keys = CLASSIFICATION_RESULT_KEYS
 
     result = benchmark.run()
-    append_result_csv(result, RESULTS_CSV)
+    save_result_csv(result, output_path, result_keys)
 
-    print(f"Results appended to: {RESULTS_CSV}")
+    print(f"Results saved to: {output_path}")
     for metric_name, metric_value in vars(result).items():
         print(f"{metric_name}: {metric_value}")
 

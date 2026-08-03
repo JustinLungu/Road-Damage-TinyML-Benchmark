@@ -52,8 +52,7 @@ def load_classification_manifest(
                 class_id = int(row["class_id"])
             except ValueError as exc:
                 raise ValueError(
-                    f"Invalid class_id on manifest row {row_number}: "
-                    f"{row['class_id']}"
+                    f"Invalid class_id on manifest row {row_number}: {row['class_id']}"
                 ) from exc
             if class_id < 0:
                 raise ValueError(

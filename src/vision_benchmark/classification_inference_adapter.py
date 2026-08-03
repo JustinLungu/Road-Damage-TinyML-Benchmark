@@ -5,21 +5,18 @@ from typing import Any, Callable
 
 import torch
 
-from src.constants import MOBILEVIT_MODEL_IDS, VIT_DIR
-from src.detection_benchmark.constants import (
-    IMAGE_CLASSIFICATION_MODELS,
-)
-from src.performance_benchmark.constants import (
-    CUSTOM_IMAGE_CLASSIFICATION_MODELS,
-    EFFICIENTFORMER_MODELS,
-    EFFICIENTNET_MODELS,
-    INCEPTION_MODELS,
-    MOBILEVIT_MODELS,
-    MOBILENET_MODELS,
-    RESNET_MODELS,
-    SHUFFLENET_MODELS,
+from src.constants import (
+    EFFICIENTFORMER_MODEL_IDS,
+    EFFICIENTNET_MODEL_CHECKPOINTS,
+    INCEPTION_MODEL_CHECKPOINTS,
+    MOBILENET_MODEL_CHECKPOINTS,
+    MOBILEVIT_MODEL_IDS,
+    RESNET_MODEL_CHECKPOINTS,
+    SHUFFLENET_MODEL_CHECKPOINTS,
+    VIT_DIR,
 )
 from src.performance_benchmark.utils import load_rgb_image, move_inputs_to_device
+from src.vision_benchmark.constants import IMAGE_CLASSIFICATION_MODELS
 
 
 PredictionFunction = Callable[[Path], torch.Tensor]
@@ -50,30 +47,30 @@ class ClassificationInferenceAdapter:
         return logits.detach().cpu()
 
     def _prepare_prediction(self) -> PredictionFunction:
-        if self.model_name in MOBILENET_MODELS:
+        if self.model_name in MOBILENET_MODEL_CHECKPOINTS:
             self._prepare_mobilenet()
             return self._predict_transformed_tensor
-        if self.model_name in EFFICIENTNET_MODELS:
+        if self.model_name in EFFICIENTNET_MODEL_CHECKPOINTS:
             from torchvision.models import EfficientNet_B0_Weights
 
             self.transform = EfficientNet_B0_Weights.DEFAULT.transforms()
             return self._predict_transformed_tensor
-        if self.model_name in RESNET_MODELS:
+        if self.model_name in RESNET_MODEL_CHECKPOINTS:
             from torchvision.models import ResNet18_Weights
 
             self.transform = ResNet18_Weights.DEFAULT.transforms()
             return self._predict_transformed_tensor
-        if self.model_name in SHUFFLENET_MODELS:
+        if self.model_name in SHUFFLENET_MODEL_CHECKPOINTS:
             from torchvision.models import ShuffleNet_V2_X0_5_Weights
 
             self.transform = ShuffleNet_V2_X0_5_Weights.DEFAULT.transforms()
             return self._predict_transformed_tensor
-        if self.model_name in INCEPTION_MODELS:
+        if self.model_name in INCEPTION_MODEL_CHECKPOINTS:
             from torchvision.models import Inception_V3_Weights
 
             self.transform = Inception_V3_Weights.DEFAULT.transforms()
             return self._predict_transformed_tensor
-        if self.model_name in MOBILEVIT_MODELS:
+        if self.model_name in MOBILEVIT_MODEL_IDS:
             from transformers import AutoImageProcessor
 
             self.processor = AutoImageProcessor.from_pretrained(
@@ -82,7 +79,7 @@ class ClassificationInferenceAdapter:
                 use_fast=False,
             )
             return self._predict_mobilevit
-        if self.model_name in EFFICIENTFORMER_MODELS:
+        if self.model_name in EFFICIENTFORMER_MODEL_IDS:
             import timm
 
             data_config = timm.data.resolve_model_data_config(self.model)
@@ -91,21 +88,6 @@ class ClassificationInferenceAdapter:
                 is_training=False,
             )
             return self._predict_transformed_tensor
-        if self.model_name in CUSTOM_IMAGE_CLASSIFICATION_MODELS:
-            from torchvision import transforms
-
-            self.transform = transforms.Compose(
-                [
-                    transforms.Resize((224, 224)),
-                    transforms.ToTensor(),
-                    transforms.Normalize(
-                        mean=(0.485, 0.456, 0.406),
-                        std=(0.229, 0.224, 0.225),
-                    ),
-                ]
-            )
-            return self._predict_transformed_tensor
-
         raise ValueError(
             f"No classification adapter is defined for model: {self.model_name}"
         )

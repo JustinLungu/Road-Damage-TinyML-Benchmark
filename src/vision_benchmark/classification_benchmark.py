@@ -4,13 +4,12 @@ from typing import Any
 
 import torch
 
-from src.detection_benchmark.benchmark_result import DetectionBenchmarkResult
-from src.detection_benchmark.classification_dataset import ClassificationSample
-from src.detection_benchmark.classification_inference_adapter import (
+from src.vision_benchmark.classification_dataset import ClassificationSample
+from src.vision_benchmark.classification_inference_adapter import (
     ClassificationInferenceAdapter,
 )
-from src.detection_benchmark.constants import IMAGE_CLASSIFICATION_TASK
-from src.detection_benchmark.utils import mean, print_progress
+from src.vision_benchmark.results import ClassificationBenchmarkResult
+from src.vision_benchmark.utils import mean, print_progress
 
 
 class ClassificationBenchmark:
@@ -34,7 +33,7 @@ class ClassificationBenchmark:
         self.split = split
         self.adapter = ClassificationInferenceAdapter(model_name, model, device)
 
-    def run(self) -> DetectionBenchmarkResult:
+    def run(self) -> ClassificationBenchmarkResult:
         true_labels = []
         predicted_labels = []
         top5_correct = 0
@@ -64,21 +63,14 @@ class ClassificationBenchmark:
             predicted_labels,
         )
 
-        return DetectionBenchmarkResult(
+        return ClassificationBenchmarkResult(
             model_name=self.model_name,
-            task=IMAGE_CLASSIFICATION_TASK,
             dataset_name=self.dataset_name,
             split=self.split,
             num_images=len(self.samples),
-            confidence_threshold=None,
-            iou_threshold=None,
-            map_50_95=None,
-            map_50=None,
-            map_75=None,
             precision=precision,
             recall=recall,
             f1_score=f1_score,
-            mean_iou=None,
             top1_accuracy=top1_accuracy,
             top5_accuracy=top5_correct / len(true_labels),
         )
@@ -121,9 +113,7 @@ def calculate_macro_classification_metrics(
             else 0.0
         )
         f1_score = (
-            2 * precision * recall / (precision + recall)
-            if precision + recall
-            else 0.0
+            2 * precision * recall / (precision + recall) if precision + recall else 0.0
         )
         precisions.append(precision)
         recalls.append(recall)

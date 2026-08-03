@@ -1,4 +1,4 @@
-# Detection Benchmark
+# Vision Benchmark
 
 This package evaluates whether a model produced the correct visual prediction.
 It is separate from `performance_benchmark`, which measures runtime cost.
@@ -14,6 +14,10 @@ free-text outputs require a different evaluation design.
 
 The default classification dataset is the Imagenette validation split prepared
 by `scripts/download_imagenette_val.sh`.
+
+Only classifiers with pretrained ImageNet weights are supported here. Custom
+models such as `tiny_cnn` and `resnet8` start with random weights and belong in
+the RDD training benchmark instead.
 
 ## Object Detection Metrics
 

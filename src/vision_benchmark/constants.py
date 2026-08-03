@@ -1,5 +1,4 @@
 from src.constants import (
-    CUSTOM_IMAGE_CLASSIFICATION_MODELS,
     EFFICIENTFORMER_MODEL_IDS,
     EFFICIENTNET_MODEL_CHECKPOINTS,
     INCEPTION_MODEL_CHECKPOINTS,
@@ -11,10 +10,9 @@ from src.constants import (
 )
 
 
-OBJECT_DETECTION_TASK = "object_detection"
-IMAGE_CLASSIFICATION_TASK = "image_classification"
-
 OBJECT_DETECTION_MODELS = frozenset(YOLO_MODEL_CHECKPOINTS)
+# Only models with pretrained ImageNet weights belong in this quality benchmark.
+# Source-defined custom models are trained and evaluated through rdd_benchmark.
 IMAGE_CLASSIFICATION_MODELS = frozenset(
     {
         *MOBILENET_MODEL_CHECKPOINTS,
@@ -24,7 +22,6 @@ IMAGE_CLASSIFICATION_MODELS = frozenset(
         *INCEPTION_MODEL_CHECKPOINTS,
         *MOBILEVIT_MODEL_IDS,
         *EFFICIENTFORMER_MODEL_IDS,
-        *CUSTOM_IMAGE_CLASSIFICATION_MODELS,
     }
 )
 SUPPORTED_MODELS = OBJECT_DETECTION_MODELS | IMAGE_CLASSIFICATION_MODELS

@@ -6,7 +6,7 @@ from typing import Any
 
 import torch
 
-from src.detection_benchmark.constants import (
+from src.vision_benchmark.constants import (
     OBJECT_DETECTION_MODELS,
     PREDICTION_CONFIDENCE_FLOOR,
 )

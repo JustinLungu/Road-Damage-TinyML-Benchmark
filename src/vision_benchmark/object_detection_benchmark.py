@@ -10,13 +10,12 @@ from typing import Any
 
 import torch
 
-from src.detection_benchmark.benchmark_result import DetectionBenchmarkResult
-from src.detection_benchmark.constants import OBJECT_DETECTION_TASK
-from src.detection_benchmark.object_detection_inference_adapter import (
+from src.vision_benchmark.object_detection_inference_adapter import (
     ObjectDetectionInferenceAdapter,
     PredictedBox,
 )
-from src.detection_benchmark.utils import print_progress, validate_unit_interval
+from src.vision_benchmark.results import ObjectDetectionBenchmarkResult
+from src.vision_benchmark.utils import print_progress, validate_unit_interval
 
 
 @dataclass(frozen=True)
@@ -91,14 +90,17 @@ class ObjectDetectionBenchmark:
             self.annotation_data["categories"],
         )
 
-    def run(self) -> DetectionBenchmarkResult:
+    def run(self) -> ObjectDetectionBenchmarkResult:
         predictions_by_image: dict[int, list[tuple[int, PredictedBox]]] = {}
         coco_predictions = []
 
         with torch.inference_mode():
             for completed, image in enumerate(self.images, start=1):
                 mapped_predictions = [
-                    (self.category_id_by_class_index[prediction.class_index], prediction)
+                    (
+                        self.category_id_by_class_index[prediction.class_index],
+                        prediction,
+                    )
                     for prediction in self.adapter.predict(image.image_path)
                 ]
                 predictions_by_image[image.image_id] = mapped_predictions
@@ -129,9 +131,8 @@ class ObjectDetectionBenchmark:
         )
         f1_score = divide(2 * precision * recall, precision + recall)
 
-        return DetectionBenchmarkResult(
+        return ObjectDetectionBenchmarkResult(
             model_name=self.model_name,
-            task=OBJECT_DETECTION_TASK,
             dataset_name=self.dataset_name,
             split=self.split,
             num_images=len(self.images),
@@ -148,8 +149,6 @@ class ObjectDetectionBenchmark:
                 if counts.matched_ious
                 else 0.0
             ),
-            top1_accuracy=None,
-            top5_accuracy=None,
         )
 
 
@@ -228,7 +227,9 @@ def build_category_mapping(
     category_id_by_name = {
         str(category["name"]): int(category["id"]) for category in coco_categories
     }
-    names = model_names.items() if isinstance(model_names, dict) else enumerate(model_names)
+    names = (
+        model_names.items() if isinstance(model_names, dict) else enumerate(model_names)
+    )
     mapping = {}
     missing_names = []
     for class_index, class_name in names:
