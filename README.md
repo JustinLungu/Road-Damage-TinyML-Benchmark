@@ -1,14 +1,11 @@
 # Road-Damage TinyML Benchmark
 
-Benchmarking and fine-tuning pipeline for lightweight road-damage image
+Training and evaluation pipeline for lightweight road-damage image
 classification, centered on binary pothole detection with RDD2022.
-
-This repository was originally started as a broader edge/VLM prototype. It is
-now scoped as a self-contained benchmark project for:
 
 - preparing RDD2022 binary pothole datasets;
 - running imbalance-aware data experiments;
-- fine-tuning tiny, small, and standard image classifiers;
+- training custom tiny classifiers and fine-tuning pretrained classifiers;
 - comparing models with accuracy, balanced accuracy, precision, recall, F1,
   ROC-AUC, confusion matrices, inference speed, and training curves;
 - documenting model loading and demo inference paths.
@@ -18,7 +15,7 @@ now scoped as a self-contained benchmark project for:
 ```text
 .
 ├── datasets/                 # ignored dataset downloads and generated manifests
-├── docs/                     # model notes, RDD constants guide, demos
+├── docs/                     # model notes, settings guide, inference demos
 ├── experiments/              # standalone performance/vision benchmark entry points
 ├── models/                   # ignored downloaded model weights, plus model notes
 ├── notebooks/                # RDD2022 exploration notebook
@@ -30,13 +27,6 @@ now scoped as a self-contained benchmark project for:
 │   └── vision_benchmark/
 └── tests/                    # unit and behavior tests
 ```
-
-Removed from the old roadmap:
-
-- `configs/`: no active config files; RDD settings live in
-  `src/rdd_benchmark/constants.py`.
-- `jetson/`: Jetson deployment belongs in the next project, not this benchmark
-  repo.
 
 ## RDD2022 Binary Pothole Benchmark
 
@@ -73,6 +63,12 @@ uv run python -m src.rdd_benchmark.main
 See [docs/rdd_benchmark_constants.md](docs/rdd_benchmark_constants.md) for the
 full explanation of the switches.
 
+The benchmark derives local train, validation, and test manifests from the
+annotated RDD2022 training data. A positive image contains at least one `D40`
+pothole annotation with a bounding-box area of at least 400 square pixels. The
+task is full-image binary classification, not the official CRDDC
+object-detection task.
+
 ## RDD Experiments
 
 The benchmark supports reproducible experiment IDs:
@@ -83,7 +79,7 @@ The benchmark supports reproducible experiment IDs:
 - `G`: majority downsampling to 1 pothole : 5 non-potholes with standard
   augmentation;
 - `H`: majority downsampling to 1 pothole : 5 non-potholes with strong
-  augmentation applied to every training image.
+  augmentation.
 
 `B`, `C`, and `D` retain the earlier, more aggressive balancing strategies for
 reproducibility. Select one or more IDs with `RDD_ACTIVE_EXPERIMENT_IDS`.

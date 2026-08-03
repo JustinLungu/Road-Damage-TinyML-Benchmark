@@ -1,6 +1,6 @@
 # Tests
 
-This directory will contain unit tests, validation scripts, pipeline checks, and regression tests.
+This directory contains unit tests and regression checks grouped by subsystem.
 
 The suite groups tests by subsystem so failures are easy to locate. It covers
 model loading, vision and performance benchmarks, plotting, RDD training, and

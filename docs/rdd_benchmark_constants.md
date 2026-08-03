@@ -16,6 +16,9 @@ Edit `src/rdd_benchmark/constants.py` before running. The pipeline is always
 full-image binary classification; settings only control preprocessing,
 experiments, models, training, evaluation, and comparison.
 
+The stages run in that order. A single command can therefore regenerate the
+manifests and immediately train, evaluate, and compare the selected models.
+
 ## Typical Run
 
 For a quick run of one model on the natural-data baseline:
@@ -51,12 +54,18 @@ datasets/rdd2022/binary_pothole/test.csv
 ```
 
 An image is positive when its XML contains a `D40` pothole box of at least 400
-pixels. The two split modes are:
+square pixels. A `D40` annotation below that threshold does not make the image
+positive. The two split modes are:
 
 - `stratified_by_country`: every country contributes to every split while
   preserving class proportions. This is the normal benchmark split.
 - `country_holdout`: whole countries are assigned to train, validation, or
   test for a harder geographic generalization check.
+
+Both modes create local splits from the official annotated training data. They
+do not reproduce the challenge's private test-server evaluation. The default
+stratified split operates at image level and does not group adjacent video
+frames.
 
 Split fractions, country assignments, the random seed, and the 400-pixel
 minimum live in `data_preprocessing/constants.py` because they are only used
@@ -88,6 +97,12 @@ datasets/rdd2022/binary_pothole_experiments/<experiment_name>/
 ```
 
 The registry is `src/rdd_benchmark/experiments/experiment_registry.py`.
+
+Standard augmentation uses a random resized crop and horizontal flip. Strong
+augmentation adds stronger cropping, color jitter, small rotations, and mild
+perspective changes. Weighted sampling changes the expected class mix of
+training draws; it does not duplicate rows in the source manifest. Every
+experiment also uses class-weighted cross-entropy.
 
 ## Model Selection
 
@@ -124,9 +139,9 @@ RDD_TRAINING_EARLY_STOPPING_PATIENCE = 8
 ```
 
 The trainer saves the checkpoint with the best validation metric and stops
-when that metric has not improved for the configured patience. Every experiment
-uses class-weighted cross-entropy to account for class imbalance; experiments
-differ only in sampling, downsampling, and augmentation.
+when that metric has not improved for the configured patience. Pretrained
+classifiers are fine-tuned; source-defined tiny classifiers start with random
+weights. Experiments differ only in sampling, downsampling, and augmentation.
 
 Keep `RDD_TRAINING_DROP_LAST_BATCH = True` for models with batch normalization.
 It avoids a final one-sample training batch.

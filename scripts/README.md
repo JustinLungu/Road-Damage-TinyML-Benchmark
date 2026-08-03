@@ -39,7 +39,8 @@ Download every available country-specific annotated training split:
 ```
 
 Create binary pothole/non-pothole image-classification manifests from the
-downloaded RDD2022 XML annotations:
+downloaded RDD2022 XML annotations by setting `RUN_RDD_PREPROCESSING = True` in
+`src/rdd_benchmark/constants.py`, then running:
 
 ```bash
 uv run python -m src.rdd_benchmark.main
@@ -68,8 +69,8 @@ Load/download every supported model:
 ./scripts/download_models.sh --all
 ```
 
-For the RDD2022 binary pothole fine-tuning work, start with the image
-classification models, for example:
+For the RDD2022 binary pothole benchmark, load selected pretrained image
+classifiers, for example:
 
 ```bash
 ./scripts/download_models.sh \
@@ -80,6 +81,10 @@ classification models, for example:
   resnet18 \
   inception_v3
 ```
+
+Source-defined models such as `tiny_cnn`, `resnet8`, `ds_cnn_small`, and
+`mobilenet_v1_025` have no external checkpoint to download. Selecting them
+constructs the architecture; RDD training learns their weights from scratch.
 
 ## Inference Demos
 

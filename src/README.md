@@ -1,7 +1,7 @@
 # Source Code
 
 This directory contains the reusable implementation for model loading,
-benchmarking, and RDD2022 binary pothole fine-tuning.
+benchmarking, and RDD2022 binary pothole training and evaluation.
 
 ## Packages
 
