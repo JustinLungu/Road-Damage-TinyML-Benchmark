@@ -47,7 +47,7 @@ RDD_MODEL_NAMES = (
 # Training Loop
 ################
 
-RUN_RDD_TRAINING = True  # set True to fine-tune selected models
+RUN_RDD_TRAINING = False  # set True to fine-tune selected models
 RDD_TRAINING_BATCH_SIZE = 32
 RDD_TRAINING_NUM_WORKERS = 2
 RDD_TRAINING_EPOCHS = 30
@@ -75,7 +75,7 @@ RDD_SKIP_FAILED_MODELS = True
 # Evaluation
 ################
 
-RUN_RDD_EVALUATION = True  # set True to evaluate selected checkpoints
+RUN_RDD_EVALUATION = False  # set True to evaluate selected checkpoints
 RDD_EVALUATION_BATCH_SIZE = 32
 RDD_EVALUATION_NUM_WORKERS = 2
 RDD_EVALUATION_PROGRESS_INTERVAL = 50
@@ -88,7 +88,25 @@ RDD_EVALUATION_SKIP_EXISTING_RESULTS = True
 # Comparison
 ################
 
-RUN_RDD_COMPARISON = True
+RUN_RDD_COMPARISON = False
 
 # Rank model_comparison.csv by this metric.
 RDD_COMPARISON_RANKING_METRIC = "f1"
+
+
+#####################
+# Prediction Export
+#####################
+
+# Checkpoint experiment used by each model in prediction exports and previews.
+RDD_PREDICTION_MODELS = {
+    "ds_cnn_small": "A",
+    "mobilevit_xs": "G",
+}
+RDD_PREDICTION_MODEL_DISPLAY_NAMES = {
+    "ds_cnn_small": "DS-CNN",
+    "mobilevit_xs": "MobileViT-XS",
+}
+
+# Used when preview-predictions is run without --num-samples.
+RDD_PREDICTION_PREVIEW_DEFAULT_SAMPLES = 20

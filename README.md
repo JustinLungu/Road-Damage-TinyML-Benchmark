@@ -74,7 +74,7 @@ uv run python -m src.rdd_benchmark.main
 ```
 
 See [docs/rdd_benchmark_constants.md](docs/rdd_benchmark_constants.md) for the
-full explanation of the switches.
+full explanation of the switches and prediction exports.
 
 The benchmark derives local train, validation, and test manifests from the
 annotated RDD2022 training data. A positive image contains at least one `D40`

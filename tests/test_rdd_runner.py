@@ -93,6 +93,9 @@ def test_rdd_experiment_runner_trains_evaluates_and_compares(
         experiment_config=experiment_config,
         model_names=("tiny",),
         output_dir=tmp_path / "results",
+        run_training=True,
+        run_evaluation=True,
+        run_comparison=True,
     )
     RDDExperimentRunner(run_config).run()
 
@@ -150,6 +153,7 @@ def test_rdd_experiment_runner_skips_existing_checkpoint(
         experiment_config=experiment_config,
         model_names=("tiny",),
         output_dir=tmp_path / "results",
+        run_training=True,
         run_evaluation=False,
         run_comparison=False,
     )
