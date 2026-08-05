@@ -6,10 +6,12 @@ import torch
 from PIL import Image
 from torch import nn
 
-from src.rdd_benchmark.predictions import (
+from src.rdd_benchmark.predictions.exporter import (
     PREDICTION_COLUMNS,
     RDDPredictionExportConfig,
     RDDPredictionExporter,
+)
+from src.rdd_benchmark.predictions.preview import (
     RDDPredictionPreviewConfig,
     RDDPredictionPreviewer,
 )

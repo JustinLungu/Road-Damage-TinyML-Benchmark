@@ -22,9 +22,11 @@ from src.rdd_benchmark.experiments.runner import (
     RDDExperimentRunConfig,
     RDDExperimentRunner,
 )
-from src.rdd_benchmark.predictions import (
+from src.rdd_benchmark.predictions.exporter import (
     RDDPredictionExportConfig,
     RDDPredictionExporter,
+)
+from src.rdd_benchmark.predictions.preview import (
     RDDPredictionPreviewConfig,
     RDDPredictionPreviewer,
 )

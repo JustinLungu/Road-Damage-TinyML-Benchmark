@@ -49,7 +49,7 @@ The main project code lives in:
 src/rdd_benchmark/
 ├── constants.py              # run switches and experiment/model selection
 ├── main.py                   # benchmark and prediction-report entry point
-├── predictions.py            # full-test CSV exports and visual comparisons
+├── predictions/              # full-test CSV exports and visual comparisons
 ├── data_loader/              # manifest and dataset classes
 ├── data_preprocessing/       # splits, balancing, and augmentation
 ├── experiments/              # experiment registry and runner
