@@ -48,7 +48,8 @@ The main project code lives in:
 ```text
 src/rdd_benchmark/
 ├── constants.py              # run switches and experiment/model selection
-├── main.py                   # single entry point for preprocessing/training/eval
+├── main.py                   # benchmark and prediction-report entry point
+├── predictions/              # full-test CSV exports and visual comparisons
 ├── data_loader/              # manifest and dataset classes
 ├── data_preprocessing/       # splits, balancing, and augmentation
 ├── experiments/              # experiment registry and runner
@@ -74,7 +75,7 @@ uv run python -m src.rdd_benchmark.main
 ```
 
 See [docs/rdd_benchmark_constants.md](docs/rdd_benchmark_constants.md) for the
-full explanation of the switches.
+full explanation of the switches and prediction exports.
 
 The benchmark derives local train, validation, and test manifests from the
 annotated RDD2022 training data. A positive image contains at least one `D40`
@@ -137,6 +138,35 @@ Experiment-level comparisons are written as:
 ```text
 results/rdd_trained_models/<experiment_name>/model_comparison.csv
 ```
+
+## Prediction Reports
+
+Existing RDD checkpoints can also produce row-level prediction reports without
+retraining. Select any compatible model and checkpoint experiment in
+`RDD_PREDICTION_MODELS`, then rerun inference over the complete test manifest:
+
+```bash
+uv run python -m src.rdd_benchmark.main export-predictions
+```
+
+Each selected model writes `test_predictions.csv` beside its checkpoint. Rows
+contain the source image ID, both softmax probabilities, predicted class, and
+actual class.
+
+Create a combined random visual comparison from those CSVs with:
+
+```bash
+uv run python -m src.rdd_benchmark.main preview-predictions
+```
+
+The default is 20 images. Use `--num-samples` to change it:
+
+```bash
+uv run python -m src.rdd_benchmark.main preview-predictions --num-samples 30
+```
+
+This reporting feature is separate from training and metric evaluation. It can
+be reused for other models by changing only the model-to-experiment mapping.
 
 ## Dataset Downloads
 

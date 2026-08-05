@@ -13,8 +13,8 @@ If `uv` is unavailable, use the project environment directly:
 ```
 
 Edit `src/rdd_benchmark/constants.py` before running. The pipeline is always
-full-image binary classification; settings only control preprocessing,
-experiments, models, training, evaluation, and comparison.
+full-image binary classification; settings control preprocessing, experiments,
+models, training, evaluation, comparison, and prediction export.
 
 The stages run in that order. A single command can therefore regenerate the
 manifests and immediately train, evaluate, and compare the selected models.
@@ -193,3 +193,48 @@ To force a rerun, set the relevant skip option to `False`:
 RDD_TRAINING_SKIP_EXISTING_CHECKPOINTS = False
 RDD_EVALUATION_SKIP_EXISTING_RESULTS = False
 ```
+
+## Prediction Reports
+
+Prediction export reruns the configured checkpoints over every image in the
+realistic test manifest. The model-to-experiment mapping selects each
+checkpoint explicitly, so the same feature can be reused with other compatible
+models:
+
+```python
+RDD_PREDICTION_MODELS = {
+    "ds_cnn_small": "A",
+    "mobilevit_xs": "G",
+}
+RDD_PREDICTION_PREVIEW_DEFAULT_SAMPLES = 20
+```
+
+Run the full-test inference and CSV export first:
+
+```bash
+uv run python -m src.rdd_benchmark.main export-predictions
+```
+
+It writes `test_predictions.csv` beside each model's `best.pt` checkpoint. Each
+CSV has one row per test image, in test-manifest order, and five
+spreadsheet-compatible columns: `image_id`, `non_pothole_softmax`,
+`pothole_softmax`, `predicted_class`, and `actual_class`. The image ID is the
+source filename without its extension, such as `China_Drone_000010`.
+
+After both CSVs exist, create a fresh random visual comparison:
+
+```bash
+uv run python -m src.rdd_benchmark.main preview-predictions
+```
+
+The default is 20 images. Override it from the command line:
+
+```bash
+uv run python -m src.rdd_benchmark.main preview-predictions --num-samples 30
+```
+
+Every preview command selects new random images without a fixed seed. Each image
+shows its image ID, actual class, and the DS-CNN and MobileViT-XS prediction and
+confidence.
+The combined image is saved as
+`results/rdd_trained_models/prediction_preview.png`.
