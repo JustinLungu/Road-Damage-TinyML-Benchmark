@@ -9,4 +9,6 @@ summaries, and other output artifacts.
 - `rdd_trained_models/` contains one folder per RDD experiment. Each model
   folder stores `best.pt`, `history.csv`, combined training curves, realistic
   and balanced-test metrics, confusion matrices, and a ROC curve. Each
-  experiment also stores the ranked `model_comparison.csv`.
+  experiment also stores the ranked `model_comparison.csv`. Optional prediction
+  reports add `test_predictions.csv` beside selected checkpoints and write the
+  combined random preview to `rdd_trained_models/prediction_preview.png`.

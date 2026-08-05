@@ -1,1 +1,1 @@
-"""RDD model adaptation, training, evaluation, and reporting."""
+"""RDD model adaptation, training, and evaluation."""

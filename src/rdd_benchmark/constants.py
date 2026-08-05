@@ -95,7 +95,7 @@ RDD_COMPARISON_RANKING_METRIC = "f1"
 
 
 #####################
-# Prediction Export
+# Prediction Reports
 #####################
 
 # Checkpoint experiment used by each model in prediction exports and previews.

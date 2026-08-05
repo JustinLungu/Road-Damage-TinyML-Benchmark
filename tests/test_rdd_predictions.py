@@ -6,12 +6,10 @@ import torch
 from PIL import Image
 from torch import nn
 
-from src.rdd_benchmark.training.prediction_export import (
+from src.rdd_benchmark.predictions import (
     PREDICTION_COLUMNS,
     RDDPredictionExportConfig,
     RDDPredictionExporter,
-)
-from src.rdd_benchmark.training.prediction_preview import (
     RDDPredictionPreviewConfig,
     RDDPredictionPreviewer,
 )
@@ -78,7 +76,7 @@ def export_test_predictions(
     return RDDPredictionExporter(config, model=model).export()
 
 
-def test_prediction_export_writes_every_test_row_with_four_columns(tmp_path):
+def test_prediction_export_writes_every_test_row_with_five_columns(tmp_path):
     manifest_path = write_test_manifest(tmp_path)
     predictions_path = export_test_predictions(
         tmp_path,

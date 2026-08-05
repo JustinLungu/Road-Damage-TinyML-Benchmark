@@ -22,11 +22,9 @@ from src.rdd_benchmark.experiments.runner import (
     RDDExperimentRunConfig,
     RDDExperimentRunner,
 )
-from src.rdd_benchmark.training.prediction_export import (
+from src.rdd_benchmark.predictions import (
     RDDPredictionExportConfig,
     RDDPredictionExporter,
-)
-from src.rdd_benchmark.training.prediction_preview import (
     RDDPredictionPreviewConfig,
     RDDPredictionPreviewer,
 )
@@ -83,32 +81,29 @@ if __name__ == "__main__":
                     experiment_id=experiment_id,
                 )
             ).export()
-        raise SystemExit(0)
-
-    if arguments.command == "preview-predictions":
+    elif arguments.command == "preview-predictions":
         RDDPredictionPreviewer(
             RDDPredictionPreviewConfig(
                 model_experiments=RDD_PREDICTION_MODELS,
                 sample_count=arguments.num_samples,
             )
         ).create()
-        raise SystemExit(0)
+    else:
+        if RUN_RDD_PREPROCESSING:
+            print("RDD2022 binary pothole full-image preprocessing")
+            prepare_binary_pothole_manifests()
+            print()
 
-    if RUN_RDD_PREPROCESSING:
-        print("RDD2022 binary pothole full-image preprocessing")
-        prepare_binary_pothole_manifests()
-        print()
-
-    if RUN_RDD_TRAINING or RUN_RDD_EVALUATION or RUN_RDD_COMPARISON:
-        selected_experiment_configs = select_rdd_experiment_configs(
-            RDD_ACTIVE_EXPERIMENT_IDS
-        )
-        print_experiment_plan(selected_experiment_configs, RDD_MODEL_NAMES)
-        for experiment_config in selected_experiment_configs:
-            runner = RDDExperimentRunner(
-                RDDExperimentRunConfig(
-                    experiment_config=experiment_config,
-                    model_names=RDD_MODEL_NAMES,
-                )
+        if RUN_RDD_TRAINING or RUN_RDD_EVALUATION or RUN_RDD_COMPARISON:
+            selected_experiment_configs = select_rdd_experiment_configs(
+                RDD_ACTIVE_EXPERIMENT_IDS
             )
-            runner.run()
+            print_experiment_plan(selected_experiment_configs, RDD_MODEL_NAMES)
+            for experiment_config in selected_experiment_configs:
+                runner = RDDExperimentRunner(
+                    RDDExperimentRunConfig(
+                        experiment_config=experiment_config,
+                        model_names=RDD_MODEL_NAMES,
+                    )
+                )
+                runner.run()

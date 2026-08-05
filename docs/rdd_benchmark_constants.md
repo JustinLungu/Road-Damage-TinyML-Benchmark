@@ -194,11 +194,12 @@ RDD_TRAINING_SKIP_EXISTING_CHECKPOINTS = False
 RDD_EVALUATION_SKIP_EXISTING_RESULTS = False
 ```
 
-## Prediction Export
+## Prediction Reports
 
 Prediction export reruns the configured checkpoints over every image in the
 realistic test manifest. The model-to-experiment mapping selects each
-checkpoint explicitly:
+checkpoint explicitly, so the same feature can be reused with other compatible
+models:
 
 ```python
 RDD_PREDICTION_MODELS = {
